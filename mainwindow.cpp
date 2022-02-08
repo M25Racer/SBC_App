@@ -94,8 +94,8 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(m_usb, &UsbTransmitter::consolePutData, this, &MainWindow::consolePutData);
     connect(m_usb, &UsbTransmitter::usbInitTimeoutStart, this, &MainWindow::usbInitTimeoutStart);
 
-    m_console->putData("SBC Application\n");
-    m_console->putData("Opening serial port...\n");
+    m_console->putData("SBC Application\n", 1);
+    m_console->putData("Opening serial port...\n", 1);
 
     // Clear serial port tx & rx buffer
     TtyUserRxBuffer.clear();
@@ -129,7 +129,7 @@ MainWindow::MainWindow(QWidget *parent) :
     version = libusb_get_version();
     m_console->putData(QString("libusb version: %1.%2.%3.%4\n")
                        .arg(version->major).arg(version->minor)
-                       .arg(version->micro).arg(version->nano));
+                       .arg(version->micro).arg(version->nano), 1);
 
     // Start timer for continuous usb initialization attempts
     timerUsbInit->start(100);
@@ -137,33 +137,24 @@ MainWindow::MainWindow(QWidget *parent) :
 
 MainWindow::~MainWindow()
 {
-    m_console->putData("Closing....\n");
     timerUsbPoll->stop();
-    m_console->putData("Closing....1\n");
     timerUsbInit->stop();
-    m_console->putData("Closing....2\n");
     timerReconnect->stop();
-    m_console->putData("Closing....3\n");
     timerRxTimeout->stop();
-    m_console->putData("Closing....4\n");
 
     closeSerialPort();
-    m_console->putData("Closing....5\n");
     m_usb->end();
-    m_console->putData("Closing....6\n");
-
-    m_console->putData("Exit\n");
 
     m_console->Close();
     delete m_ui;
 }
 
-void MainWindow::consolePutData(const QString &data)
+void MainWindow::consolePutData(const QString &data, uint8_t priority)
 {
     if(m_console == nullptr)
         return;
 
-    m_console->putData(data);
+    m_console->putData(data, priority);
 }
 
 bool MainWindow::openSerialPort()
@@ -218,7 +209,7 @@ bool MainWindow::openSerialPort()
 
         m_console->putData(tr("Connected to %1 : %2, %3, %4, %5, %6\n")
                            .arg(p.name).arg(p.stringBaudRate).arg(p.stringDataBits)
-                           .arg(p.stringParity).arg(p.stringStopBits).arg(p.stringFlowControl));
+                           .arg(p.stringParity).arg(p.stringStopBits).arg(p.stringFlowControl), 1);
         return true;
     }
     else
@@ -227,7 +218,7 @@ bool MainWindow::openSerialPort()
         str_b.append(tr("Error "));
         str_b.append(m_serial->errorString());
         str_b.append("\n");
-        m_console->putData(str_b);
+        m_console->putData(str_b, 1);
         return false;
     }
 }
@@ -241,7 +232,7 @@ void MainWindow::closeSerialPort()
     m_ui->actionDisconnect->setEnabled(false);
     m_ui->actionConfigure->setEnabled(true);
     //showStatusMessage(tr("Disconnected"));
-    m_console->putData("Serial port disconnected\n");
+    m_console->putData("Serial port disconnected\n", 1);
 }
 
 void MainWindow::about()
@@ -259,7 +250,7 @@ void MainWindow::writeDataSerialPort(const QByteArray &data)
 
 void MainWindow::timeoutSerialPortRx()
 {
-    m_console->putData("Receive timeout # ");
+    m_console->putData("Receive timeout # ", 0);
     timeoutSerialPort = true;
     readDataSerialPort();
 }
@@ -300,7 +291,7 @@ void MainWindow::timeoutUsbPollCallback()
 
                 if(rc != LIBUSB_SUCCESS)
                 {
-                    m_console->putData(QString("Usb Transfer Error: %1\n").arg(libusb_error_name(rc)));
+                    m_console->putData(QString("Usb Transfer Error: %1\n").arg(libusb_error_name(rc)), 1);
                 }
             }
         }
@@ -323,7 +314,7 @@ void MainWindow::timeoutUsbPollCallback()
 
                 if(rc != LIBUSB_SUCCESS)
                 {
-                    m_console->putData(QString("Transfer Error: %1\n").arg(libusb_error_name(rc)));
+                    m_console->putData(QString("Transfer Error: %1\n").arg(libusb_error_name(rc)), 1);
                     //fprintf(stderr, "Transfer Error: %s\n", libusb_error_name(rc));
                     //break;
                 }
@@ -353,7 +344,7 @@ void MainWindow::timeoutUsbPollCallback()
 
 void MainWindow::timeoutSerialPortReconnect()
 {
-    m_console->putData("SP Trying to reconnect to a serial port...");
+    m_console->putData("SP Trying to reconnect to a serial port...", 1);
     if(!openSerialPort())
     {
         // Start timer again
@@ -386,15 +377,32 @@ void MainWindow::readDataSerialPort()
 
     qint64 length_rx = m_serial->bytesAvailable();
     if(TtyUserRxBuffer_len)
-        m_console->putData("SP Received (" + QString::number(TtyUserRxBuffer_len) + ") + " + QString::number(length_rx) + " bytes\n");
+        m_console->putData("SP Received (" + QString::number(TtyUserRxBuffer_len) + ") + " + QString::number(length_rx) + " bytes\n", 0);
     else
-        m_console->putData("SP Received " + QString::number(length_rx) + " bytes\n");
+        m_console->putData("SP Received " + QString::number(length_rx) + " bytes\n", 0);
 
     TtyUserRxBuffer.append(m_serial->readAll());
     TtyUserRxBuffer_len += length_rx;
 
+    uint8_t addr = TtyUserRxBuffer.at(0);
+
+    // If package for listed tools, response with 'quick answer'
+    if (addr == m_message_box->PT_ADDR ||
+        addr == m_message_box->SILS_ADDR ||
+        addr == m_message_box->SFBS_ADDR ||
+        addr == m_message_box->NAV_ADDR ||
+        addr == m_message_box->ReCap_ADDR ||
+        addr == m_message_box->XYC_ADDR ||
+        addr == m_message_box->HEX_ADDR ||
+        addr == m_message_box->Ind1h_ADDR)
+    {
+//        uint8_t quick_answer[2];
+        quick_answer[0] = addr;
+//        quick_answer[1] = 0x1d;
+        transmit_quick_answer = true;
+    }
     // If package for SRP
-    if (TtyUserRxBuffer.at(0) == m_message_box->SRP_ADDR)
+    else if (addr == m_message_box->SRP_ADDR)
     {
         // Check length
         if(TtyUserRxBuffer_len >= TtyUserRxBuffer_MaxSize)
@@ -412,7 +420,7 @@ void MainWindow::readDataSerialPort()
 //            }
 
             // Timeout already exceeded
-            m_console->putData("SP Broken packet from PC to SRP: length is too short\n");
+            m_console->putData("SP Broken packet from PC to SRP: length is too short\n", 1);
             serialPortRxCleanup();
 
             // Unlock USB receiver
@@ -426,7 +434,7 @@ void MainWindow::readDataSerialPort()
         const uint8_t *p_data = (const uint8_t*)TtyUserRxBuffer.data();
         if(calc_crc16(p_data + 1, TtyUserRxBuffer_len-1-m_message_box->CRC_LENGTH) != crc16)
         {
-            m_console->putData("SP Broken packet from PC to SRP: crc error\n");
+            m_console->putData("SP Broken packet from PC to SRP: crc error\n", 1);
             serialPortRxCleanup();
 
             // Unlock USB receiver
@@ -454,11 +462,17 @@ void MainWindow::readDataSerialPort()
     if(TtyUserRxBuffer_len >= TtyUserRxBuffer_MaxSize)
     {
         TtyUserRxBuffer_len = TtyUserRxBuffer_MaxSize;
-        m_console->putData("SP Warning: received length is too big\n");
+        m_console->putData("SP Warning: received length is too big\n", 1);
 
         // Transmit to STM32H7
         postTxDataToSTM32H7((uint8_t*)TtyUserRxBuffer.data(), int(TtyUserRxBuffer_len));
         serialPortRxCleanup();
+
+        if(transmit_quick_answer)
+        {
+            transmit_quick_answer = false;
+            postTxData(quick_answer, sizeof(quick_answer));
+        }
         return;
     }
 
@@ -474,6 +488,12 @@ void MainWindow::readDataSerialPort()
     // Transmit to STM32H7
     postTxDataToSTM32H7((uint8_t*)TtyUserRxBuffer.data(), int(TtyUserRxBuffer_len));
     serialPortRxCleanup();
+
+    if(transmit_quick_answer)
+    {
+        transmit_quick_answer = false;
+        postTxData(quick_answer, sizeof(quick_answer));
+    }
 }
 
 void MainWindow::handleError(QSerialPort::SerialPortError error)
@@ -481,7 +501,7 @@ void MainWindow::handleError(QSerialPort::SerialPortError error)
     // TODO other errors?
     if (error == QSerialPort::ResourceError)
     {
-        m_console->putData("SP Critical Error: " + m_serial->errorString() + "\n");
+        m_console->putData("SP Critical Error: " + m_serial->errorString() + "\n", 1);
         closeSerialPort();
 
         // Start timer to periodically try to reconnect
@@ -506,14 +526,14 @@ void MainWindow::postTxData(const uint8_t *p_data, const int length)
 {
     if(p_data == nullptr)
     {
-        m_console->putData("SP Error post_data_tx reported p_data = NULL");
+        m_console->putData("SP Error post_data_tx reported p_data = NULL", 0);
         return;
     }
 
     TtyUserTxBuffer.clear();
     TtyUserTxBuffer.append((char*)p_data, length);
 
-    m_console->putData("SP Transmit " + QString::number(length) + " bytes\n");
+    m_console->putData("SP Transmit " + QString::number(length) + " bytes\n", 0);
     m_serial->write(TtyUserTxBuffer);
 }
 
@@ -524,39 +544,39 @@ void MainWindow::postTxDataToSTM32H7(const uint8_t *p_data, const int length)
 
     if(p_data == nullptr)
     {
-        m_console->putData("Error postTxDataToSTM32H7 reported p_data = NULL\n");
+        m_console->putData("Error postTxDataToSTM32H7 reported p_data = NULL\n", 1);
         return;
     }
 
-    USB_Protocol packet;    // todo remove 'packet' or remove UserBufferTx
+    //USB_Protocol packet;    // todo remove 'packet' or remove UserBufferTx
+    USBheader_t header;
 
-    if(len + sizeof(packet.header) > int(sizeof(m_usb->UserTxBuffer)))
+    if(len + sizeof(header) > int(sizeof(m_usb->UserTxBuffer)))
     {
-        m_console->putData("Error postTxDataToSTM32H7 reported length is too long\n");
+        m_console->putData("Error postTxDataToSTM32H7 reported length is too long\n", 1);
         len = sizeof(m_usb->UserTxBuffer);
     }
 
-    if(len > int(sizeof(packet.data)))
+    if(len > int(sizeof(USB_Protocol::data)))
     {
-        m_console->putData("Error postTxDataToSTM32H7 reported length is too long\n");
-        len = sizeof(packet.data);
+        m_console->putData("Error postTxDataToSTM32H7 reported length is too long\n", 1);
+        len = sizeof(USB_Protocol::data);
     }
 
     // Cancel ongoing transfer (if any)
     m_usb->USB_StopTransmit();
 //    timerUsbPoll->QTimer::qt_metacall(QMetaObject::InvokeMetaMethod, 5, {});    // force timeout hack
 
-    m_usb->UserTxBuffer_len = len + sizeof(packet.header);
+    m_usb->UserTxBuffer_len = len + sizeof(header);
 
-    packet.header.packet_length = m_usb->UserTxBuffer_len;
-    packet.header.type = SRP_LS_DATA;
-    packet.header.cmd = 0;  // Don't care
+    header.packet_length = m_usb->UserTxBuffer_len;
+    header.type = SRP_LS_DATA;
+    header.cmd = 0;  // Don't care
 
+    memcpy(m_usb->UserTxBuffer, (uint8_t*)&header, sizeof(header));
+    memcpy(m_usb->UserTxBuffer + sizeof(header), p_data, len);
 
-    memcpy(m_usb->UserTxBuffer, (uint8_t*)&packet.header, sizeof(packet.header));
-    memcpy(m_usb->UserTxBuffer + sizeof(packet.header), p_data, len);
-
-    m_console->putData("Transmit to H7 " + QString::number(m_usb->UserTxBuffer_len) + " bytes\n");
+    m_console->putData("Transmit to H7 " + QString::number(m_usb->UserTxBuffer_len) + " bytes\n", 0);
     m_usb->start_transmit = true;
     timerUsbPoll->QTimer::qt_metacall(QMetaObject::InvokeMetaMethod, 5, {});    // force timeout hack
 }

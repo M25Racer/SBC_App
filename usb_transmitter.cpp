@@ -36,7 +36,7 @@ void UsbTransmitter::USB_ReceiveTransmitInit()
 
     if(t_rx != nullptr)
     {
-        emit consolePutData("Error USB_ReceiveTransmitInit reported t_rx != nullptr\n");
+        emit consolePutData("Error USB_ReceiveTransmitInit reported t_rx != nullptr\n", 1);
         return;
     }
 
@@ -44,7 +44,7 @@ void UsbTransmitter::USB_ReceiveTransmitInit()
 
     if(t_rx == nullptr)
     {
-        emit consolePutData("Error USB_ReceiveTransmitInit: unable to allocate a libusb transfer rx\n");
+        emit consolePutData("Error USB_ReceiveTransmitInit: unable to allocate a libusb transfer rx\n", 1);
         return;
     }
     else
@@ -56,7 +56,7 @@ void UsbTransmitter::USB_ReceiveTransmitInit()
 
     if(t_tx != nullptr)
     {
-        emit consolePutData("Error USB_ReceiveTransmitInit reported t_tx != nullptr\n");
+        emit consolePutData("Error USB_ReceiveTransmitInit reported t_tx != nullptr\n", 1);
         return;
     }
 
@@ -64,7 +64,7 @@ void UsbTransmitter::USB_ReceiveTransmitInit()
 
     if(t_tx == nullptr)
     {
-        emit consolePutData("Error USB_ReceiveTransmitInit: unable to allocate a libusb transfer tx\n");
+        emit consolePutData("Error USB_ReceiveTransmitInit: unable to allocate a libusb transfer tx\n", 1);
         return;
     }
 }
@@ -75,13 +75,13 @@ void UsbTransmitter::USB_StartReceive(uint8_t *p_rx_buffer_offset)
 
     if(t_rx == nullptr)
     {
-        emit consolePutData("Error USB_StartReceive transfer = NULL\n");
+        emit consolePutData("Error USB_StartReceive transfer = NULL\n", 1);
         return;
     }
 
     if(handle == nullptr)
     {
-        emit consolePutData("Error USB_StartReceivereported handle = nullptr\n");
+        emit consolePutData("Error USB_StartReceivereported handle = nullptr\n", 1);
         return;
     }
 
@@ -96,7 +96,7 @@ void UsbTransmitter::USB_StartReceive(uint8_t *p_rx_buffer_offset)
 
     if(rc < 0)
     {
-        emit consolePutData(QString("Error USB_StartReceive libusb_submit_transfer: %1\n").arg(libusb_error_name(rc)));
+        emit consolePutData(QString("Error USB_StartReceive libusb_submit_transfer: %1\n").arg(libusb_error_name(rc)), 1);
 
         if (rc == LIBUSB_ERROR_NO_DEVICE)
         {
@@ -117,13 +117,13 @@ void UsbTransmitter::USB_StartTransmit()
 
     if(t_tx == nullptr)
     {
-        emit consolePutData("Error USB_StartTransmit reported t_tx == nullptr\n");
+        emit consolePutData("Error USB_StartTransmit reported t_tx == nullptr\n", 1);
         return;
     }
 
     if(handle == nullptr)
     {
-        emit consolePutData("Error USB_StartTransmit reported handle = nullptr\n");
+        emit consolePutData("Error USB_StartTransmit reported handle = nullptr\n", 1);
         return;
     }
 
@@ -136,7 +136,7 @@ void UsbTransmitter::USB_StartTransmit()
 
     if(rc < 0)
     {
-        emit consolePutData(QString("Error USB_StartTransmit libusb_submit_transfer: %1\n").arg(libusb_error_name(rc)));
+        emit consolePutData(QString("Error USB_StartTransmit libusb_submit_transfer: %1\n").arg(libusb_error_name(rc)), 1);
 
         if (rc == LIBUSB_ERROR_NO_DEVICE)
         {
@@ -161,7 +161,7 @@ void UsbTransmitter::USB_StopReceive()
     if(rc == 0)
     {
         // Cancel success
-        emit consolePutData("Usb canceled ongoing receive transfer\n");
+        emit consolePutData("Usb canceled ongoing receive transfer\n", 0);
     }
 
     if(rc < 0)
@@ -173,7 +173,7 @@ void UsbTransmitter::USB_StopReceive()
         }
 
         // Some other error
-        emit consolePutData(QString("Error USB_StopReceive libusb_cancel_transfer error: %1\n").arg(libusb_error_name(rc)));
+        emit consolePutData(QString("Error USB_StopReceive libusb_cancel_transfer error: %1\n").arg(libusb_error_name(rc)), 1);
     }
 
     // Reset received length
@@ -189,7 +189,7 @@ void UsbTransmitter::USB_StopTransmit()
     if(rc == 0)
     {
         // Cancel success
-        emit consolePutData("Usb canceled ongoing transmit transfer\n");
+        emit consolePutData("Usb canceled ongoing transmit transfer\n", 0);
     }
 
     if(rc < 0)
@@ -201,7 +201,7 @@ void UsbTransmitter::USB_StopTransmit()
         else
         {
             // Some other error, report it
-            emit consolePutData(QString("Error USB_StopTransmit libusb_cancel_transfer error: %1\n").arg(libusb_error_name(rc)));
+            emit consolePutData(QString("Error USB_StopTransmit libusb_cancel_transfer error: %1\n").arg(libusb_error_name(rc)), 1);
         }
     }
 }
@@ -214,7 +214,6 @@ void UsbTransmitter::end()
 
     int rc = 0;
 
-    emit consolePutData("end 1\n");
     receive_in_progress = false;
     transmit_in_progress = false;
     start_transmit = false;
@@ -224,11 +223,9 @@ void UsbTransmitter::end()
 
     USB_StopReceive();
     libusb_handle_events_timeout_completed(context, &tv, nullptr);
-    emit consolePutData("end 2\n");
 
     USB_StopTransmit();
     libusb_handle_events_timeout_completed(context, &tv, nullptr);
-    emit consolePutData("end 3\n");
 
     // Deallocation
     if(t_rx != nullptr)
@@ -236,37 +233,30 @@ void UsbTransmitter::end()
         libusb_free_transfer(t_rx);
         t_rx = nullptr;
     }
-    emit consolePutData("end 5\n");
 
     if(t_tx != nullptr)
     {
         libusb_free_transfer(t_tx);
         t_tx = nullptr;
     }
-    emit consolePutData("end 6\n");
 
     if(handle)
     {
-        emit consolePutData("end 7\n");
         rc = libusb_release_interface(handle, DEV_INTF);
         if(rc < 0)
-            emit consolePutData(QString("Error libusb_release_interface: %1\n").arg(libusb_error_name(rc)));
+            emit consolePutData(QString("Error libusb_release_interface: %1\n").arg(libusb_error_name(rc)), 1);
     }
     if(handle)
     {
-        emit consolePutData("end 8\n");
         rc = libusb_attach_kernel_driver(handle, DEV_INTF);
         if(rc < 0)
-            emit consolePutData(QString("Error libusb_attach_kernel_driver: %1\n").arg(libusb_error_name(rc)));
+            emit consolePutData(QString("Error libusb_attach_kernel_driver: %1\n").arg(libusb_error_name(rc)), 1);
     }
     if(handle)
     {
-        emit consolePutData("end 9\n");
         libusb_close(handle);
     }
-    emit consolePutData("end 10\n");
     libusb_exit(nullptr);
-    emit consolePutData("end 12\n");
 }
 
 /** \ingroup asyncio
@@ -285,7 +275,7 @@ void LIBUSB_CALL UsbTransmitter::tx_callback(struct libusb_transfer *transfer)
 
     if(transfer == nullptr)
     {
-        emit consolePutData("Error tx_callback reported transfer = NULL\n");
+        emit consolePutData("Error tx_callback reported transfer = NULL\n", 1);
         return;
     }
 
@@ -295,14 +285,14 @@ void LIBUSB_CALL UsbTransmitter::tx_callback(struct libusb_transfer *transfer)
      * that the entire amount of requested data was transferred. */
     case LIBUSB_TRANSFER_COMPLETED:
     {
-        emit consolePutData(QString("Transfer completed, actual transmitted length %1\n").arg(transfer->actual_length));
+        emit consolePutData(QString("Transfer completed, actual transmitted length %1\n").arg(transfer->actual_length), 0);
         uint8_t len_cut = transfer->actual_length > 254 ? 254 : uint8_t(transfer->actual_length);
         QString d;
         for(uint8_t i = 0; i < len_cut; ++i)
             d.append(QString("%1 ").arg(transfer->buffer[i], 2, 16, QLatin1Char('0')));
             //emit consolePutData(QString("%1").arg(transfer->buffer[i], 2, 16, QLatin1Char('0')));
         d.append("\n");
-        emit consolePutData(d);
+        emit consolePutData(d, 0);
         d.clear();
 
 //todo add code to transmit more here
@@ -356,7 +346,7 @@ void LIBUSB_CALL UsbTransmitter::tx_callback(struct libusb_transfer *transfer)
 
     if(transfer->status != LIBUSB_TRANSFER_COMPLETED)
     {
-        emit consolePutData(QString("Error tx transfer: %1\n").arg(libusb_error_name(transfer->status)));
+        emit consolePutData(QString("Error tx transfer: %1\n").arg(libusb_error_name(transfer->status)), 1);
     }
 
     tx_complete_flag = 1;
@@ -366,7 +356,7 @@ void LIBUSB_CALL UsbTransmitter::rx_callback(struct libusb_transfer *transfer)
 {  
     if(transfer == nullptr)
     {
-        emit consolePutData("Error rx_callback reported transfer = NULL\n");
+        emit consolePutData("Error rx_callback reported transfer = NULL\n", 1);
         return;
     }
 
@@ -376,11 +366,11 @@ void LIBUSB_CALL UsbTransmitter::rx_callback(struct libusb_transfer *transfer)
     // Drop any received data from USB if needed
     if(usb_receiver_drop)
     {
-        emit consolePutData("USB dropped received data\n");
+        emit consolePutData("USB dropped received data\n", 0);
 
 //todo - we should call it in timer later - not in rx_callback! do not call anything like this here - check
         // Start receiving again
-        emit consolePutData("Start receiving again\n");
+        emit consolePutData("Start receiving again\n", 0);
         start_receive = true;
         return;
     }
@@ -391,14 +381,14 @@ void LIBUSB_CALL UsbTransmitter::rx_callback(struct libusb_transfer *transfer)
      * that the entire amount of requested data was transferred. */
     case LIBUSB_TRANSFER_COMPLETED:
     {
-        emit consolePutData(QString("Transfer completed, actual received length %1\n").arg(transfer->actual_length));
+        emit consolePutData(QString("Transfer completed, actual received length %1\n").arg(transfer->actual_length), 0);
         uint8_t len_cut = transfer->actual_length > 254 ? 254 : uint8_t(transfer->actual_length);
         QString d;
         for(uint8_t i = 0; i < len_cut; ++i)
             d.append(QString("%1 ").arg(transfer->buffer[i], 2, 16, QLatin1Char('0')));
             //emit consolePutData(QString("%1").arg(transfer->buffer[i], 2, 16, QLatin1Char('0')));
         d.append("\n");
-        emit consolePutData(d);
+        emit consolePutData(d, 0);
         d.clear();
 
         UserRxBuffer_len += transfer->actual_length;
@@ -412,7 +402,7 @@ void LIBUSB_CALL UsbTransmitter::rx_callback(struct libusb_transfer *transfer)
 
             if(header->packet_length > uint32_t(UserRxBuffer_len))
             {
-                emit consolePutData(QString("Parse error, packet length is too long %1\n").arg(header->packet_length));
+                emit consolePutData(QString("Parse error, packet length is too long %1\n").arg(header->packet_length), 1);
                 UserRxBuffer_len = 0;
                 break;
             }
@@ -423,7 +413,7 @@ void LIBUSB_CALL UsbTransmitter::rx_callback(struct libusb_transfer *transfer)
             // Packet data should be at least 1 byte in length
             if(header->packet_length < sizeof(USBheader_t) + 1)
             {
-                emit consolePutData(QString("Parse error, packet length is too short %1\n").arg(header->packet_length));
+                emit consolePutData(QString("Parse error, packet length is too short %1\n").arg(header->packet_length), 1);
                 UserRxBuffer_len = 0;
                 break;
             }
@@ -432,12 +422,12 @@ void LIBUSB_CALL UsbTransmitter::rx_callback(struct libusb_transfer *transfer)
             {
                 case SRP_LS_DATA:
                     // Retransmit data to PC
-                    emit consolePutData(QString("Received SRP LS DATA\n"));
+                    emit consolePutData(QString("Received SRP LS DATA\n"), 0);
                     emit postTxDataToSerialPort(UserRxBuffer + sizeof(USBheader_t), header->packet_length - sizeof(USBheader_t));
                     break;
                 case SRP_HS_DATA:
                     // todo
-                    emit consolePutData(QString("Received SRP HS DATA, todo\n"));
+                    emit consolePutData(QString("Received SRP HS DATA, todo\n"), 0);
                     break;
             }
 
@@ -454,7 +444,7 @@ void LIBUSB_CALL UsbTransmitter::rx_callback(struct libusb_transfer *transfer)
         else
         {
             // Continue receive
-            emit consolePutData(QString("Continue usb receive\n"));
+            emit consolePutData(QString("Continue usb receive\n"), 0);
             start_receive = true;
             //USB_StartReceive(&UserRxBuffer[UserRxBuffer_len]);
         }
@@ -492,14 +482,14 @@ void LIBUSB_CALL UsbTransmitter::rx_callback(struct libusb_transfer *transfer)
         UserRxBuffer_len = 0;
 
         if(transfer->status != LIBUSB_TRANSFER_CANCELLED)
-            emit consolePutData(QString("Error rx transfer: %1\n").arg(libusb_error_name(transfer->status)));
+            emit consolePutData(QString("Error rx transfer: %1\n").arg(libusb_error_name(transfer->status)), 1);
     }
 
     // If we are not receiving already
     if(rx_complete_flag)
     {
         // Start receiving again
-        emit consolePutData("Start receiving again\n");
+        emit consolePutData("Start receiving again\n", 0);
         start_receive = true;
     }
 }
@@ -510,7 +500,7 @@ bool UsbTransmitter::usbInitialization()
     int rc = libusb_init(&context);
     if(rc < 0)
     {
-        emit consolePutData(QString("Error Initializing libusb: %1\n").arg(libusb_error_name(rc)));
+        emit consolePutData(QString("Error Initializing libusb: %1\n").arg(libusb_error_name(rc)), 1);
         return false;
     }
     Q_ASSERT(rc == 0);
@@ -519,7 +509,7 @@ bool UsbTransmitter::usbInitialization()
     rc = libusb_set_option(nullptr, LIBUSB_OPTION_LOG_LEVEL, LIBUSB_LOG_LEVEL_WARNING);     // LIBUSB_LOG_LEVEL_DEBUG
     if(rc < 0)
     {
-        emit consolePutData(QString("Error libusb_set_option: %1\n").arg(libusb_error_name(rc)));
+        emit consolePutData(QString("Error libusb_set_option: %1\n").arg(libusb_error_name(rc)), 1);
         return false;
     }
 
@@ -538,7 +528,7 @@ bool UsbTransmitter::usbInitialization()
 
         emit consolePutData(QString("Vendor:Device = %1:%2\n")
                             .arg(desc.idVendor, 4, 16, QLatin1Char('0'))
-                            .arg(desc.idProduct, 4, 16, QLatin1Char('0')));
+                            .arg(desc.idProduct, 4, 16, QLatin1Char('0')), 1);
     }
 
     // Free device list
@@ -560,7 +550,7 @@ void UsbTransmitter::USB_Init()
             if(!r)
             {
                 // Try again
-                emit consolePutData(QString("Usb initialization failed, next attempt in %1 ms\n").arg(timeoutUsbInit_ms));
+                emit consolePutData(QString("Usb initialization failed, next attempt in %1 ms\n").arg(timeoutUsbInit_ms), 1);
                 emit usbInitTimeoutStart(timeoutUsbInit_ms);
                 return;
             }
@@ -577,13 +567,13 @@ void UsbTransmitter::USB_Init()
                 //printf("USB device %04x:%04x has been connected\n", VID, PID);
                 emit consolePutData(QString("USB device %1:%2 has been connected\n")
                                    .arg(VID, 4, 16, QLatin1Char('0'))
-                                   .arg(PID, 4, 16, QLatin1Char('0')));
+                                   .arg(PID, 4, 16, QLatin1Char('0')), 1);
             }
             else
             {
                 emit consolePutData(QString("USB device %1:%2 has not been connected\n")
                                    .arg(VID, 4, 16, QLatin1Char('0'))
-                                   .arg(PID, 4, 16, QLatin1Char('0')));
+                                   .arg(PID, 4, 16, QLatin1Char('0')), 1);
                 if(handle)
                 {
                     //m_usb->end(handle);
@@ -591,7 +581,7 @@ void UsbTransmitter::USB_Init()
                     libusb_close(handle);
                 }
                 // Try again
-                emit consolePutData(QString("Usb initialization failed, next attempt in %1 ms\n").arg(timeoutUsbInit_ms));
+                emit consolePutData(QString("Usb initialization failed, next attempt in %1 ms\n").arg(timeoutUsbInit_ms), 1);
                 emit usbInitTimeoutStart(timeoutUsbInit_ms);
                 return;
             }
@@ -627,17 +617,17 @@ void UsbTransmitter::USB_Init()
                 {
                     //fprintf(stderr, "Error libusb_set_option: %s\n", libusb_error_name(rc));
                     emit consolePutData(QString("Error libusb_set_option: %1\n")
-                                       .arg(libusb_error_name(rc)));
+                                       .arg(libusb_error_name(rc)), 1);
                 }
 #endif
                 else if(rc == LIBUSB_ERROR_NO_DEVICE)
                 {
-                    emit consolePutData("USB device has been disconnected\n");
-                    emit consolePutData(QString("Error libusb_kernel_driver_active: %1\n").arg(libusb_error_name(rc)));
+                    emit consolePutData("USB device has been disconnected\n", 1);
+                    emit consolePutData(QString("Error libusb_kernel_driver_active: %1\n").arg(libusb_error_name(rc)), 1);
                 }
 
                 // Try again
-                emit consolePutData(QString("Usb initialization failed, next attempt in %1 ms\n").arg(timeoutUsbInit_ms));
+                emit consolePutData(QString("Usb initialization failed, next attempt in %1 ms\n").arg(timeoutUsbInit_ms), 1);
                 emit usbInitTimeoutStart(timeoutUsbInit_ms);
                 return;
             }
@@ -652,11 +642,11 @@ void UsbTransmitter::USB_Init()
 
             if(rc != 0)
             {
-                emit consolePutData("Interface error");
-                emit consolePutData(QString("Error libusb_claim_interface: %1\n").arg(libusb_error_name(rc)));
+                emit consolePutData("Interface error", 1);
+                emit consolePutData(QString("Error libusb_claim_interface: %1\n").arg(libusb_error_name(rc)), 1);
 
                 // Try again
-                emit consolePutData(QString("Usb initialization failed, next attempt in %1 ms\n").arg(timeoutUsbInit_ms));
+                emit consolePutData(QString("Usb initialization failed, next attempt in %1 ms\n").arg(timeoutUsbInit_ms), 1);
                 emit usbInitTimeoutStart(timeoutUsbInit_ms);
             }
 
@@ -669,8 +659,7 @@ void UsbTransmitter::USB_Init()
             USB_ReceiveTransmitInit();
 
             // Start receiving
-            emit consolePutData("Start receiving for the first time\n");
-            //USB_StartReceive(static_cast<uint8_t*>(UserRxBuffer));    // Start receiving
+            emit consolePutData("Start receiving for the first time\n", 0);
             start_receive = true;
             s = UsbTransmitter::INIT_END;
             [[fallthrough]];
@@ -683,7 +672,7 @@ void UsbTransmitter::USB_Init()
 
 void UsbTransmitter::USB_Reconnect()
 {
-    emit consolePutData("USB reconnect attempt...\n");
+    emit consolePutData("USB reconnect attempt...\n", 1);
 
     USB_StopReceive();
     USB_StopTransmit();

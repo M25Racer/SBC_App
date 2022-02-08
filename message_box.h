@@ -42,6 +42,15 @@ public:
     const uint8_t MOD_ADDR 	= 0x54;
     const uint8_t MASTER_ADDR = 0x4D;
 
+    const uint8_t PT_ADDR    = 0x44;
+    const uint8_t SILS_ADDR  = 0x45;
+    const uint8_t SFBS_ADDR  = 0x46;
+    const uint8_t NAV_ADDR   = 0x47;
+    const uint8_t ReCap_ADDR = 0x52;
+    const uint8_t XYC_ADDR   = 0x43;
+    const uint8_t HEX_ADDR   = 0x48;
+    const uint8_t Ind1h_ADDR = 0x21;
+
     const uint32_t RX_HEADER_LENGTH = 6;
     const uint32_t TX_HEADER_LENGTH = 7;
     const uint32_t DATA_ADDRESS_LENGTH = 4;

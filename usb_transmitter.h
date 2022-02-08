@@ -18,7 +18,7 @@ public:
     Q_OBJECT
 
 signals:
-    void consolePutData(const QString &data);
+    void consolePutData(const QString &data, uint8_t priority);
     void postTxDataToSerialPort(const uint8_t *p_data, const int len);
     void usbInitTimeoutStart(const int timeout_ms);
 

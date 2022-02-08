@@ -89,7 +89,7 @@ private slots:
     void postTxData(const uint8_t *p_data, const int length);
     void postTxDataToSTM32H7(const uint8_t *p_data, const int length);
     void handleError(QSerialPort::SerialPortError error);
-    void consolePutData(const QString &data);
+    void consolePutData(const QString &data, uint8_t priority);
     void timeoutSerialPortRx();
     void timeoutSerialPortReconnect();
     void timeoutUsbPollCallback();
@@ -127,6 +127,9 @@ private:
     const int timeoutSerialPortReconnect_ms = 1000;
     const int timeoutUsbPoll_ms = 15;
     //const int timeoutUsbInit_ms = 1000;
+
+    uint8_t quick_answer[2] = {0x00, 0x1d};
+    bool transmit_quick_answer = false;
 };
 
 #endif // MAINWINDOW_H

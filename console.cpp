@@ -71,12 +71,15 @@ Console::Console(QWidget *parent) :
     out.setDevice(m_logFile.data());
 }
 
-void Console::putData(const QString &data)
+void Console::putData(const QString &data, uint8_t priority)
 {
-    insertPlainText(data);
+    if(priority)
+    {
+        insertPlainText(data);
 
-    QScrollBar *bar = verticalScrollBar();
-    bar->setValue(bar->maximum());
+        QScrollBar *bar = verticalScrollBar();
+        bar->setValue(bar->maximum());
+    }
 
     // Log to file
 

@@ -62,7 +62,7 @@ int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
     MainWindow w;
-//    p_w = &w; //
+//    p_w = &w;
 
     // Init SRP variables
     mod_status_reg = ready_status;
