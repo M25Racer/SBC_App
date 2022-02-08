@@ -279,6 +279,19 @@ void MainWindow::timeoutUsbPollCallback()
     tv.tv_sec = 0;
     tv.tv_usec = 0;
 
+    if(m_usb->start_transmit)
+    {
+        m_usb->start_transmit = false;
+        m_usb->USB_StartTransmit();
+    }
+
+    if(m_usb->start_receive)
+    {
+        // Start or continue receive
+        m_usb->start_receive = false;
+        m_usb->USB_StartReceive(&m_usb->UserRxBuffer[m_usb->UserRxBuffer_len]);
+    }
+
     if(m_usb->transmit_in_progress)
     {
         if(!m_usb->tx_complete_flag)
@@ -325,20 +338,6 @@ void MainWindow::timeoutUsbPollCallback()
         {
             m_usb->receive_in_progress = false;
         }
-    }
-
-    if(m_usb->start_transmit)
-    {
-        m_usb->start_transmit = false;
-        m_usb->USB_StartTransmit();
-    }
-
-    if(m_usb->start_receive)
-    {
-        // Start or continue receive
-        m_usb->start_receive = false;
-        //m_usb->USB_StartReceive(static_cast<uint8_t*>(m_usb->UserRxBuffer));
-        m_usb->USB_StartReceive(&m_usb->UserRxBuffer[m_usb->UserRxBuffer_len]);
     }
 }
 
@@ -396,9 +395,7 @@ void MainWindow::readDataSerialPort()
         addr == m_message_box->HEX_ADDR ||
         addr == m_message_box->Ind1h_ADDR)
     {
-//        uint8_t quick_answer[2];
         quick_answer[0] = addr;
-//        quick_answer[1] = 0x1d;
         transmit_quick_answer = true;
     }
     // If package for SRP

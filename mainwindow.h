@@ -125,7 +125,7 @@ private:
 
 //    const int timeoutSerialPortRx_ms = 1;//10;              // timeout for serial port receiver (max time between rx packets)
     const int timeoutSerialPortReconnect_ms = 1000;
-    const int timeoutUsbPoll_ms = 15;
+    const int timeoutUsbPoll_ms = 1;//15;
     //const int timeoutUsbInit_ms = 1000;
 
     uint8_t quick_answer[2] = {0x00, 0x1d};
