@@ -99,7 +99,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     // Clear serial port tx & rx buffer
     TtyUserRxBuffer.clear();
-    TtyUserTxBuffer.clear();
+    //TtyUserTxBuffer.clear();
 
     // Timers
     // Serial port rx timeout timer
@@ -132,7 +132,7 @@ MainWindow::MainWindow(QWidget *parent) :
                        .arg(version->micro).arg(version->nano), 1);
 
     // Start timer for continuous usb initialization attempts
-    timerUsbInit->start(100);
+    timerUsbInit->start(m_usb->timeoutUsbInit_ms);
 }
 
 MainWindow::~MainWindow()
@@ -274,10 +274,6 @@ void MainWindow::usbInitTimeoutStart(const int timeout_ms)
 void MainWindow::timeoutUsbPollCallback()
 {
     int rc = 0;
-
-    struct timeval tv;
-    tv.tv_sec = 0;
-    tv.tv_usec = 0;
 
     if(m_usb->start_transmit)
     {
@@ -527,11 +523,8 @@ void MainWindow::postTxData(const uint8_t *p_data, const int length)
         return;
     }
 
-    TtyUserTxBuffer.clear();
-    TtyUserTxBuffer.append((char*)p_data, length);
-
+    m_serial->write((const char*)p_data, length);
     m_console->putData("SP Transmit " + QString::number(length) + " bytes\n", 0);
-    m_serial->write(TtyUserTxBuffer);
 }
 
 // USB to STM32H7 board
@@ -545,7 +538,6 @@ void MainWindow::postTxDataToSTM32H7(const uint8_t *p_data, const int length)
         return;
     }
 
-    //USB_Protocol packet;    // todo remove 'packet' or remove UserBufferTx
     USBheader_t header;
 
     if(len + sizeof(header) > int(sizeof(m_usb->UserTxBuffer)))

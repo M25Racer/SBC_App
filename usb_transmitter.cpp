@@ -113,7 +113,6 @@ void UsbTransmitter::USB_StartReceive(uint8_t *p_rx_buffer_offset)
 void UsbTransmitter::USB_StartTransmit()
 {
     int rc = 0;
-    //int n_iso_packets = 0;
 
     if(t_tx == nullptr)
     {
@@ -130,6 +129,7 @@ void UsbTransmitter::USB_StartTransmit()
     // Filling
     tx_complete_flag = 0;
     libusb_fill_bulk_transfer(t_tx, handle, EP_OUT, UserTxBuffer, UserTxBuffer_len, static_tx_callback, this, 1000);
+    //libusb_fill_bulk_transfer(t_tx, handle, EP_OUT, UserTxBuffer, UserTxBuffer_len, static_tx_callback, this, 100);
 
     // Submission
     rc = libusb_submit_transfer(t_tx);
@@ -353,7 +353,11 @@ void LIBUSB_CALL UsbTransmitter::tx_callback(struct libusb_transfer *transfer)
 }
 
 void LIBUSB_CALL UsbTransmitter::rx_callback(struct libusb_transfer *transfer)
-{  
+{
+    // Stop usb polling timer
+
+    QString d;
+
     if(transfer == nullptr)
     {
         emit consolePutData("Error rx_callback reported transfer = NULL\n", 1);
@@ -366,11 +370,7 @@ void LIBUSB_CALL UsbTransmitter::rx_callback(struct libusb_transfer *transfer)
     // Drop any received data from USB if needed
     if(usb_receiver_drop)
     {
-        emit consolePutData("USB dropped received data\n", 0);
-
-//todo - we should call it in timer later - not in rx_callback! do not call anything like this here - check
-        // Start receiving again
-        emit consolePutData("Start receiving again\n", 0);
+        emit consolePutData("USB dropped received data\nStart receiving again\n", 0);
         start_receive = true;
         return;
     }
@@ -383,7 +383,6 @@ void LIBUSB_CALL UsbTransmitter::rx_callback(struct libusb_transfer *transfer)
     {
         emit consolePutData(QString("Transfer completed, actual received length %1\n").arg(transfer->actual_length), 0);
         uint8_t len_cut = transfer->actual_length > 254 ? 254 : uint8_t(transfer->actual_length);
-        QString d;
         for(uint8_t i = 0; i < len_cut; ++i)
             d.append(QString("%1 ").arg(transfer->buffer[i], 2, 16, QLatin1Char('0')));
             //emit consolePutData(QString("%1").arg(transfer->buffer[i], 2, 16, QLatin1Char('0')));

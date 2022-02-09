@@ -112,7 +112,7 @@ private:
     UsbTransmitter *m_usb = nullptr;
 
     QByteArray TtyUserRxBuffer;
-    QByteArray TtyUserTxBuffer;
+    //QByteArray TtyUserTxBuffer;
 
     quint64 TtyUserRxBuffer_MaxSize = 4096;
     quint64 TtyUserRxBuffer_len = 0;
@@ -123,13 +123,14 @@ private:
     QTimer *timerUsbInit;
     bool timeoutSerialPort = false;
 
-//    const int timeoutSerialPortRx_ms = 1;//10;              // timeout for serial port receiver (max time between rx packets)
+    // const int timeoutSerialPortRx_ms = 1;//10;              // timeout for serial port receiver (max time between rx packets)
     const int timeoutSerialPortReconnect_ms = 1000;
-    const int timeoutUsbPoll_ms = 1;//15;
-    //const int timeoutUsbInit_ms = 1000;
+    const int timeoutUsbPoll_ms = 0;    // A timer with an interval of 0 will time out as soon as there are no more events to process
 
     uint8_t quick_answer[2] = {0x00, 0x1d};
     bool transmit_quick_answer = false;
+
+    struct timeval tv = {0, 0};
 };
 
 #endif // MAINWINDOW_H
