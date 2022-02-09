@@ -52,7 +52,6 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include "console.h"
-//#include "settingsdialog.h"
 #include "../SRP_HS_USB_PROTOCOL/SRP_HS_USB_Protocol.h"
 
 #include <QLabel>
@@ -68,8 +67,8 @@ MainWindow::MainWindow(QWidget *parent) :
     m_status(new QLabel),
     m_console(new Console),
     m_serial(new QSerialPort(this)),
-    m_message_box(new MessageBox),
-    m_usb(new UsbTransmitter)
+    m_message_box(new MessageBox)
+    //m_usb(new UsbTransmitter)
 {
     m_ui->setupUi(this);
     m_console->setEnabled(false);
@@ -90,9 +89,13 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(m_console, &Console::getData, this, &MainWindow::writeDataSerialPort);
     connect(m_message_box, &MessageBox::postData, this, &MainWindow::postTxData);
     connect(m_message_box, &MessageBox::postDataToStm32H7, this, &MainWindow::postTxDataToSTM32H7);
-    connect(m_usb, &UsbTransmitter::postTxDataToSerialPort, this, &MainWindow::postTxData);
-    connect(m_usb, &UsbTransmitter::consolePutData, this, &MainWindow::consolePutData);
-    connect(m_usb, &UsbTransmitter::usbInitTimeoutStart, this, &MainWindow::usbInitTimeoutStart);
+//    connect(m_usb, &UsbTransmitter::postTxDataToSerialPort, this, &MainWindow::postTxData);
+//    connect(m_usb, &UsbTransmitter::consolePutData, this, &MainWindow::consolePutData);
+//    connect(m_usb, &UsbTransmitter::usbInitTimeoutStart, this, &MainWindow::usbInitTimeoutStart);
+    connect(&m_usb_thread, &UsbWorkThread::postTxDataToSerialPort, this, &MainWindow::postTxData);
+    connect(&m_usb_thread, &UsbWorkThread::consolePutData, this, &MainWindow::consolePutData);
+    connect(&m_usb_thread, &UsbWorkThread::usbInitTimeoutStart, this, &MainWindow::usbInitTimeoutStart);
+
 
     m_console->putData("SBC Application\n", 1);
     m_console->putData("Opening serial port...\n", 1);
@@ -117,9 +120,9 @@ MainWindow::MainWindow(QWidget *parent) :
     timerUsbInit->setSingleShot(true);
     connect(timerUsbInit, SIGNAL(timeout()), this, SLOT(timeoutUsbInitCallback()));
 
-    // Usb poll timer
-    timerUsbPoll = new QTimer();
-    connect(timerUsbPoll, SIGNAL(timeout()), this, SLOT(timeoutUsbPollCallback()));
+//    // Usb poll timer
+//    timerUsbPoll = new QTimer();
+//    connect(timerUsbPoll, SIGNAL(timeout()), this, SLOT(timeoutUsbPollCallback()));
 
     openSerialPort();
 
@@ -132,18 +135,18 @@ MainWindow::MainWindow(QWidget *parent) :
                        .arg(version->micro).arg(version->nano), 1);
 
     // Start timer for continuous usb initialization attempts
-    timerUsbInit->start(m_usb->timeoutUsbInit_ms);
+    timerUsbInit->start(m_usb_thread.timeoutUsbInit_ms);
 }
 
 MainWindow::~MainWindow()
 {
-    timerUsbPoll->stop();
+//    timerUsbPoll->stop();
     timerUsbInit->stop();
     timerReconnect->stop();
     timerRxTimeout->stop();
 
     closeSerialPort();
-    m_usb->end();
+    m_usb_thread.end();
 
     m_console->Close();
     delete m_ui;
@@ -257,12 +260,13 @@ void MainWindow::timeoutSerialPortRx()
 
 void MainWindow::timeoutUsbInitCallback()
 {
-    m_usb->USB_Init();
+    m_usb_thread.USB_Init();
 
-    if(m_usb->s == UsbTransmitter::INIT_END)
+    if(m_usb_thread.s == UsbWorkThread::INIT_END)
     {
         // Start LibUSB polling timer
-        timerUsbPoll->start(timeoutUsbPoll_ms);
+        //timerUsbPoll->start(timeoutUsbPoll_ms);
+        m_usb_thread.USB_ThreadStart();
     }
 }
 
@@ -271,71 +275,71 @@ void MainWindow::usbInitTimeoutStart(const int timeout_ms)
     timerUsbInit->start(timeout_ms);
 }
 
-void MainWindow::timeoutUsbPollCallback()
-{
-    int rc = 0;
+//void MainWindow::timeoutUsbPollCallback()
+//{
+//    int rc = 0;
 
-    if(m_usb->start_transmit)
-    {
-        m_usb->start_transmit = false;
-        m_usb->USB_StartTransmit();
-    }
+//    if(m_usb->start_transmit)
+//    {
+//        m_usb->start_transmit = false;
+//        m_usb->USB_StartTransmit();
+//    }
 
-    if(m_usb->start_receive)
-    {
-        // Start or continue receive
-        m_usb->start_receive = false;
-        m_usb->USB_StartReceive(&m_usb->UserRxBuffer[m_usb->UserRxBuffer_len]);
-    }
+//    if(m_usb->start_receive)
+//    {
+//        // Start or continue receive
+//        m_usb->start_receive = false;
+//        m_usb->USB_StartReceive(&m_usb->UserRxBuffer[m_usb->UserRxBuffer_len]);
+//    }
 
-    if(m_usb->transmit_in_progress)
-    {
-        if(!m_usb->tx_complete_flag)
-        {
-            /* Handle Events */
-            if(m_usb->context != nullptr)
-            {
-                // If a zero timeval is passed, this function will handle any already-pending events and then immediately return in non-blocking style.
-                rc = libusb_handle_events_timeout_completed(m_usb->context, &tv, nullptr);
+//    if(m_usb->transmit_in_progress)
+//    {
+//        if(!m_usb->tx_complete_flag)
+//        {
+//            /* Handle Events */
+//            if(m_usb->context != nullptr)
+//            {
+//                // If a zero timeval is passed, this function will handle any already-pending events and then immediately return in non-blocking style.
+//                rc = libusb_handle_events_timeout_completed(m_usb->context, &tv, nullptr);
 
-                if(rc != LIBUSB_SUCCESS)
-                {
-                    m_console->putData(QString("Usb Transfer Error: %1\n").arg(libusb_error_name(rc)), 1);
-                }
-            }
-        }
+//                if(rc != LIBUSB_SUCCESS)
+//                {
+//                    m_console->putData(QString("Usb Transfer Error: %1\n").arg(libusb_error_name(rc)), 1);
+//                }
+//            }
+//        }
 
-        if(m_usb->tx_complete_flag)
-        {
-            m_usb->transmit_in_progress = false;
-        }
-    }
+//        if(m_usb->tx_complete_flag)
+//        {
+//            m_usb->transmit_in_progress = false;
+//        }
+//    }
 
-    if(m_usb->receive_in_progress)
-    {
-        if(!m_usb->rx_complete_flag)
-        {
-            /* Handle Events */
-            if(m_usb->context != nullptr)
-            {
-                // If a zero timeval is passed, this function will handle any already-pending events and then immediately return in non-blocking style.
-                rc = libusb_handle_events_timeout_completed(m_usb->context, &tv, nullptr);
+//    if(m_usb->receive_in_progress)
+//    {
+//        if(!m_usb->rx_complete_flag)
+//        {
+//            /* Handle Events */
+//            if(m_usb->context != nullptr)
+//            {
+//                // If a zero timeval is passed, this function will handle any already-pending events and then immediately return in non-blocking style.
+//                rc = libusb_handle_events_timeout_completed(m_usb->context, &tv, nullptr);
 
-                if(rc != LIBUSB_SUCCESS)
-                {
-                    m_console->putData(QString("Transfer Error: %1\n").arg(libusb_error_name(rc)), 1);
-                    //fprintf(stderr, "Transfer Error: %s\n", libusb_error_name(rc));
-                    //break;
-                }
-            }
-        }
+//                if(rc != LIBUSB_SUCCESS)
+//                {
+//                    m_console->putData(QString("Transfer Error: %1\n").arg(libusb_error_name(rc)), 1);
+//                    //fprintf(stderr, "Transfer Error: %s\n", libusb_error_name(rc));
+//                    //break;
+//                }
+//            }
+//        }
 
-        if(m_usb->rx_complete_flag)
-        {
-            m_usb->receive_in_progress = false;
-        }
-    }
-}
+//        if(m_usb->rx_complete_flag)
+//        {
+//            m_usb->receive_in_progress = false;
+//        }
+//    }
+//}
 
 void MainWindow::timeoutSerialPortReconnect()
 {
@@ -359,16 +363,7 @@ void MainWindow::readDataSerialPort()
     // Serial port data received (from PC)
 
     // Drop any USB received data to prevent old packets been transmitted to serial port (to PC)
-    m_usb->usb_receiver_drop = true;
-
-//    // Stop rx timeout
-//    timerRxTimeout->stop();
-
-    // Stop USB receive
-//    m_usb->USB_StopReceive();
-
-//    // Stop usb poll timer
-//    timerUsbPoll->stop();
+    m_usb_thread.usb_receiver_drop = true;
 
     qint64 length_rx = m_serial->bytesAvailable();
     if(TtyUserRxBuffer_len)
@@ -417,7 +412,7 @@ void MainWindow::readDataSerialPort()
             serialPortRxCleanup();
 
             // Unlock USB receiver
-            m_usb->usb_receiver_drop = false;
+            m_usb_thread.usb_receiver_drop = false;
             return;
         }
 
@@ -431,7 +426,7 @@ void MainWindow::readDataSerialPort()
             serialPortRxCleanup();
 
             // Unlock USB receiver
-            m_usb->usb_receiver_drop = false;
+            m_usb_thread.usb_receiver_drop = false;
             return;
         }
 
@@ -439,7 +434,7 @@ void MainWindow::readDataSerialPort()
         if(m_message_box->message_box_srp((uint8_t*)TtyUserRxBuffer.data(), uint16_t(TtyUserRxBuffer_len), m_message_box->MASTER_ADDR, m_message_box->SRP_ADDR))
         {
             // Unlock USB receiver
-            m_usb->usb_receiver_drop = false;
+            m_usb_thread.usb_receiver_drop = false;
         }
         else
         {
@@ -540,10 +535,10 @@ void MainWindow::postTxDataToSTM32H7(const uint8_t *p_data, const int length)
 
     USBheader_t header;
 
-    if(len + sizeof(header) > int(sizeof(m_usb->UserTxBuffer)))
+    if(len + sizeof(header) > int(sizeof(m_usb_thread.UserTxBuffer)))
     {
         m_console->putData("Error postTxDataToSTM32H7 reported length is too long\n", 1);
-        len = sizeof(m_usb->UserTxBuffer);
+        len = sizeof(m_usb_thread.UserTxBuffer);
     }
 
     if(len > int(sizeof(USB_Protocol::data)))
@@ -553,19 +548,19 @@ void MainWindow::postTxDataToSTM32H7(const uint8_t *p_data, const int length)
     }
 
     // Cancel ongoing transfer (if any)
-    m_usb->USB_StopTransmit();
+    m_usb_thread.USB_StopTransmit();
 //    timerUsbPoll->QTimer::qt_metacall(QMetaObject::InvokeMetaMethod, 5, {});    // force timeout hack
 
-    m_usb->UserTxBuffer_len = len + sizeof(header);
+    m_usb_thread.UserTxBuffer_len = len + sizeof(header);
 
-    header.packet_length = m_usb->UserTxBuffer_len;
+    header.packet_length = m_usb_thread.UserTxBuffer_len;
     header.type = SRP_LS_DATA;
     header.cmd = 0;  // Don't care
 
-    memcpy(m_usb->UserTxBuffer, (uint8_t*)&header, sizeof(header));
-    memcpy(m_usb->UserTxBuffer + sizeof(header), p_data, len);
+    memcpy(m_usb_thread.UserTxBuffer, (uint8_t*)&header, sizeof(header));
+    memcpy(m_usb_thread.UserTxBuffer + sizeof(header), p_data, len);
 
-    m_console->putData("Transmit to H7 " + QString::number(m_usb->UserTxBuffer_len) + " bytes\n", 0);
-    m_usb->start_transmit = true;
-    timerUsbPoll->QTimer::qt_metacall(QMetaObject::InvokeMetaMethod, 5, {});    // force timeout hack
+    m_console->putData("Transmit to H7 " + QString::number(m_usb_thread.UserTxBuffer_len) + " bytes\n", 0);
+    m_usb_thread.start_transmit = true;
+    //timerUsbPoll->QTimer::qt_metacall(QMetaObject::InvokeMetaMethod, 5, {});    // force timeout hack
 }

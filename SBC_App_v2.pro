@@ -12,7 +12,8 @@ SOURCES += \
     settingsdialog.cpp \
     console.cpp \
     statistics.cpp \
-    usb_transmitter.cpp
+    usb_transmitter.cpp \
+    usb_workthread.cpp
 
 #-------------------------------------------------
 # Add LibUSB library
@@ -73,7 +74,8 @@ HEADERS += \
     settingsdialog.h \
     console.h \
     statistics.h \
-    usb_transmitter.h
+    usb_transmitter.h \
+    usb_workthread.h
 
 FORMS += \
     mainwindow.ui

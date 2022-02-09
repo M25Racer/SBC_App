@@ -55,7 +55,8 @@
 #include <QMainWindow>
 #include <QSerialPort>
 #include <message_box.h>
-#include <usb_transmitter.h>
+//#include <usb_transmitter.h>
+#include  <usb_workthread.h>
 
 QT_BEGIN_NAMESPACE
 
@@ -70,7 +71,7 @@ QT_END_NAMESPACE
 class Console;
 class SettingsDialog;
 class MessageBox;
-class UsbTransmitter;
+//class UsbTransmitter;
 
 class MainWindow : public QMainWindow
 {
@@ -92,7 +93,7 @@ private slots:
     void consolePutData(const QString &data, uint8_t priority);
     void timeoutSerialPortRx();
     void timeoutSerialPortReconnect();
-    void timeoutUsbPollCallback();
+    //void timeoutUsbPollCallback();
     void timeoutUsbInitCallback();
     void usbInitTimeoutStart(const int timeout_ms);
 
@@ -105,11 +106,12 @@ private:
 
     Ui::MainWindow *m_ui = nullptr;
     QLabel *m_status = nullptr;
+
     Console *m_console = nullptr;
-    //SettingsDialog *m_settings = nullptr;
     QSerialPort *m_serial = nullptr;
     MessageBox *m_message_box = nullptr;
-    UsbTransmitter *m_usb = nullptr;
+    //UsbTransmitter *m_usb = nullptr;
+    UsbWorkThread m_usb_thread;
 
     QByteArray TtyUserRxBuffer;
     //QByteArray TtyUserTxBuffer;
