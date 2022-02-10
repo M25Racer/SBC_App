@@ -22,7 +22,7 @@ signals:
 //    void error(const QString &s);
 //    void timeout(const QString &s);
 
-    void consolePutData(const QString &data, uint8_t priority);
+    void consolePutData(const QString &data, quint8 priority);
     void postTxDataToSerialPort(const uint8_t *p_data, const int len);
     void usbInitTimeoutStart(const int timeout_ms);
 

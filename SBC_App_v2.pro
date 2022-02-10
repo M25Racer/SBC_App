@@ -12,7 +12,6 @@ SOURCES += \
     settingsdialog.cpp \
     console.cpp \
     statistics.cpp \
-    usb_transmitter.cpp \
     usb_workthread.cpp
 
 #-------------------------------------------------
@@ -74,7 +73,6 @@ HEADERS += \
     settingsdialog.h \
     console.h \
     statistics.h \
-    usb_transmitter.h \
     usb_workthread.h
 
 FORMS += \

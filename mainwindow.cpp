@@ -93,7 +93,7 @@ MainWindow::MainWindow(QWidget *parent) :
 //    connect(m_usb, &UsbTransmitter::consolePutData, this, &MainWindow::consolePutData);
 //    connect(m_usb, &UsbTransmitter::usbInitTimeoutStart, this, &MainWindow::usbInitTimeoutStart);
     connect(&m_usb_thread, &UsbWorkThread::postTxDataToSerialPort, this, &MainWindow::postTxData);
-    connect(&m_usb_thread, &UsbWorkThread::consolePutData, this, &MainWindow::consolePutData);
+    connect(&m_usb_thread, &UsbWorkThread::consolePutData, this, &MainWindow::consolePutData, Qt::ConnectionType::QueuedConnection);
     connect(&m_usb_thread, &UsbWorkThread::usbInitTimeoutStart, this, &MainWindow::usbInitTimeoutStart);
 
 
@@ -120,10 +120,6 @@ MainWindow::MainWindow(QWidget *parent) :
     timerUsbInit->setSingleShot(true);
     connect(timerUsbInit, SIGNAL(timeout()), this, SLOT(timeoutUsbInitCallback()));
 
-//    // Usb poll timer
-//    timerUsbPoll = new QTimer();
-//    connect(timerUsbPoll, SIGNAL(timeout()), this, SLOT(timeoutUsbPollCallback()));
-
     openSerialPort();
 
     // LibUsb initialization, init usb device
@@ -140,7 +136,6 @@ MainWindow::MainWindow(QWidget *parent) :
 
 MainWindow::~MainWindow()
 {
-//    timerUsbPoll->stop();
     timerUsbInit->stop();
     timerReconnect->stop();
     timerRxTimeout->stop();
@@ -152,7 +147,7 @@ MainWindow::~MainWindow()
     delete m_ui;
 }
 
-void MainWindow::consolePutData(const QString &data, uint8_t priority)
+void MainWindow::consolePutData(const QString &data, quint8 priority)
 {
     if(m_console == nullptr)
         return;
@@ -264,8 +259,7 @@ void MainWindow::timeoutUsbInitCallback()
 
     if(m_usb_thread.s == UsbWorkThread::INIT_END)
     {
-        // Start LibUSB polling timer
-        //timerUsbPoll->start(timeoutUsbPoll_ms);
+        // Start LibUSB polling thread
         m_usb_thread.USB_ThreadStart();
     }
 }
@@ -549,7 +543,6 @@ void MainWindow::postTxDataToSTM32H7(const uint8_t *p_data, const int length)
 
     // Cancel ongoing transfer (if any)
     m_usb_thread.USB_StopTransmit();
-//    timerUsbPoll->QTimer::qt_metacall(QMetaObject::InvokeMetaMethod, 5, {});    // force timeout hack
 
     m_usb_thread.UserTxBuffer_len = len + sizeof(header);
 
@@ -562,5 +555,4 @@ void MainWindow::postTxDataToSTM32H7(const uint8_t *p_data, const int length)
 
     m_console->putData("Transmit to H7 " + QString::number(m_usb_thread.UserTxBuffer_len) + " bytes\n", 0);
     m_usb_thread.start_transmit = true;
-    //timerUsbPoll->QTimer::qt_metacall(QMetaObject::InvokeMetaMethod, 5, {});    // force timeout hack
 }

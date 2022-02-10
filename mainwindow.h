@@ -90,7 +90,7 @@ private slots:
     void postTxData(const uint8_t *p_data, const int length);
     void postTxDataToSTM32H7(const uint8_t *p_data, const int length);
     void handleError(QSerialPort::SerialPortError error);
-    void consolePutData(const QString &data, uint8_t priority);
+    void consolePutData(const QString &data, quint8 priority);
     void timeoutSerialPortRx();
     void timeoutSerialPortReconnect();
     //void timeoutUsbPollCallback();
