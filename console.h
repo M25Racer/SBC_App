@@ -62,7 +62,7 @@ class Console : public QPlainTextEdit
     Q_OBJECT
 
 signals:
-    void getData(const QByteArray &data);
+    //void getData(const QByteArray &data);
 
 public:
     explicit Console(QWidget *parent = nullptr);

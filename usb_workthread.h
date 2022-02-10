@@ -18,10 +18,6 @@ class UsbWorkThread : public QThread
     Q_OBJECT
 
 signals:
-//    void response(const QString &s);
-//    void error(const QString &s);
-//    void timeout(const QString &s);
-
     void consolePutData(const QString &data, quint8 priority);
     void postTxDataToSerialPort(const uint8_t *p_data, const int len);
     void usbInitTimeoutStart(const int timeout_ms);
@@ -29,8 +25,6 @@ signals:
 public:
     explicit UsbWorkThread(QObject *parent = nullptr);
     ~UsbWorkThread();
-
-    //void transaction(const QString &portName, int waitTimeout, const QString &request);
 
     void USB_ReceiveTransmitInit();
     void USB_StartReceive(uint8_t *p_rx_buffer_offset);

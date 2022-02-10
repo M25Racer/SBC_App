@@ -55,8 +55,7 @@
 #include <QMainWindow>
 #include <QSerialPort>
 #include <message_box.h>
-//#include <usb_transmitter.h>
-#include  <usb_workthread.h>
+#include <usb_workthread.h>
 
 QT_BEGIN_NAMESPACE
 
@@ -71,7 +70,6 @@ QT_END_NAMESPACE
 class Console;
 class SettingsDialog;
 class MessageBox;
-//class UsbTransmitter;
 
 class MainWindow : public QMainWindow
 {
@@ -85,15 +83,13 @@ private slots:
     bool openSerialPort();
     void closeSerialPort();
     void about();
-    void writeDataSerialPort(const QByteArray &data);
     void readDataSerialPort();
-    void postTxData(const uint8_t *p_data, const int length);
-    void postTxDataToSTM32H7(const uint8_t *p_data, const int length);
+    void transmitDataSerialPort(const uint8_t *p_data, const int length);
+    void postTxDataSTM(const uint8_t *p_data, const int length);
     void handleError(QSerialPort::SerialPortError error);
     void consolePutData(const QString &data, quint8 priority);
     void timeoutSerialPortRx();
     void timeoutSerialPortReconnect();
-    //void timeoutUsbPollCallback();
     void timeoutUsbInitCallback();
     void usbInitTimeoutStart(const int timeout_ms);
 
@@ -110,11 +106,9 @@ private:
     Console *m_console = nullptr;
     QSerialPort *m_serial = nullptr;
     MessageBox *m_message_box = nullptr;
-    //UsbTransmitter *m_usb = nullptr;
     UsbWorkThread m_usb_thread;
 
     QByteArray TtyUserRxBuffer;
-    //QByteArray TtyUserTxBuffer;
 
     quint64 TtyUserRxBuffer_MaxSize = 4096;
     quint64 TtyUserRxBuffer_len = 0;
@@ -127,7 +121,6 @@ private:
 
     // const int timeoutSerialPortRx_ms = 1;//10;              // timeout for serial port receiver (max time between rx packets)
     const int timeoutSerialPortReconnect_ms = 1000;
-    const int timeoutUsbPoll_ms = 0;    // A timer with an interval of 0 will time out as soon as there are no more events to process
 
     uint8_t quick_answer[2] = {0x00, 0x1d};
     bool transmit_quick_answer = false;

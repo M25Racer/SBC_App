@@ -60,7 +60,6 @@
 #include <QThread>
 #include "crc16.h"
 
-
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     m_ui(new Ui::MainWindow),
@@ -68,7 +67,6 @@ MainWindow::MainWindow(QWidget *parent) :
     m_console(new Console),
     m_serial(new QSerialPort(this)),
     m_message_box(new MessageBox)
-    //m_usb(new UsbTransmitter)
 {
     m_ui->setupUi(this);
     m_console->setEnabled(false);
@@ -86,23 +84,17 @@ MainWindow::MainWindow(QWidget *parent) :
 
     connect(m_serial, &QSerialPort::errorOccurred, this, &MainWindow::handleError);
     connect(m_serial, &QSerialPort::readyRead, this, &MainWindow::readDataSerialPort);
-    connect(m_console, &Console::getData, this, &MainWindow::writeDataSerialPort);
-    connect(m_message_box, &MessageBox::postData, this, &MainWindow::postTxData);
-    connect(m_message_box, &MessageBox::postDataToStm32H7, this, &MainWindow::postTxDataToSTM32H7);
-//    connect(m_usb, &UsbTransmitter::postTxDataToSerialPort, this, &MainWindow::postTxData);
-//    connect(m_usb, &UsbTransmitter::consolePutData, this, &MainWindow::consolePutData);
-//    connect(m_usb, &UsbTransmitter::usbInitTimeoutStart, this, &MainWindow::usbInitTimeoutStart);
-    connect(&m_usb_thread, &UsbWorkThread::postTxDataToSerialPort, this, &MainWindow::postTxData);
+    connect(m_message_box, &MessageBox::postData, this, &MainWindow::transmitDataSerialPort);
+    connect(m_message_box, &MessageBox::postDataToStm32H7, this, &MainWindow::postTxDataSTM);
+    connect(&m_usb_thread, &UsbWorkThread::postTxDataToSerialPort, this, &MainWindow::transmitDataSerialPort, Qt::ConnectionType::QueuedConnection);
     connect(&m_usb_thread, &UsbWorkThread::consolePutData, this, &MainWindow::consolePutData, Qt::ConnectionType::QueuedConnection);
-    connect(&m_usb_thread, &UsbWorkThread::usbInitTimeoutStart, this, &MainWindow::usbInitTimeoutStart);
-
+    connect(&m_usb_thread, &UsbWorkThread::usbInitTimeoutStart, this, &MainWindow::usbInitTimeoutStart, Qt::ConnectionType::QueuedConnection);
 
     m_console->putData("SBC Application\n", 1);
     m_console->putData("Opening serial port...\n", 1);
 
     // Clear serial port tx & rx buffer
     TtyUserRxBuffer.clear();
-    //TtyUserTxBuffer.clear();
 
     // Timers
     // Serial port rx timeout timer
@@ -241,11 +233,6 @@ void MainWindow::about()
                           "using Qt, with a menu bar, toolbars, and a status bar."));
 }
 
-void MainWindow::writeDataSerialPort(const QByteArray &data)
-{
-    m_serial->write(data);
-}
-
 void MainWindow::timeoutSerialPortRx()
 {
     m_console->putData("Receive timeout # ", 0);
@@ -268,72 +255,6 @@ void MainWindow::usbInitTimeoutStart(const int timeout_ms)
 {
     timerUsbInit->start(timeout_ms);
 }
-
-//void MainWindow::timeoutUsbPollCallback()
-//{
-//    int rc = 0;
-
-//    if(m_usb->start_transmit)
-//    {
-//        m_usb->start_transmit = false;
-//        m_usb->USB_StartTransmit();
-//    }
-
-//    if(m_usb->start_receive)
-//    {
-//        // Start or continue receive
-//        m_usb->start_receive = false;
-//        m_usb->USB_StartReceive(&m_usb->UserRxBuffer[m_usb->UserRxBuffer_len]);
-//    }
-
-//    if(m_usb->transmit_in_progress)
-//    {
-//        if(!m_usb->tx_complete_flag)
-//        {
-//            /* Handle Events */
-//            if(m_usb->context != nullptr)
-//            {
-//                // If a zero timeval is passed, this function will handle any already-pending events and then immediately return in non-blocking style.
-//                rc = libusb_handle_events_timeout_completed(m_usb->context, &tv, nullptr);
-
-//                if(rc != LIBUSB_SUCCESS)
-//                {
-//                    m_console->putData(QString("Usb Transfer Error: %1\n").arg(libusb_error_name(rc)), 1);
-//                }
-//            }
-//        }
-
-//        if(m_usb->tx_complete_flag)
-//        {
-//            m_usb->transmit_in_progress = false;
-//        }
-//    }
-
-//    if(m_usb->receive_in_progress)
-//    {
-//        if(!m_usb->rx_complete_flag)
-//        {
-//            /* Handle Events */
-//            if(m_usb->context != nullptr)
-//            {
-//                // If a zero timeval is passed, this function will handle any already-pending events and then immediately return in non-blocking style.
-//                rc = libusb_handle_events_timeout_completed(m_usb->context, &tv, nullptr);
-
-//                if(rc != LIBUSB_SUCCESS)
-//                {
-//                    m_console->putData(QString("Transfer Error: %1\n").arg(libusb_error_name(rc)), 1);
-//                    //fprintf(stderr, "Transfer Error: %s\n", libusb_error_name(rc));
-//                    //break;
-//                }
-//            }
-//        }
-
-//        if(m_usb->rx_complete_flag)
-//        {
-//            m_usb->receive_in_progress = false;
-//        }
-//    }
-//}
 
 void MainWindow::timeoutSerialPortReconnect()
 {
@@ -447,13 +368,13 @@ void MainWindow::readDataSerialPort()
         m_console->putData("SP Warning: received length is too big\n", 1);
 
         // Transmit to STM32H7
-        postTxDataToSTM32H7((uint8_t*)TtyUserRxBuffer.data(), int(TtyUserRxBuffer_len));
+        postTxDataSTM((uint8_t*)TtyUserRxBuffer.data(), int(TtyUserRxBuffer_len));
         serialPortRxCleanup();
 
         if(transmit_quick_answer)
         {
             transmit_quick_answer = false;
-            postTxData(quick_answer, sizeof(quick_answer));
+            transmitDataSerialPort(quick_answer, sizeof(quick_answer));
         }
         return;
     }
@@ -468,13 +389,13 @@ void MainWindow::readDataSerialPort()
 
     // Timeout already exceeded
     // Transmit to STM32H7
-    postTxDataToSTM32H7((uint8_t*)TtyUserRxBuffer.data(), int(TtyUserRxBuffer_len));
+    postTxDataSTM((uint8_t*)TtyUserRxBuffer.data(), int(TtyUserRxBuffer_len));
     serialPortRxCleanup();
 
     if(transmit_quick_answer)
     {
         transmit_quick_answer = false;
-        postTxData(quick_answer, sizeof(quick_answer));
+        transmitDataSerialPort(quick_answer, sizeof(quick_answer));
     }
 }
 
@@ -504,7 +425,7 @@ void MainWindow::showStatusMessage(const QString &message)
 
 // Serial port to PC
 // Asynchronous transmit
-void MainWindow::postTxData(const uint8_t *p_data, const int length)
+void MainWindow::transmitDataSerialPort(const uint8_t *p_data, const int length)
 {
     if(p_data == nullptr)
     {
@@ -517,7 +438,7 @@ void MainWindow::postTxData(const uint8_t *p_data, const int length)
 }
 
 // USB to STM32H7 board
-void MainWindow::postTxDataToSTM32H7(const uint8_t *p_data, const int length)
+void MainWindow::postTxDataSTM(const uint8_t *p_data, const int length)
 {
     int len = length;
 
