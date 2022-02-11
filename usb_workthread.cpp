@@ -2,6 +2,7 @@
 
 //#include <QSerialPort>
 //#include <QTime>
+#include "crc16.h"
 
 UsbWorkThread::UsbWorkThread(QObject *parent) :
     QThread(parent)
@@ -14,6 +15,11 @@ UsbWorkThread::~UsbWorkThread()
     m_quit = true;
 //    m_cond.wakeOne();
 //    m_mutex.unlock();
+    if(timerReconnect != nullptr)
+        timerReconnect->stop();
+    if(timerRxTimeout != nullptr)
+        timerRxTimeout->stop();
+
     wait();
 }
 
@@ -46,6 +52,31 @@ void UsbWorkThread::USB_ThreadStart()
 void UsbWorkThread::run()
 {
     struct timeval tv = {0, 0};
+
+    // Reconnect to serial port in case of error
+    timerReconnect = new QTimer();
+    timerReconnect->setSingleShot(true);
+    connect(timerReconnect, SIGNAL(timeout()), this, SLOT(timeoutSerialPortReconnect()));
+
+    // Serial port rx timeout
+    timerRxTimeout = new QTimer();
+
+    // Clear serial port tx & rx buffer
+    TtyUserRxBuffer.clear();
+
+    //m_serial = new QSerialPort(this);
+    m_serial = new QSerialPort;
+    m_message_box = new MessageBox;
+
+    //connect: Cannot queue arguments of type 'QSerialPort::SerialPortError'
+
+    connect(m_serial, &QSerialPort::errorOccurred, this, &UsbWorkThread::handleError);
+    connect(m_serial, &QSerialPort::readyRead, this, &UsbWorkThread::readDataSerialPort);
+    connect(m_message_box, &MessageBox::postData, this, &UsbWorkThread::transmitDataSerialPort);
+    connect(m_message_box, &MessageBox::postDataToStm32H7, this, &UsbWorkThread::postTxDataSTM);
+
+    emit consolePutData("Opening serial port...\n", 1);
+    openSerialPort();
 
     while (!m_quit)
     {
@@ -535,7 +566,7 @@ void LIBUSB_CALL UsbWorkThread::rx_callback(struct libusb_transfer *transfer)
                 case SRP_LS_DATA:
                     // Retransmit data to PC
                     emit consolePutData(QString("Received SRP LS DATA\n"), 0);
-                    emit postTxDataToSerialPort(UserRxBuffer + sizeof(USBheader_t), header->packet_length - sizeof(USBheader_t));
+                    transmitDataSerialPort(UserRxBuffer + sizeof(USBheader_t), header->packet_length - sizeof(USBheader_t));
                     break;
                 case SRP_HS_DATA:
                     // todo
@@ -792,4 +823,296 @@ void UsbWorkThread::USB_Reconnect()
     end();
     s = UsbWorkThread::INIT;
     USB_Init();
+}
+
+bool UsbWorkThread::openSerialPort()
+{
+    struct Settings {
+        QString name;
+        qint32 baudRate;
+        QString stringBaudRate;
+        QSerialPort::DataBits dataBits;
+        QString stringDataBits;
+        QSerialPort::Parity parity;
+        QString stringParity;
+        QSerialPort::StopBits stopBits;
+        QString stringStopBits;
+        QSerialPort::FlowControl flowControl;
+        QString stringFlowControl;
+        bool localEchoEnabled;
+    };
+
+    Settings settings;
+    settings.name = "ttyGS0";
+    settings.baudRate = 115200;//460800;
+    settings.stringBaudRate = "115200";//"460800";
+    //settings.baudRate = 9600;
+    //settings.stringBaudRate = "9600";
+    settings.dataBits = QSerialPort::Data8;
+    settings.flowControl = QSerialPort::NoFlowControl;
+    ///settings.localEchoEnabled = true;
+    settings.localEchoEnabled = false;
+    settings.parity = QSerialPort::NoParity;
+    settings.stopBits = QSerialPort::OneStop;
+    settings.stringDataBits = "8";
+    settings.stringFlowControl= "None";
+    settings.stringParity = "None";
+    settings.stringStopBits = "1";
+
+    const Settings p = settings;
+    m_serial->setPortName(p.name);
+    m_serial->setBaudRate(p.baudRate);
+    m_serial->setDataBits(p.dataBits);
+    m_serial->setParity(p.parity);
+    m_serial->setStopBits(p.stopBits);
+    m_serial->setFlowControl(p.flowControl);
+
+    if (m_serial->open(QIODevice::ReadWrite))
+    {
+        emit consolePutData(tr("Connected to %1 : %2, %3, %4, %5, %6\n")
+                           .arg(p.name).arg(p.stringBaudRate).arg(p.stringDataBits)
+                           .arg(p.stringParity).arg(p.stringStopBits).arg(p.stringFlowControl), 1);
+        return true;
+    }
+    else
+    {
+        QByteArray str_b;
+        str_b.append(tr("Error "));
+        str_b.append(m_serial->errorString());
+        str_b.append("\n");
+        emit consolePutData(str_b, 1);
+        return false;
+    }
+}
+
+void UsbWorkThread::closeSerialPort()
+{
+    if(m_serial == nullptr)
+    {
+        emit consolePutData("Warning: closeSerialPort reproted m_serial = null\n", 1);
+        return;
+    }
+
+    if (m_serial->isOpen())
+        m_serial->close();
+
+    emit consolePutData("Serial port disconnected\n", 1);
+}
+
+void UsbWorkThread::timeoutSerialPortRx()
+{
+    emit consolePutData("Receive timeout # ", 0);
+    timeoutSerialPort = true;
+    readDataSerialPort();
+}
+
+void UsbWorkThread::timeoutSerialPortReconnect()
+{
+    emit consolePutData("SP Trying to reconnect to a serial port...", 1);
+    if(!openSerialPort())
+    {
+        // Start timer again
+        timerReconnect->start(timeoutSerialPortReconnect_ms);
+    }
+}
+
+void UsbWorkThread::serialPortRxCleanup()
+{
+    TtyUserRxBuffer_len = 0;
+    TtyUserRxBuffer.clear();
+    timeoutSerialPort = false;
+}
+
+void UsbWorkThread::readDataSerialPort()
+{
+    // Serial port data received (from PC)
+
+    // Drop any USB received data to prevent old packets been transmitted to serial port (to PC)
+    usb_receiver_drop = true;
+
+    qint64 length_rx = m_serial->bytesAvailable();
+    if(TtyUserRxBuffer_len)
+        emit consolePutData("SP Received (" + QString::number(TtyUserRxBuffer_len) + ") + " + QString::number(length_rx) + " bytes\n", 0);
+    else
+        emit consolePutData("SP Received " + QString::number(length_rx) + " bytes\n", 0);
+
+    TtyUserRxBuffer.append(m_serial->readAll());
+    TtyUserRxBuffer_len += length_rx;
+
+    uint8_t addr = TtyUserRxBuffer.at(0);
+
+    // If package for listed tools, response with 'quick answer'
+    if (addr == m_message_box->PT_ADDR ||
+        addr == m_message_box->SILS_ADDR ||
+        addr == m_message_box->SFBS_ADDR ||
+        addr == m_message_box->NAV_ADDR ||
+        addr == m_message_box->ReCap_ADDR ||
+        addr == m_message_box->XYC_ADDR ||
+        addr == m_message_box->HEX_ADDR ||
+        addr == m_message_box->Ind1h_ADDR)
+    {
+        quick_answer[0] = addr;
+        transmit_quick_answer = true;
+    }
+    // If package for SRP
+    else if (addr == m_message_box->SRP_ADDR)
+    {
+        // Check length
+        if(TtyUserRxBuffer_len >= TtyUserRxBuffer_MaxSize)
+            TtyUserRxBuffer_len = TtyUserRxBuffer_MaxSize;
+
+        // len < minimum packet size ?
+        if(TtyUserRxBuffer_len < m_message_box->TX_HEADER_LENGTH + m_message_box->DATA_ADDRESS_LENGTH + m_message_box->CRC_LENGTH)
+        {
+//            // Continue receive
+//            if(!timeoutSerialPort)
+//            {
+//                // Start receive timeout
+//                timerRxTimeout->start(timeoutSerialPortRx_ms);
+//                return;
+//            }
+
+            // Timeout already exceeded
+            emit consolePutData("SP Broken packet from PC to SRP: length is too short\n", 1);
+            serialPortRxCleanup();
+
+            // Unlock USB receiver
+            usb_receiver_drop = false;
+            return;
+        }
+
+        // Check crc
+        uint16_t crc16 = uint16_t(TtyUserRxBuffer.at(TtyUserRxBuffer_len - 2) & 0xFF) | (uint16_t(TtyUserRxBuffer.at(TtyUserRxBuffer_len - 1)) << 8);
+
+        const uint8_t *p_data = (const uint8_t*)TtyUserRxBuffer.data();
+        if(calc_crc16(p_data + 1, TtyUserRxBuffer_len-1-m_message_box->CRC_LENGTH) != crc16)
+        {
+            emit consolePutData("SP Broken packet from PC to SRP: crc error\n", 1);
+            serialPortRxCleanup();
+
+            // Unlock USB receiver
+            usb_receiver_drop = false;
+            return;
+        }
+
+        // Crc ok, continue to message box
+        if(m_message_box->message_box_srp((uint8_t*)TtyUserRxBuffer.data(), uint16_t(TtyUserRxBuffer_len), m_message_box->MASTER_ADDR, m_message_box->SRP_ADDR))
+        {
+            // Unlock USB receiver
+            usb_receiver_drop = false;
+        }
+        else
+        {
+            // data is being transmitted to STM32H7, usb_receiver_drop flag will be reset after the transfer
+        }
+
+        serialPortRxCleanup();
+        return;
+    }
+
+    // Data for other tools
+    // Check length
+    if(TtyUserRxBuffer_len >= TtyUserRxBuffer_MaxSize)
+    {
+        TtyUserRxBuffer_len = TtyUserRxBuffer_MaxSize;
+        emit consolePutData("SP Warning: received length is too big\n", 1);
+
+        // Transmit to STM32H7
+        postTxDataSTM((uint8_t*)TtyUserRxBuffer.data(), int(TtyUserRxBuffer_len));
+        serialPortRxCleanup();
+
+        if(transmit_quick_answer)
+        {
+            transmit_quick_answer = false;
+            transmitDataSerialPort(quick_answer, sizeof(quick_answer));
+        }
+        return;
+    }
+
+//    // Continue receive
+//    if(!timeoutSerialPort)
+//    {
+//        // Start receive timeout
+//        timerRxTimeout->start(timeoutSerialPortRx_ms);
+//        return;
+//    }
+
+    // Timeout already exceeded
+    // Transmit to STM32H7
+    postTxDataSTM((uint8_t*)TtyUserRxBuffer.data(), int(TtyUserRxBuffer_len));
+    serialPortRxCleanup();
+
+    if(transmit_quick_answer)
+    {
+        transmit_quick_answer = false;
+        transmitDataSerialPort(quick_answer, sizeof(quick_answer));
+    }
+}
+
+void UsbWorkThread::handleError(QSerialPort::SerialPortError error)
+{
+    // TODO other errors?
+    if (error == QSerialPort::ResourceError)
+    {
+        emit consolePutData("SP Critical Error: " + m_serial->errorString() + "\n", 1);
+        closeSerialPort();
+
+        // Start timer to periodically try to reconnect
+        timerReconnect->start(timeoutSerialPortReconnect_ms);
+    }
+}
+
+// Serial port to PC
+// Asynchronous transmit
+void UsbWorkThread::transmitDataSerialPort(const uint8_t *p_data, const int length)
+{
+    if(p_data == nullptr)
+    {
+        emit consolePutData("SP Error post_data_tx reported p_data = NULL", 0);
+        return;
+    }
+
+    m_serial->write((const char*)p_data, length);
+    emit consolePutData("SP Transmit " + QString::number(length) + " bytes\n", 0);
+}
+
+// USB to STM32H7 board
+void UsbWorkThread::postTxDataSTM(const uint8_t *p_data, const int length)
+{
+    int len = length;
+
+    if(p_data == nullptr)
+    {
+        emit consolePutData("Error postTxDataToSTM32H7 reported p_data = NULL\n", 1);
+        return;
+    }
+
+    USBheader_t header;
+
+    if(len + sizeof(header) > int(sizeof(UserTxBuffer)))
+    {
+        emit consolePutData("Error postTxDataToSTM32H7 reported length is too long\n", 1);
+        len = sizeof(UserTxBuffer);
+    }
+
+    if(len > int(sizeof(USB_Protocol::data)))
+    {
+        emit consolePutData("Error postTxDataToSTM32H7 reported length is too long\n", 1);
+        len = sizeof(USB_Protocol::data);
+    }
+
+    // Cancel ongoing transfer (if any)
+    USB_StopTransmit();
+
+    UserTxBuffer_len = len + sizeof(header);
+
+    header.packet_length = UserTxBuffer_len;
+    header.type = SRP_LS_DATA;
+    header.cmd = 0;  // Don't care
+
+    memcpy(UserTxBuffer, (uint8_t*)&header, sizeof(header));
+    memcpy(UserTxBuffer + sizeof(header), p_data, len);
+
+    start_transmit = true;
+    emit consolePutData("Transmit to H7 " + QString::number(UserTxBuffer_len) + " bytes\n", 0);
 }

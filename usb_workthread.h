@@ -4,8 +4,10 @@
 #include <QMutex>
 #include <QThread>
 #include <QWaitCondition>
-//#include <QCoreApplication>
 #include <libusb-1.0/libusb.h>
+#include <QSerialPort>
+#include <QTimer>
+#include<message_box.h>
 
 #define VID 0x04d8
 #define PID 0x0053
@@ -19,12 +21,24 @@ class UsbWorkThread : public QThread
 
 signals:
     void consolePutData(const QString &data, quint8 priority);
-    void postTxDataToSerialPort(const uint8_t *p_data, const int len);
     void usbInitTimeoutStart(const int timeout_ms);
+
+private slots:
+    //void closeSerialPort();
+    void readDataSerialPort();
+    void transmitDataSerialPort(const uint8_t *p_data, const int length);
+    void handleError(QSerialPort::SerialPortError error);
+    void timeoutSerialPortRx();
+    void timeoutSerialPortReconnect();
+    void postTxDataSTM(const uint8_t *p_data, const int length);
+    //bool openSerialPort();
 
 public:
     explicit UsbWorkThread(QObject *parent = nullptr);
     ~UsbWorkThread();
+
+    bool openSerialPort();
+    void closeSerialPort();
 
     void USB_ReceiveTransmitInit();
     void USB_StartReceive(uint8_t *p_rx_buffer_offset);
@@ -80,10 +94,29 @@ public:
 
     bool usb_receiver_drop = false;     // Drop any received usb data when this flag is active
 
+    MessageBox *m_message_box = nullptr;
+    QSerialPort *m_serial = nullptr;
+
+    QTimer *timerReconnect = nullptr;
+    QTimer *timerRxTimeout = nullptr;
+
+    bool timeoutSerialPort = false;
+
+    // const int timeoutSerialPortRx_ms = 1;//10;              // timeout for serial port receiver (max time between rx packets)
+    const int timeoutSerialPortReconnect_ms = 1000;
     const int timeoutUsbInit_ms = 1000;
+
+    uint8_t quick_answer[2] = {0x00, 0x1d};
+    bool transmit_quick_answer = false;
+
+    QByteArray TtyUserRxBuffer;
+
+    quint64 TtyUserRxBuffer_MaxSize = 4096;
+    quint64 TtyUserRxBuffer_len = 0;
 
 private:
     void run() override;
+    void serialPortRxCleanup();
 
 //    QString m_portName;
 //    QString m_request;

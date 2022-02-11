@@ -80,16 +80,8 @@ public:
     ~MainWindow();
 
 private slots:
-    bool openSerialPort();
-    void closeSerialPort();
     void about();
-    void readDataSerialPort();
-    void transmitDataSerialPort(const uint8_t *p_data, const int length);
-    void postTxDataSTM(const uint8_t *p_data, const int length);
-    void handleError(QSerialPort::SerialPortError error);
     void consolePutData(const QString &data, quint8 priority);
-    void timeoutSerialPortRx();
-    void timeoutSerialPortReconnect();
     void timeoutUsbInitCallback();
     void usbInitTimeoutStart(const int timeout_ms);
 
@@ -98,32 +90,15 @@ private:
 
 private:
     void showStatusMessage(const QString &message);
-    void serialPortRxCleanup();
 
     Ui::MainWindow *m_ui = nullptr;
     QLabel *m_status = nullptr;
 
     Console *m_console = nullptr;
-    QSerialPort *m_serial = nullptr;
-    MessageBox *m_message_box = nullptr;
     UsbWorkThread m_usb_thread;
 
-    QByteArray TtyUserRxBuffer;
-
-    quint64 TtyUserRxBuffer_MaxSize = 4096;
-    quint64 TtyUserRxBuffer_len = 0;
-
-    QTimer *timerRxTimeout;
-    QTimer *timerReconnect;
     QTimer *timerUsbPoll;                               // todo Probably we should move USB to separate thread
     QTimer *timerUsbInit;
-    bool timeoutSerialPort = false;
-
-    // const int timeoutSerialPortRx_ms = 1;//10;              // timeout for serial port receiver (max time between rx packets)
-    const int timeoutSerialPortReconnect_ms = 1000;
-
-    uint8_t quick_answer[2] = {0x00, 0x1d};
-    bool transmit_quick_answer = false;
 
     struct timeval tv = {0, 0};
 };
