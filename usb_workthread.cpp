@@ -179,6 +179,11 @@ void UsbWorkThread::USB_ReceiveTransmitInit()
         emit consolePutData("Error USB_ReceiveTransmitInit: unable to allocate a libusb transfer tx\n", 1);
         return;
     }
+    else
+    {
+        // Filling
+        libusb_fill_bulk_transfer(t_tx, handle, EP_OUT, UserTxBuffer, UserTxBuffer_len, static_tx_callback, this, 1000);
+    }
 }
 
 void UsbWorkThread::USB_StartReceive(uint8_t *p_rx_buffer_offset)
@@ -240,8 +245,7 @@ void UsbWorkThread::USB_StartTransmit()
 
     // Filling
     tx_complete_flag = 0;
-    libusb_fill_bulk_transfer(t_tx, handle, EP_OUT, UserTxBuffer, UserTxBuffer_len, static_tx_callback, this, 1000);
-    //libusb_fill_bulk_transfer(t_tx, handle, EP_OUT, UserTxBuffer, UserTxBuffer_len, static_tx_callback, this, 100);
+    t_tx->length = UserTxBuffer_len;
 
     // Submission
     rc = libusb_submit_transfer(t_tx);
