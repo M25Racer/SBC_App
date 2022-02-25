@@ -448,9 +448,14 @@ void MainWindow::postTxDataSTM(const uint8_t *p_data, const int length)
         return;
     }
 
-    USBheader_t header;
+//    USBheader_t header;
 
-    if(len + sizeof(header) > int(sizeof(m_usb_thread.UserTxBuffer)))
+//    if(len + sizeof(header) > int(sizeof(m_usb_thread.UserTxBuffer)))
+//    {
+//        m_console->putData("Error postTxDataToSTM32H7 reported length is too long\n", 1);
+//        len = sizeof(m_usb_thread.UserTxBuffer);
+//    }
+    if(len > int(sizeof(m_usb_thread.UserTxBuffer)))
     {
         m_console->putData("Error postTxDataToSTM32H7 reported length is too long\n", 1);
         len = sizeof(m_usb_thread.UserTxBuffer);
@@ -465,14 +470,17 @@ void MainWindow::postTxDataSTM(const uint8_t *p_data, const int length)
     // Cancel ongoing transfer (if any)
     m_usb_thread.USB_StopTransmit();
 
-    m_usb_thread.UserTxBuffer_len = len + sizeof(header);
+//    m_usb_thread.UserTxBuffer_len = len + sizeof(header);
 
-    header.packet_length = m_usb_thread.UserTxBuffer_len;
-    header.type = SRP_LS_DATA;
-    header.cmd = 0;  // Don't care
+//    header.packet_length = m_usb_thread.UserTxBuffer_len;
+//    header.type = SRP_LS_DATA;
+//    header.cmd = 0;  // Don't care
 
-    memcpy(m_usb_thread.UserTxBuffer, (uint8_t*)&header, sizeof(header));
-    memcpy(m_usb_thread.UserTxBuffer + sizeof(header), p_data, len);
+//    memcpy(m_usb_thread.UserTxBuffer, (uint8_t*)&header, sizeof(header));
+//    memcpy(m_usb_thread.UserTxBuffer + sizeof(header), p_data, len);
+
+m_usb_thread.UserTxBuffer_len = len;
+memcpy(m_usb_thread.UserTxBuffer, p_data, len);
 
     m_console->putData("Transmit to H7 " + QString::number(m_usb_thread.UserTxBuffer_len) + " bytes\n", 0);
     m_usb_thread.start_transmit = true;

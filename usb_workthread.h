@@ -7,8 +7,11 @@
 //#include <QCoreApplication>
 #include <libusb-1.0/libusb.h>
 
-#define VID 0x04d8
-#define PID 0x0053
+//#define VID 0x04d8
+#define VID 0x0483
+//#define PID 0x0053
+#define PID 0x5740
+
 #define DEV_INTF 0
 #define EP_OUT 0x01
 #define EP_IN 0x81

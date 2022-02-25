@@ -509,61 +509,66 @@ void LIBUSB_CALL UsbWorkThread::rx_callback(struct libusb_transfer *transfer)
 
         UserRxBuffer_len += transfer->actual_length;
 
-        USBheader_t *header = (USBheader_t*)&UserRxBuffer;
+// Retransmit data to PC
+emit consolePutData(QString("Received SRP LS DATA\n"), 0);
+emit postTxDataToSerialPort(UserRxBuffer, UserRxBuffer_len);
+UserRxBuffer_len = 0;
 
-        // If packet is too big already, start parsing it
-        if(UserRxBuffer_len >= int(sizeof(UserRxBuffer)))
-        {
-            UserRxBuffer_len = sizeof(UserRxBuffer);
+//        USBheader_t *header = (USBheader_t*)&UserRxBuffer;
 
-            if(header->packet_length > uint32_t(UserRxBuffer_len))
-            {
-                emit consolePutData(QString("Parse error, packet length is too long %1\n").arg(header->packet_length), 1);
-                UserRxBuffer_len = 0;
-                break;
-            }
-        }
-
-        if(header->packet_length <= uint32_t(UserRxBuffer_len))
-        {
-            // Packet data should be at least 1 byte in length
-            if(header->packet_length < sizeof(USBheader_t) + 1)
-            {
-                emit consolePutData(QString("Parse error, packet length is too short %1\n").arg(header->packet_length), 1);
-                UserRxBuffer_len = 0;
-                break;
-            }
-
-            switch(header->type)
-            {
-                case SRP_LS_DATA:
-                    // Retransmit data to PC
-                    emit consolePutData(QString("Received SRP LS DATA\n"), 0);
-                    emit postTxDataToSerialPort(UserRxBuffer + sizeof(USBheader_t), header->packet_length - sizeof(USBheader_t));
-                    break;
-                case SRP_HS_DATA:
-                    // todo
-                    emit consolePutData(QString("Received SRP HS DATA, todo\n"), 0);
-                    break;
-            }
-
-            UserRxBuffer_len = 0;
-        }
-
-//        // Old legacy code
-//        if((transfer->actual_length < maxPacketSize) || (UserRxBuffer_len >= int(sizeof(UserRxBuffer))))
+//        // If packet is too big already, start parsing it
+//        if(UserRxBuffer_len >= int(sizeof(UserRxBuffer)))
 //        {
-//            //todo add protocol STM32H7<->SBC parsing here
-//            //emit parseReceivedUsbData(UserRxBuffer, UserRxBuffer_len);
+//            UserRxBuffer_len = sizeof(UserRxBuffer);
+
+//            if(header->packet_length > uint32_t(UserRxBuffer_len))
+//            {
+//                emit consolePutData(QString("Parse error, packet length is too long %1\n").arg(header->packet_length), 1);
+//                UserRxBuffer_len = 0;
+//                break;
+//            }
+//        }
+
+//        if(header->packet_length <= uint32_t(UserRxBuffer_len))
+//        {
+//            // Packet data should be at least 1 byte in length
+//            if(header->packet_length < sizeof(USBheader_t) + 1)
+//            {
+//                emit consolePutData(QString("Parse error, packet length is too short %1\n").arg(header->packet_length), 1);
+//                UserRxBuffer_len = 0;
+//                break;
+//            }
+
+//            switch(header->type)
+//            {
+//                case SRP_LS_DATA:
+//                    // Retransmit data to PC
+//                    emit consolePutData(QString("Received SRP LS DATA\n"), 0);
+//                    emit postTxDataToSerialPort(UserRxBuffer + sizeof(USBheader_t), header->packet_length - sizeof(USBheader_t));
+//                    break;
+//                case SRP_HS_DATA:
+//                    // todo
+//                    emit consolePutData(QString("Received SRP HS DATA, todo\n"), 0);
+//                    break;
+//            }
+
 //            UserRxBuffer_len = 0;
 //        }
-        else
-        {
-            // Continue receive
-            emit consolePutData(QString("Continue usb receive\n"), 0);
-            start_receive = true;
-            //USB_StartReceive(&UserRxBuffer[UserRxBuffer_len]);
-        }
+
+////        // Old legacy code
+////        if((transfer->actual_length < maxPacketSize) || (UserRxBuffer_len >= int(sizeof(UserRxBuffer))))
+////        {
+////            //todo add protocol STM32H7<->SBC parsing here
+////            //emit parseReceivedUsbData(UserRxBuffer, UserRxBuffer_len);
+////            UserRxBuffer_len = 0;
+////        }
+//        else
+//        {
+//            // Continue receive
+//            emit consolePutData(QString("Continue usb receive\n"), 0);
+//            start_receive = true;
+//            //USB_StartReceive(&UserRxBuffer[UserRxBuffer_len]);
+//        }
     }
         break;
 
