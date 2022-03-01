@@ -70,6 +70,8 @@ public:
     void putData(const QString &data, uint8_t priority);
     //void setLocalEchoEnabled(bool set);
     void Close();
+    void fileFlush();
+    void fileOpen();
 
 protected:
     //void keyPressEvent(QKeyEvent *e) override;

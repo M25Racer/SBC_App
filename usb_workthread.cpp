@@ -402,15 +402,15 @@ void LIBUSB_CALL UsbWorkThread::tx_callback(struct libusb_transfer *transfer)
      * that the entire amount of requested data was transferred. */
     case LIBUSB_TRANSFER_COMPLETED:
     {
-        emit consolePutData(QString("Transfer completed, actual transmitted length %1\n").arg(transfer->actual_length), 0);
-        uint8_t len_cut = transfer->actual_length > 254 ? 254 : uint8_t(transfer->actual_length);
-        QString d;
-        for(uint8_t i = 0; i < len_cut; ++i)
-            d.append(QString("%1 ").arg(transfer->buffer[i], 2, 16, QLatin1Char('0')));
-            //emit consolePutData(QString("%1").arg(transfer->buffer[i], 2, 16, QLatin1Char('0')));
-        d.append("\n");
-        emit consolePutData(d, 0);
-        d.clear();
+//        emit consolePutData(QString("Transfer completed, actual transmitted length %1\n").arg(transfer->actual_length), 0);
+//        uint8_t len_cut = transfer->actual_length > 254 ? 254 : uint8_t(transfer->actual_length);
+//        QString d;
+//        for(uint8_t i = 0; i < len_cut; ++i)
+//            d.append(QString("%1 ").arg(transfer->buffer[i], 2, 16, QLatin1Char('0')));
+//            //emit consolePutData(QString("%1").arg(transfer->buffer[i], 2, 16, QLatin1Char('0')));
+//        d.append("\n");
+//        emit consolePutData(d, 0);
+//        d.clear();
 
 //todo add code to transmit more here
         //qDebug() << "Data 0 " << transfer->buffer[0];
@@ -498,14 +498,14 @@ void LIBUSB_CALL UsbWorkThread::rx_callback(struct libusb_transfer *transfer)
      * that the entire amount of requested data was transferred. */
     case LIBUSB_TRANSFER_COMPLETED:
     {
-        emit consolePutData(QString("Transfer completed, actual received length %1\n").arg(transfer->actual_length), 0);
-        uint8_t len_cut = transfer->actual_length > 254 ? 254 : uint8_t(transfer->actual_length);
-        for(uint8_t i = 0; i < len_cut; ++i)
-            d.append(QString("%1 ").arg(transfer->buffer[i], 2, 16, QLatin1Char('0')));
-            //emit consolePutData(QString("%1").arg(transfer->buffer[i], 2, 16, QLatin1Char('0')));
-        d.append("\n");
-        emit consolePutData(d, 0);
-        d.clear();
+//        emit consolePutData(QString("Transfer completed, actual received length %1\n").arg(transfer->actual_length), 0);
+//        uint8_t len_cut = transfer->actual_length > 254 ? 254 : uint8_t(transfer->actual_length);
+//        for(uint8_t i = 0; i < len_cut; ++i)
+//            d.append(QString("%1 ").arg(transfer->buffer[i], 2, 16, QLatin1Char('0')));
+//            //emit consolePutData(QString("%1").arg(transfer->buffer[i], 2, 16, QLatin1Char('0')));
+//        d.append("\n");
+//        emit consolePutData(d, 0);
+//        d.clear();
 
         UserRxBuffer_len += transfer->actual_length;
 
@@ -538,7 +538,7 @@ void LIBUSB_CALL UsbWorkThread::rx_callback(struct libusb_transfer *transfer)
             {
                 case SRP_LS_DATA:
                     // Retransmit data to PC
-                    emit consolePutData(QString("Received SRP LS DATA\n"), 0);
+//                    emit consolePutData(QString("Received SRP LS DATA\n"), 0);
                     emit postTxDataToSerialPort(UserRxBuffer + sizeof(USBheader_t), header->packet_length - sizeof(USBheader_t));
                     break;
                 case SRP_HS_DATA:

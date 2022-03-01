@@ -52,6 +52,9 @@
 #include "console.h"
 
 #include <QScrollBar>
+#include <QDesktopServices>
+#include <QFileInfo>
+//#include <QDir>
 
 Console::Console(QWidget *parent) :
     QPlainTextEdit(parent)
@@ -73,6 +76,10 @@ Console::Console(QWidget *parent) :
 
 void Console::putData(const QString &data, uint8_t priority)
 {
+#ifdef QT_DEBUG
+    ++priority;
+#endif
+
     if(priority)
     {
         insertPlainText(data);
@@ -89,6 +96,28 @@ void Console::putData(const QString &data, uint8_t priority)
     // Write to the output category of the message and the message itself
     out << data;// << endl;
     //out.flush();    // Clear the buffered data
+}
+
+void Console::fileFlush()
+{
+    putData("Force log file flush by user\n", 1);
+    out.flush();    // Clear the buffered data
+}
+
+void Console::fileOpen()
+{
+    // Find file path
+    QFileInfo info;
+    info.setFile(m_logFile->fileName());
+    info.makeAbsolute();
+
+    putData(QString("Opening log file: ") + info.filePath() + QString("\n"), 1);
+
+    // Flush before open
+    fileFlush();
+
+    // Open file with external program
+    QDesktopServices::openUrl(QUrl::fromLocalFile(info.filePath()));
 }
 
 void Console::Close()

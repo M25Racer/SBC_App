@@ -98,14 +98,14 @@ MainWindow::MainWindow(QWidget *parent) :
 
     // Timers
     // Serial port rx timeout timer
-    timerRxTimeout = new QTimer();
-//    timerRxTimeout->setSingleShot(true);
-//    connect(timerRxTimeout, SIGNAL(timeout()), this, SLOT(timeoutSerialPortRx()));
+    timerSpRxTimeout = new QTimer();
+    timerSpRxTimeout->setSingleShot(true);
+    connect(timerSpRxTimeout, SIGNAL(timeout()), this, SLOT(timeoutSerialPortRx()));
 
     // Reconnect to serial port in case of error
-    timerReconnect = new QTimer();
-    timerReconnect->setSingleShot(true);
-    connect(timerReconnect, SIGNAL(timeout()), this, SLOT(timeoutSerialPortReconnect()));
+    timerSpReconnect = new QTimer();
+    timerSpReconnect->setSingleShot(true);
+    connect(timerSpReconnect, SIGNAL(timeout()), this, SLOT(timeoutSerialPortReconnect()));
 
     // Usb initialization timer
     timerUsbInit = new QTimer();
@@ -129,8 +129,8 @@ MainWindow::MainWindow(QWidget *parent) :
 MainWindow::~MainWindow()
 {
     timerUsbInit->stop();
-    timerReconnect->stop();
-    timerRxTimeout->stop();
+    timerSpReconnect->stop();
+    timerSpRxTimeout->stop();
 
     closeSerialPort();
     m_usb_thread.end();
@@ -225,21 +225,6 @@ void MainWindow::closeSerialPort()
     m_console->putData("Serial port disconnected\n", 1);
 }
 
-void MainWindow::about()
-{
-    QMessageBox::about(this, tr("About SBC Application"),
-                       tr("The <b>SBC Application</b> example demonstrates how to "
-                          "use the Qt Serial Port module in modern GUI applications "
-                          "using Qt, with a menu bar, toolbars, and a status bar."));
-}
-
-void MainWindow::timeoutSerialPortRx()
-{
-    m_console->putData("Receive timeout # ", 0);
-    timeoutSerialPort = true;
-    readDataSerialPort();
-}
-
 void MainWindow::timeoutUsbInitCallback()
 {
     m_usb_thread.USB_Init();
@@ -262,8 +247,15 @@ void MainWindow::timeoutSerialPortReconnect()
     if(!openSerialPort())
     {
         // Start timer again
-        timerReconnect->start(timeoutSerialPortReconnect_ms);
+        timerSpReconnect->start(timeoutSerialPortReconnect_ms);
     }
+}
+
+void MainWindow::timeoutSerialPortRx()
+{
+    m_console->putData("SP receive timeout\n", 0);
+    timeoutSerialPort = true;
+    parseDataSerialPort();
 }
 
 void MainWindow::serialPortRxCleanup()
@@ -280,14 +272,37 @@ void MainWindow::readDataSerialPort()
     // Drop any USB received data to prevent old packets been transmitted to serial port (to PC)
     m_usb_thread.usb_receiver_drop = true;
 
-    qint64 length_rx = m_serial->bytesAvailable();
-    if(TtyUserRxBuffer_len)
-        m_console->putData("SP Received (" + QString::number(TtyUserRxBuffer_len) + ") + " + QString::number(length_rx) + " bytes\n", 0);
-    else
-        m_console->putData("SP Received " + QString::number(length_rx) + " bytes\n", 0);
+    timerSpRxTimeout->stop();
 
-    TtyUserRxBuffer.append(m_serial->readAll());
-    TtyUserRxBuffer_len += length_rx;
+    qint64 length_rx = m_serial->bytesAvailable();
+
+    while(length_rx)
+    {
+        if(TtyUserRxBuffer_len)
+            m_console->putData("SP Received " + QString::number(TtyUserRxBuffer_len) + " + " + QString::number(length_rx) + " bytes\n", 0);
+        else
+            m_console->putData("SP Received " + QString::number(length_rx) + " bytes\n", 0);
+
+        TtyUserRxBuffer.append(m_serial->readAll());
+        TtyUserRxBuffer_len += length_rx;
+        length_rx = m_serial->bytesAvailable();
+    }
+
+    // Continue receive
+    // Start receive timeout
+    timerSpRxTimeout->start(timeoutSerialPortRx_ms);
+}
+
+void MainWindow::parseDataSerialPort()
+{
+//    // Drop any USB received data to prevent old packets been transmitted to serial port (to PC)
+//    m_usb_thread.usb_receiver_drop = true;
+//
+//    qint64 length_rx = m_serial->bytesAvailable();
+//    if(TtyUserRxBuffer_len)
+//        m_console->putData("SP Received (" + QString::number(TtyUserRxBuffer_len) + ") + " + QString::number(length_rx) + " bytes\n", 0);
+//    else
+//        m_console->putData("SP Received " + QString::number(length_rx) + " bytes\n", 0);
 
     uint8_t addr = TtyUserRxBuffer.at(0);
 
@@ -311,14 +326,14 @@ void MainWindow::readDataSerialPort()
         if(TtyUserRxBuffer_len >= TtyUserRxBuffer_MaxSize)
             TtyUserRxBuffer_len = TtyUserRxBuffer_MaxSize;
 
-        // len < minimum packet size ?
+        // len < minimum packet size
         if(TtyUserRxBuffer_len < m_message_box->TX_HEADER_LENGTH + m_message_box->DATA_ADDRESS_LENGTH + m_message_box->CRC_LENGTH)
         {
 //            // Continue receive
 //            if(!timeoutSerialPort)
 //            {
 //                // Start receive timeout
-//                timerRxTimeout->start(timeoutSerialPortRx_ms);
+//                timerSpRxTimeout->start(timeoutSerialPortRx_ms);
 //                return;
 //            }
 
@@ -362,7 +377,7 @@ void MainWindow::readDataSerialPort()
 
     // Data for other tools
     // Check length
-    if(TtyUserRxBuffer_len >= TtyUserRxBuffer_MaxSize)
+    if(TtyUserRxBuffer_len > TtyUserRxBuffer_MaxSize)
     {
         TtyUserRxBuffer_len = TtyUserRxBuffer_MaxSize;
         m_console->putData("SP Warning: received length is too big\n", 1);
@@ -408,7 +423,7 @@ void MainWindow::handleError(QSerialPort::SerialPortError error)
         closeSerialPort();
 
         // Start timer to periodically try to reconnect
-        timerReconnect->start(timeoutSerialPortReconnect_ms);
+        timerSpReconnect->start(timeoutSerialPortReconnect_ms);
     }
 }
 
@@ -416,6 +431,8 @@ void MainWindow::initActionsConnections()
 {
     connect(m_ui->actionAbout, &QAction::triggered, this, &MainWindow::about);
     connect(m_ui->actionAboutQt, &QAction::triggered, qApp, &QApplication::aboutQt);
+    connect(m_ui->actionLogsFlush, &QAction::triggered, this, &MainWindow::logFileFlush);
+    connect(m_ui->actionLogsOpenFile, &QAction::triggered, this, &MainWindow::logFileOpen);
 }
 
 void MainWindow::showStatusMessage(const QString &message)
@@ -476,4 +493,27 @@ void MainWindow::postTxDataSTM(const uint8_t *p_data, const int length)
 
     m_console->putData("Transmit to H7 " + QString::number(m_usb_thread.UserTxBuffer_len) + " bytes\n", 0);
     m_usb_thread.start_transmit = true;
+}
+
+// Actions
+void MainWindow::about()
+{
+    QMessageBox::about(this, tr("About SBC Application"),
+                       tr("The <b>SBC Application</b> example demonstrates how to "
+                          "use the Qt Serial Port module in modern GUI applications "
+                          "using Qt, with a menu bar, toolbars, and a status bar."));
+}
+
+void MainWindow::logFileFlush()
+{
+    m_console->fileFlush();
+    QMessageBox::information(this, tr("Info"),
+                       tr("Log file has been flushed!"));
+}
+
+void MainWindow::logFileOpen()
+{
+    m_console->fileOpen();
+//    QMessageBox::information(this, tr("Info"),
+//                       tr("Todo!"));
 }

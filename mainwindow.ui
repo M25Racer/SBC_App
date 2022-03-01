@@ -32,7 +32,15 @@
     <addaction name="actionAbout"/>
     <addaction name="actionAboutQt"/>
    </widget>
+   <widget class="QMenu" name="menuLogs">
+    <property name="title">
+     <string>Logs</string>
+    </property>
+    <addaction name="actionLogsFlush"/>
+    <addaction name="actionLogsOpenFile"/>
+   </widget>
    <addaction name="menuHelp"/>
+   <addaction name="menuLogs"/>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
   <action name="actionAbout">
@@ -121,6 +129,22 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+Q</string>
+   </property>
+  </action>
+  <action name="actionLogsFlush">
+   <property name="text">
+    <string>Flush</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+F</string>
+   </property>
+  </action>
+  <action name="actionLogsOpenFile">
+   <property name="text">
+    <string>Open last log file</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+O</string>
    </property>
   </action>
  </widget>

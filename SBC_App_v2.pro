@@ -14,6 +14,8 @@ SOURCES += \
     statistics.cpp \
     usb_workthread.cpp
 
+CONFIG += c++11
+
 #-------------------------------------------------
 # Add LibUSB library
 #-------------------------------------------------
