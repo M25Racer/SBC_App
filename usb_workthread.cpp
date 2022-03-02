@@ -1,8 +1,5 @@
 #include "usb_workthread.h"
 
-//#include <QSerialPort>
-//#include <QTime>
-
 UsbWorkThread::UsbWorkThread(QObject *parent) :
     QThread(parent)
 {
@@ -41,7 +38,6 @@ void UsbWorkThread::USB_ThreadStart()
 //    else
 //        m_cond.wakeOne();
 }
-
 
 void UsbWorkThread::run()
 {
@@ -100,8 +96,6 @@ void UsbWorkThread::run()
                     if(rc != LIBUSB_SUCCESS)
                     {
                         emit consolePutData(QString("Transfer Error: %1\n").arg(libusb_error_name(rc)), 1);
-                        //fprintf(stderr, "Transfer Error: %s\n", libusb_error_name(rc));
-                        //break;
                     }
                 }
             }
@@ -402,36 +396,16 @@ void LIBUSB_CALL UsbWorkThread::tx_callback(struct libusb_transfer *transfer)
      * that the entire amount of requested data was transferred. */
     case LIBUSB_TRANSFER_COMPLETED:
     {
-//        emit consolePutData(QString("Transfer completed, actual transmitted length %1\n").arg(transfer->actual_length), 0);
+        emit consolePutData(QString("Transfer completed, actual transmitted length %1\n").arg(transfer->actual_length), 0);
 //        uint8_t len_cut = transfer->actual_length > 254 ? 254 : uint8_t(transfer->actual_length);
 //        QString d;
 //        for(uint8_t i = 0; i < len_cut; ++i)
 //            d.append(QString("%1 ").arg(transfer->buffer[i], 2, 16, QLatin1Char('0')));
-//            //emit consolePutData(QString("%1").arg(transfer->buffer[i], 2, 16, QLatin1Char('0')));
 //        d.append("\n");
 //        emit consolePutData(d, 0);
 //        d.clear();
 
-//todo add code to transmit more here
-        //qDebug() << "Data 0 " << transfer->buffer[0];
-
-//        UserRxBuffer_len += transfer->actual_length;
-
-//        if((transfer->actual_length < maxPacketSize) || (UserRxBuffer_len >= int(sizeof(UserRxBuffer))))
-//        {
-//            if (UserRxBuffer[0] == SRP_ADDR)
-//            {
-//                message_box_srp(UserRxBuffer, uint16_t(UserRxBuffer_len), MASTER_ADDR, SRP_ADDR);
-//                //change_baudrate(UserTxBufferHS[2]);
-//            }
-
-//            // TODO: add other addresses
-//        }
-//        else
-//        {
-//            transfer->buffer = &UserRxBuffer[UserRxBuffer_len];
-//            libusb_submit_transfer(transfer);
-//        }
+        // TODO add code to transmit more here?
     }
         break;
 
@@ -471,10 +445,6 @@ void LIBUSB_CALL UsbWorkThread::tx_callback(struct libusb_transfer *transfer)
 
 void LIBUSB_CALL UsbWorkThread::rx_callback(struct libusb_transfer *transfer)
 {
-    // Stop usb polling timer
-
-    QString d;
-
     if(transfer == nullptr)
     {
         emit consolePutData("Error rx_callback reported transfer = NULL\n", 1);
@@ -502,7 +472,6 @@ void LIBUSB_CALL UsbWorkThread::rx_callback(struct libusb_transfer *transfer)
 //        uint8_t len_cut = transfer->actual_length > 254 ? 254 : uint8_t(transfer->actual_length);
 //        for(uint8_t i = 0; i < len_cut; ++i)
 //            d.append(QString("%1 ").arg(transfer->buffer[i], 2, 16, QLatin1Char('0')));
-//            //emit consolePutData(QString("%1").arg(transfer->buffer[i], 2, 16, QLatin1Char('0')));
 //        d.append("\n");
 //        emit consolePutData(d, 0);
 //        d.clear();
@@ -538,8 +507,8 @@ void LIBUSB_CALL UsbWorkThread::rx_callback(struct libusb_transfer *transfer)
             {
                 case SRP_LS_DATA:
                     // Retransmit data to PC
-//                    emit consolePutData(QString("Received SRP LS DATA\n"), 0);
                     emit postTxDataToSerialPort(UserRxBuffer + sizeof(USBheader_t), header->packet_length - sizeof(USBheader_t));
+                    emit consolePutData(QString("Received SRP LS DATA\n"), 0);
                     break;
                 case SRP_HS_DATA:
                     // todo
@@ -549,20 +518,13 @@ void LIBUSB_CALL UsbWorkThread::rx_callback(struct libusb_transfer *transfer)
 
             UserRxBuffer_len = 0;
         }
-
-//        // Old legacy code
-//        if((transfer->actual_length < maxPacketSize) || (UserRxBuffer_len >= int(sizeof(UserRxBuffer))))
-//        {
-//            //todo add protocol STM32H7<->SBC parsing here
-//            //emit parseReceivedUsbData(UserRxBuffer, UserRxBuffer_len);
-//            UserRxBuffer_len = 0;
-//        }
         else
         {
-            // Continue receive
-            emit consolePutData(QString("Continue usb receive\n"), 0);
-            start_receive = true;
-            //USB_StartReceive(&UserRxBuffer[UserRxBuffer_len]);
+//            // Continue receive
+//            emit consolePutData(QString("Continue usb receive\n"), 0);
+//            start_receive = true;
+            // Todo continue receive with timeout?
+            UserRxBuffer_len = 0;
         }
     }
         break;
@@ -605,8 +567,20 @@ void LIBUSB_CALL UsbWorkThread::rx_callback(struct libusb_transfer *transfer)
     if(rx_complete_flag)
     {
         // Start receiving again
-        emit consolePutData("Start receiving again\n", 0);
+//        emit consolePutData("Start receiving again\n", 0);
         start_receive = true;
+    }
+
+    if(transfer->status == LIBUSB_TRANSFER_COMPLETED)
+    {
+        QString d;
+        emit consolePutData(QString("Transfer completed, actual received length %1\n").arg(transfer->actual_length), 0);
+        uint8_t len_cut = transfer->actual_length > 254 ? 254 : uint8_t(transfer->actual_length);
+        for(uint8_t i = 0; i < len_cut; ++i)
+            d.append(QString("%1 ").arg(transfer->buffer[i], 2, 16, QLatin1Char('0')));
+        d.append("\n");
+        emit consolePutData(d, 0);
+        d.clear();
     }
 }
 

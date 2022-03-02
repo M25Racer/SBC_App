@@ -295,15 +295,6 @@ void MainWindow::readDataSerialPort()
 
 void MainWindow::parseDataSerialPort()
 {
-//    // Drop any USB received data to prevent old packets been transmitted to serial port (to PC)
-//    m_usb_thread.usb_receiver_drop = true;
-//
-//    qint64 length_rx = m_serial->bytesAvailable();
-//    if(TtyUserRxBuffer_len)
-//        m_console->putData("SP Received (" + QString::number(TtyUserRxBuffer_len) + ") + " + QString::number(length_rx) + " bytes\n", 0);
-//    else
-//        m_console->putData("SP Received " + QString::number(length_rx) + " bytes\n", 0);
-
     uint8_t addr = TtyUserRxBuffer.at(0);
 
     // If package for listed tools, response with 'quick answer'
@@ -329,15 +320,6 @@ void MainWindow::parseDataSerialPort()
         // len < minimum packet size
         if(TtyUserRxBuffer_len < m_message_box->TX_HEADER_LENGTH + m_message_box->DATA_ADDRESS_LENGTH + m_message_box->CRC_LENGTH)
         {
-//            // Continue receive
-//            if(!timeoutSerialPort)
-//            {
-//                // Start receive timeout
-//                timerSpRxTimeout->start(timeoutSerialPortRx_ms);
-//                return;
-//            }
-
-            // Timeout already exceeded
             m_console->putData("SP Broken packet from PC to SRP: length is too short\n", 1);
             serialPortRxCleanup();
 
@@ -381,28 +363,8 @@ void MainWindow::parseDataSerialPort()
     {
         TtyUserRxBuffer_len = TtyUserRxBuffer_MaxSize;
         m_console->putData("SP Warning: received length is too big\n", 1);
-
-        // Transmit to STM32H7
-        postTxDataSTM((uint8_t*)TtyUserRxBuffer.data(), int(TtyUserRxBuffer_len));
-        serialPortRxCleanup();
-
-        if(transmit_quick_answer)
-        {
-            transmit_quick_answer = false;
-            transmitDataSerialPort(quick_answer, sizeof(quick_answer));
-        }
-        return;
     }
 
-//    // Continue receive
-//    if(!timeoutSerialPort)
-//    {
-//        // Start receive timeout
-//        timerRxTimeout->start(timeoutSerialPortRx_ms);
-//        return;
-//    }
-
-    // Timeout already exceeded
     // Transmit to STM32H7
     postTxDataSTM((uint8_t*)TtyUserRxBuffer.data(), int(TtyUserRxBuffer_len));
     serialPortRxCleanup();
