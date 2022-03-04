@@ -86,14 +86,14 @@ private slots:
     void logFileFlush();
     void logFileOpen();
     void readDataSerialPort();
-    void transmitDataSerialPort(const uint8_t *p_data, const int length);
+    void transmitDataSerialPort(const uint8_t *p_data, int length);
     void postTxDataSTM(const uint8_t *p_data, const int length);
     void handleError(QSerialPort::SerialPortError error);
     void consolePutData(const QString &data, quint8 priority);
     void timeoutSerialPortRx();
     void timeoutSerialPortReconnect();
     void timeoutUsbInitCallback();
-    void usbInitTimeoutStart(const int timeout_ms);
+    void usbInitTimeoutStart(int timeout_ms);
 
 private:
     void initActionsConnections();

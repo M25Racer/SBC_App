@@ -31,7 +31,7 @@ public:
     Q_OBJECT
 
 signals:
-    void postData(const uint8_t *p_data, const int length);
+    void postData(const uint8_t *p_data, int length);
     void postDataToStm32H7(const uint8_t *p_data, const int length);
 
 public:

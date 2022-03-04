@@ -14,18 +14,6 @@ UsbWorkThread::~UsbWorkThread()
     wait();
 }
 
-//void UsbWorkThread::transaction(const QString &portName, int waitTimeout, const QString &request)
-//{
-//    const QMutexLocker locker(&m_mutex);
-//    m_portName = portName;
-//    m_waitTimeout = waitTimeout;
-//    m_request = request;
-
-//    if (!isRunning())
-//        start();
-//    else
-//        m_cond.wakeOne();
-//}
 void UsbWorkThread::USB_ThreadStart()
 {
     //    const QMutexLocker locker(&m_mutex);
@@ -42,6 +30,8 @@ void UsbWorkThread::USB_ThreadStart()
 void UsbWorkThread::run()
 {
     struct timeval tv = {0, 0};
+
+    console_spam_timer.start();
 
     while (!m_quit)
     {
@@ -105,6 +95,8 @@ void UsbWorkThread::run()
                 receive_in_progress = false;
             }
         }
+
+        //QApplication::processEvents();
     }
 }
 
@@ -397,13 +389,13 @@ void LIBUSB_CALL UsbWorkThread::tx_callback(struct libusb_transfer *transfer)
     case LIBUSB_TRANSFER_COMPLETED:
     {
         emit consolePutData(QString("Transfer completed, actual transmitted length %1\n").arg(transfer->actual_length), 0);
-//        uint8_t len_cut = transfer->actual_length > 254 ? 254 : uint8_t(transfer->actual_length);
-//        QString d;
-//        for(uint8_t i = 0; i < len_cut; ++i)
-//            d.append(QString("%1 ").arg(transfer->buffer[i], 2, 16, QLatin1Char('0')));
-//        d.append("\n");
-//        emit consolePutData(d, 0);
-//        d.clear();
+        uint8_t len_cut = transfer->actual_length > 254 ? 254 : uint8_t(transfer->actual_length);
+        QString d;
+        for(uint8_t i = 0; i < len_cut; ++i)
+            d.append(QString("%1 ").arg(transfer->buffer[i], 2, 16, QLatin1Char('0')));
+        d.append("\n");
+        emit consolePutData(d, 0);
+        d.clear();
 
         // TODO add code to transmit more here?
     }
@@ -560,7 +552,14 @@ void LIBUSB_CALL UsbWorkThread::rx_callback(struct libusb_transfer *transfer)
         UserRxBuffer_len = 0;
 
         if(transfer->status != LIBUSB_TRANSFER_CANCELLED)
-            emit consolePutData(QString("Error rx transfer: %1\n").arg(libusb_error_name(transfer->status)), 1);
+        {
+            // Check time, we should not spam to console too often
+            if(console_spam_timer.hasExpired(1000))
+            {
+                emit consolePutData(QString("Error rx transfer: %1\n").arg(libusb_error_name(transfer->status)), 1);
+                console_spam_timer.start();
+            }
+        }
     }
 
     // If we are not receiving already

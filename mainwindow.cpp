@@ -236,7 +236,7 @@ void MainWindow::timeoutUsbInitCallback()
     }
 }
 
-void MainWindow::usbInitTimeoutStart(const int timeout_ms)
+void MainWindow::usbInitTimeoutStart(int timeout_ms)
 {
     timerUsbInit->start(timeout_ms);
 }
@@ -404,7 +404,7 @@ void MainWindow::showStatusMessage(const QString &message)
 
 // Serial port to PC
 // Asynchronous transmit
-void MainWindow::transmitDataSerialPort(const uint8_t *p_data, const int length)
+void MainWindow::transmitDataSerialPort(const uint8_t *p_data, int length)
 {
     if(p_data == nullptr)
     {

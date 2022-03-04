@@ -6,6 +6,7 @@
 #include <QWaitCondition>
 //#include <QCoreApplication>
 #include <libusb-1.0/libusb.h>
+#include <QElapsedTimer>
 
 #define VID 0x04d8
 #define PID 0x0053
@@ -19,8 +20,8 @@ class UsbWorkThread : public QThread
 
 signals:
     void consolePutData(const QString &data, quint8 priority);
-    void postTxDataToSerialPort(const uint8_t *p_data, const int len);
-    void usbInitTimeoutStart(const int timeout_ms);
+    void postTxDataToSerialPort(const uint8_t *p_data, int len);
+    void usbInitTimeoutStart(int timeout_ms);
 
 public:
     explicit UsbWorkThread(QObject *parent = nullptr);
@@ -91,6 +92,8 @@ private:
 //    QMutex m_mutex;
 //    QWaitCondition m_cond;
     bool m_quit = false;
+
+    QElapsedTimer console_spam_timer;
 };
 
 #endif // USB_WORKTHREAD_H
