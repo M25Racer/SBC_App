@@ -95,8 +95,6 @@ void UsbWorkThread::run()
                 receive_in_progress = false;
             }
         }
-
-        //QApplication::processEvents();
     }
 }
 
@@ -308,7 +306,7 @@ void UsbWorkThread::USB_StopTransmit()
     }
 }
 
-void UsbWorkThread::end()
+void UsbWorkThread::USB_Deinit()
 {
     struct timeval tv;
     tv.tv_sec = 0;
@@ -503,8 +501,8 @@ void LIBUSB_CALL UsbWorkThread::rx_callback(struct libusb_transfer *transfer)
                     emit consolePutData(QString("Received SRP LS DATA\n"), 0);
                     break;
                 case SRP_HS_DATA:
-                    // todo
-                    emit consolePutData(QString("Received SRP HS DATA, todo\n"), 0);
+                    emit consolePutData(QString("Received SRP HS DATA\n"), 0);
+                    parseHsData();
                     break;
             }
 
@@ -766,7 +764,108 @@ void UsbWorkThread::USB_Reconnect()
     USB_StopReceive();
     USB_StopTransmit();
 
-    end();
+    USB_Deinit();
     s = UsbWorkThread::INIT;
     USB_Init();
+}
+
+// SRP HS protocol handling (TODO: move to separate class)
+
+void UsbWorkThread::sendHsCommand(uint8_t Command, uint32_t Length, uint8_t *p_Data)
+{
+    USBheader_t header;
+    header.cmd = Command;
+    header.type = SRP_HS_DATA;
+    header.packet_length = sizeof(USBheader_t) + Length;
+
+    emit consolePutData("sendHsCommand\n", 1);
+
+    if(Length)
+    {
+        if(p_Data == nullptr)
+        {
+            emit consolePutData("Error: sendHsCommand reported p_data == null\n", 1);
+            return;
+        }
+
+        if(header.packet_length > sizeof(UserTxBuffer))
+        {
+            emit consolePutData("Error: sendHsCommand reported length is too long\n", 1);
+            header.packet_length = sizeof(UserTxBuffer);
+        }
+    }
+
+    // Cancel ongoing transfer (if any)
+    USB_StopTransmit();
+
+    UserTxBuffer_len = header.packet_length;
+    memcpy(UserTxBuffer, (uint8_t*)&header, sizeof(header));
+
+    if(Length)
+        memcpy(UserTxBuffer + sizeof(header), p_Data, Length);
+
+    emit consolePutData("Transmit to H7 " + QString::number(UserTxBuffer_len) + " bytes\n", 0);
+    start_transmit = true;
+}
+
+void UsbWorkThread::parseHsData()
+{
+    USBheader_t *header = (USBheader_t*)&UserRxBuffer;
+    uint8_t *p_data = (uint8_t*)&UserRxBuffer[sizeof(USBheader_t)];
+
+    switch(header->cmd)
+    {
+        case USB_CMD_ADC_START:
+        case USB_CMD_ADC_STOP:
+            break;
+
+        case USB_CMD_GET_DATA_SIZE:
+        {
+            uint32_t ready_adc_data_size = UserRxBuffer[sizeof(USBheader_t)];
+            ready_adc_data_size |= (uint32_t)UserRxBuffer[sizeof(USBheader_t) + 1] << 8;
+            ready_adc_data_size |= (uint32_t)UserRxBuffer[sizeof(USBheader_t) + 2] << 16;
+            ready_adc_data_size |= (uint32_t)UserRxBuffer[sizeof(USBheader_t) + 3] << 24;
+            emit consolePutData(QString("Ready ADC data size = %1\n").arg(ready_adc_data_size), 0);
+            break;
+        }
+
+        case USB_CMD_GET_DATA:
+            // TODO copy data to buffer
+            break;
+
+        case USB_CMD_GET_STATUS:
+        {
+            uint8_t AdcStatus = *p_data;
+            if(AdcStatus == ADC_STATUS_READY)
+            {
+                emit consolePutData("ADC status = ready\n", 0);
+
+                if(UserRxBuffer_len >= (int)sizeof(USBheader_t) + 1 + 4)
+                {
+                    uint32_t ready_adc_data_size = UserRxBuffer[sizeof(USBheader_t) + 1];
+                    ready_adc_data_size |= (uint32_t)UserRxBuffer[sizeof(USBheader_t) + 2] << 8;
+                    ready_adc_data_size |= (uint32_t)UserRxBuffer[sizeof(USBheader_t) + 3] << 16;
+                    ready_adc_data_size |= (uint32_t)UserRxBuffer[sizeof(USBheader_t) + 4] << 24;
+                    emit consolePutData(QString("Ready ADC data size = %1\n").arg(ready_adc_data_size), 0);
+
+                    // If there is an ADC data available to read
+                    if(ready_adc_data_size)
+                    {
+                        // Send GET_DATA command
+                        sendHsCommand(USB_CMD_GET_DATA, 0, nullptr);
+                    }
+                }
+
+            }
+            else if(AdcStatus == ADC_STATUS_BUSY)
+            {
+                emit consolePutData("ADC status = busy\n", 0);
+            }
+            else
+            {
+                emit consolePutData("ADC status = unknown\n", 0);
+            }
+            break;
+        }
+    }
 }

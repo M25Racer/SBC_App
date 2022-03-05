@@ -133,7 +133,7 @@ MainWindow::~MainWindow()
     timerSpRxTimeout->stop();
 
     closeSerialPort();
-    m_usb_thread.end();
+    m_usb_thread.USB_Deinit();
 
     m_console->Close();
     delete m_ui;
@@ -395,6 +395,9 @@ void MainWindow::initActionsConnections()
     connect(m_ui->actionAboutQt, &QAction::triggered, qApp, &QApplication::aboutQt);
     connect(m_ui->actionLogsFlush, &QAction::triggered, this, &MainWindow::logFileFlush);
     connect(m_ui->actionLogsOpenFile, &QAction::triggered, this, &MainWindow::logFileOpen);
+    connect(m_ui->actionSend_HS_command_GET_STATUS, &QAction::triggered, this, &MainWindow::sendHsCommandGetStatus);
+    connect(m_ui->actionSend_HS_command_GET_DATA, &QAction::triggered, this, &MainWindow::sendHsCommandGetData);
+    connect(m_ui->actionGET_DATA_SIZE, &QAction::triggered, this, &MainWindow::sendHsCommandGetDataSize);
 }
 
 void MainWindow::showStatusMessage(const QString &message)
@@ -478,4 +481,20 @@ void MainWindow::logFileOpen()
     m_console->fileOpen();
 //    QMessageBox::information(this, tr("Info"),
 //                       tr("Todo!"));
+}
+
+void MainWindow::sendHsCommandGetStatus()
+{
+    // Get status
+    m_usb_thread.sendHsCommand(USB_CMD_GET_STATUS, 0, nullptr);
+}
+
+void MainWindow::sendHsCommandGetData()
+{
+    m_usb_thread.sendHsCommand(USB_CMD_GET_DATA, 0, nullptr);
+}
+
+void MainWindow::sendHsCommandGetDataSize()
+{
+    m_usb_thread.sendHsCommand(USB_CMD_GET_DATA_SIZE, 0, nullptr);
 }

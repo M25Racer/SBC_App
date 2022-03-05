@@ -85,6 +85,9 @@ private slots:
     void about();
     void logFileFlush();
     void logFileOpen();
+    void sendHsCommandGetStatus();
+    void sendHsCommandGetData();
+    void sendHsCommandGetDataSize();
     void readDataSerialPort();
     void transmitDataSerialPort(const uint8_t *p_data, int length);
     void postTxDataSTM(const uint8_t *p_data, const int length);
