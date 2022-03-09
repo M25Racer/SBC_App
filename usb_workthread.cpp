@@ -334,6 +334,9 @@ void UsbWorkThread::USB_Deinit()
     USB_StopTransmit();
     libusb_handle_events_timeout_completed(context, &tv, nullptr);
 
+    // Deregister hotplug event callback
+    libusb_hotplug_deregister_callback(context, h_hotplug);
+
     // Deallocation
     if(t_rx != nullptr)
     {
@@ -437,6 +440,23 @@ void LIBUSB_CALL UsbWorkThread::tx_callback(struct libusb_transfer *transfer)
     }
 
     tx_complete_flag = 1;
+}
+
+int LIBUSB_CALL UsbWorkThread::hotplug_callback(libusb_context *ctx, libusb_device *device, libusb_hotplug_event event, void *user_data)
+{
+    Q_UNUSED(ctx);
+    Q_UNUSED(device);
+    Q_UNUSED(event);
+    Q_UNUSED(user_data);
+
+    //if(event & LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED)
+    //    emit consolePutData("USB hotplug callback DEVICE_ARRIVED\n", 1);
+
+    //if(event & LIBUSB_HOTPLUG_EVENT_DEVICE_LEFT)
+    //    emit consolePutData("USB hotplug callback DEVICE_LEFT\n", 1);
+
+    // Returning 1 will cause this callback to be deregistered
+    return 0;
 }
 
 void LIBUSB_CALL UsbWorkThread::rx_callback(struct libusb_transfer *transfer)
@@ -626,6 +646,24 @@ bool UsbWorkThread::usbInitialization()
 
     // Free device list
     libusb_free_device_list(list, 1);
+
+    // Register 'hotplug event'
+    if(libusb_has_capability(LIBUSB_CAP_HAS_HOTPLUG))
+    {
+        rc = libusb_hotplug_register_callback(context,
+                                             libusb_hotplug_event(LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED | LIBUSB_HOTPLUG_EVENT_DEVICE_LEFT),
+                                             LIBUSB_HOTPLUG_ENUMERATE,
+                                             VID,
+                                             PID,
+                                             LIBUSB_HOTPLUG_MATCH_ANY,
+                                             static_hotplug_callback,
+                                             this,
+                                             &h_hotplug);
+        if(rc < 0)
+        {
+            emit consolePutData(QString("Error libusb_hotplug_register_callback: %1\n").arg(libusb_error_name(rc)), 1);
+        }
+    }
 
     return true;
 }

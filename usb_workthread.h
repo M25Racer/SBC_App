@@ -75,9 +75,14 @@ private:
     {
         return reinterpret_cast<UsbWorkThread*>(transfer->user_data)->rx_callback(transfer);
     }
+    static int LIBUSB_CALL static_hotplug_callback(libusb_context *ctx, libusb_device *device, libusb_hotplug_event event, void *user_data)
+    {
+        return reinterpret_cast<UsbWorkThread*>(user_data)->hotplug_callback(ctx, device, event, user_data);
+    }
 
     void LIBUSB_CALL tx_callback(struct libusb_transfer *transfer);
     void LIBUSB_CALL rx_callback(struct libusb_transfer *transfer);
+    int LIBUSB_CALL hotplug_callback(libusb_context *ctx, libusb_device *device, libusb_hotplug_event event, void *user_data);
 
 
     libusb_context *context = nullptr;
@@ -94,6 +99,8 @@ private:
     int tx_complete_flag = 0;
 
     QElapsedTimer console_spam_timer;
+
+    libusb_hotplug_callback_handle h_hotplug;    // libusb callback handle for hotplug event
 };
 
 #endif // USB_WORKTHREAD_H
