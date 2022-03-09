@@ -228,12 +228,6 @@ void MainWindow::closeSerialPort()
 void MainWindow::timeoutUsbInitCallback()
 {
     m_usb_thread.USB_Init();
-
-    if(m_usb_thread.s == UsbWorkThread::INIT_END)
-    {
-        // Start LibUSB polling thread
-        m_usb_thread.USB_ThreadStart();
-    }
 }
 
 void MainWindow::usbInitTimeoutStart(int timeout_ms)

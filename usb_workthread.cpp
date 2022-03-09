@@ -22,9 +22,15 @@ void UsbWorkThread::USB_ThreadStart()
     //    m_request = request;
 
     if(!isRunning())
+    {
+        m_quit = false;
         start();
-//    else
-//        m_cond.wakeOne();
+    }
+    else
+    {
+        //m_quit = false;
+        //m_cond.wakeOne();
+    }
 }
 
 void UsbWorkThread::run()
@@ -629,7 +635,7 @@ void UsbWorkThread::USB_Init()
     bool r = false;
     int rc = 0;
 
-    switch(s)
+    switch(InitState)
     {
         case UsbWorkThread::INIT:
             r = usbInitialization();
@@ -642,7 +648,7 @@ void UsbWorkThread::USB_Init()
                 return;
             }
 
-            s = UsbWorkThread::OPEN_DEV;
+            InitState = UsbWorkThread::OPEN_DEV;
             [[fallthrough]];
             /* no break */
 
@@ -673,7 +679,7 @@ void UsbWorkThread::USB_Init()
                 return;
             }
 
-            s = UsbWorkThread::DEV_TAKE_CONTROL;
+            InitState = UsbWorkThread::DEV_TAKE_CONTROL;
             [[fallthrough]];
             /* no break */
 
@@ -719,7 +725,7 @@ void UsbWorkThread::USB_Init()
                 return;
             }
 
-            s = UsbWorkThread::CLAIM_INTERFACE;
+            InitState = UsbWorkThread::CLAIM_INTERFACE;
             [[fallthrough]];
             /* no break */
 
@@ -737,7 +743,7 @@ void UsbWorkThread::USB_Init()
                 emit usbInitTimeoutStart(timeoutUsbInit_ms);
             }
 
-            s = UsbWorkThread::TRANSMIT_RECEIVE_INIT;
+            InitState = UsbWorkThread::TRANSMIT_RECEIVE_INIT;
             [[fallthrough]];
             /* no break */
 
@@ -748,7 +754,12 @@ void UsbWorkThread::USB_Init()
             // Start receiving
             emit consolePutData("Start receiving for the first time\n", 0);
             start_receive = true;
-            s = UsbWorkThread::INIT_END;
+            InitState = UsbWorkThread::INIT_END;
+            [[fallthrough]];
+            /* no break */
+        case UsbWorkThread::INIT_END:
+            // Start LibUSB polling thread
+            USB_ThreadStart();
             [[fallthrough]];
             /* no break */
 
@@ -765,7 +776,7 @@ void UsbWorkThread::USB_Reconnect()
     USB_StopTransmit();
 
     USB_Deinit();
-    s = UsbWorkThread::INIT;
+    InitState = UsbWorkThread::INIT;
     USB_Init();
 }
 

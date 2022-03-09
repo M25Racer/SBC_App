@@ -32,7 +32,6 @@ public:
     void USB_ThreadStart();
     void USB_Init();
     void USB_Deinit();
-    void USB_StopReceive();
     void USB_StopTransmit();
 
     // Init 'states'
@@ -40,7 +39,7 @@ public:
         INIT = 0, OPEN_DEV, DEV_TAKE_CONTROL, CLAIM_INTERFACE, TRANSMIT_RECEIVE_INIT, INIT_END
     } UsbInitState;
 
-    UsbInitState s = UsbInitState::INIT;
+    UsbInitState InitState = UsbInitState::INIT;
 
     uint8_t UserRxBuffer[65536];
     uint8_t UserTxBuffer[65536];
@@ -63,6 +62,7 @@ private:
     void USB_ReceiveTransmitInit();
     void USB_StartReceive(uint8_t *p_rx_buffer_offset);
     void USB_StartTransmit();
+    void USB_StopReceive();
     void parseHsData();
 
     // Hack to use libusb's 'C'-callback functions in 'C++' project
