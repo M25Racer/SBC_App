@@ -495,7 +495,14 @@ void LIBUSB_CALL UsbWorkThread::rx_callback(struct libusb_transfer *transfer)
 //        d.clear();
 //        ///////////////////////////
 
-        bool first_chunk = !UserRxBuffer_len ? true : false;
+        // If we waited for more data and timeout expired
+        if(UserRxBuffer_len && rx_timeout_timer.hasExpired(rx_timeout_ms))
+        {
+            // Drop previously received data
+            UserRxBuffer_len = 0;
+            emit consolePutData(QString("Usb receive timeout detected, broken previously received packet\n"), 1);
+        }
+
         UserRxBuffer_len += transfer->actual_length;
 
         USBheader_t *header = (USBheader_t*)&UserRxBuffer;
@@ -531,7 +538,7 @@ void LIBUSB_CALL UsbWorkThread::rx_callback(struct libusb_transfer *transfer)
                     emit consolePutData(QString("Received SRP LS DATA\n"), 0);
                     break;
                 case SRP_HS_DATA:
-                    emit consolePutData(QString("Received SRP HS DATA\n"), 0);
+                    emit consolePutData(QString("Received SRP HS DATA, continue to parsing\n"), 0);
                     parseHsData();
                     break;
             }
@@ -540,16 +547,8 @@ void LIBUSB_CALL UsbWorkThread::rx_callback(struct libusb_transfer *transfer)
         }
         else
         {
-            if(!first_chunk && rx_timeout_timer.hasExpired(rx_timeout_ms))
-            {
-                UserRxBuffer_len = 0;
-                emit consolePutData(QString("Usb receive timeout, possibly broken packet\n"), 1);
-                break;
-            }
-
             // Continue receive
-            emit consolePutData(QString("Continue usb receive\n"), 0);
-            //start_receive = true;
+            emit consolePutData(QString("Continue usb receive, start rx timeout timer\n"), 0);
             rx_timeout_timer.start();
         }
     }
@@ -883,16 +882,14 @@ void UsbWorkThread::parseHsData()
             ready_adc_data_size |= (uint32_t)UserRxBuffer[sizeof(USBheader_t) + 1] << 8;
             ready_adc_data_size |= (uint32_t)UserRxBuffer[sizeof(USBheader_t) + 2] << 16;
             ready_adc_data_size |= (uint32_t)UserRxBuffer[sizeof(USBheader_t) + 3] << 24;
-            emit consolePutData(QString("Ready ADC data size = %1\n").arg(ready_adc_data_size), 0);
+            emit consolePutData(QString("parseHsData(): Ready ADC data size = %1\n").arg(ready_adc_data_size), 0);
             break;
         }
 
         case USB_CMD_GET_DATA:
-            // TODO copy data to buffer
-            emit consolePutData(QString("USB_CMD_GET_DATA\n"), 0);
+            emit consolePutData(QString("parseHsData(): USB_CMD_GET_DATA\n"), 0);
             memcpy(AdcDataBuffer, UserRxBuffer + sizeof(USBheader_t), header->packet_length - sizeof(USBheader_t));
             emit consoleAdcFile(AdcDataBuffer, header->packet_length - sizeof(USBheader_t));
-            //emit consoleAdcFile(const QByteArray &adc_data, uint32_t size);
             break;
 
         case USB_CMD_GET_STATUS:
@@ -906,12 +903,12 @@ void UsbWorkThread::parseHsData()
                 ready_adc_data_size |= (uint32_t)UserRxBuffer[sizeof(USBheader_t) + 2] << 8;
                 ready_adc_data_size |= (uint32_t)UserRxBuffer[sizeof(USBheader_t) + 3] << 16;
                 ready_adc_data_size |= (uint32_t)UserRxBuffer[sizeof(USBheader_t) + 4] << 24;
-                emit consolePutData(QString("Ready ADC data size = %1\n").arg(ready_adc_data_size), 0);
+                emit consolePutData(QString("parseHsData(): Ready ADC data size = %1\n").arg(ready_adc_data_size), 0);
             }
 
             if(AdcStatus == ADC_STATUS_READY)
             {
-                emit consolePutData("ADC status = ready\n", 0);
+                emit consolePutData("parseHsData(): ADC status = ready\n", 0);
 
                 // If there is an ADC data available to read
                 if(ready_adc_data_size)
@@ -922,11 +919,11 @@ void UsbWorkThread::parseHsData()
             }
             else if(AdcStatus == ADC_STATUS_BUSY)
             {
-                emit consolePutData("ADC status = busy\n", 0);
+                emit consolePutData("parseHsData(): ADC status = busy\n", 0);
             }
             else
             {
-                emit consolePutData("ADC status = unknown\n", 0);
+                emit consolePutData("parseHsData(): ADC status = unknown\n", 0);
             }
             break;
         }
