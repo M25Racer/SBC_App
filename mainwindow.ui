@@ -41,11 +41,12 @@
    </widget>
    <widget class="QMenu" name="menuTest">
     <property name="title">
-     <string>Test</string>
+     <string>Test HS</string>
     </property>
     <addaction name="actionSend_HS_command_GET_STATUS"/>
     <addaction name="actionSend_HS_command_GET_DATA"/>
     <addaction name="actionGET_DATA_SIZE"/>
+    <addaction name="actionADC_START"/>
    </widget>
    <addaction name="menuHelp"/>
    <addaction name="menuLogs"/>
@@ -158,17 +159,22 @@
   </action>
   <action name="actionSend_HS_command_GET_STATUS">
    <property name="text">
-    <string>Send HS command GET_STATUS</string>
+    <string>Send GET_STATUS</string>
    </property>
   </action>
   <action name="actionSend_HS_command_GET_DATA">
    <property name="text">
-    <string>Send HS command GET_DATA</string>
+    <string>Send GET_DATA</string>
    </property>
   </action>
   <action name="actionGET_DATA_SIZE">
    <property name="text">
-    <string>GET_DATA_SIZE</string>
+    <string>Send GET_DATA_SIZE</string>
+   </property>
+  </action>
+  <action name="actionADC_START">
+   <property name="text">
+    <string>Send ADC_START</string>
    </property>
   </action>
  </widget>

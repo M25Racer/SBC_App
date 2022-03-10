@@ -72,6 +72,15 @@ Console::Console(QWidget *parent) :
 
     // Open stream file writes
     out.setDevice(m_logFile.data());
+
+
+    // Set the adc data file
+    m_adcFile.reset(new QFile("SBC_adc_data_"+ QDateTime::currentDateTime().toString("yyyy-MM-dd_hh.mm.ss.zzz") + ".txt"));
+    // Open the file logging
+    m_adcFile.data()->open(QFile::Append | QFile::Text);
+
+    // Open stream file writes
+    outAdc.setDevice(m_adcFile.data());
 }
 
 void Console::putData(const QString &data, uint8_t priority)
@@ -96,6 +105,24 @@ void Console::putData(const QString &data, uint8_t priority)
     // Write to the output category of the message and the message itself
     out << data;// << endl;
     //out.flush();    // Clear the buffered data
+}
+
+void Console::putDataAdc(const quint8 *p_data, quint32 size)
+{
+    QString data;
+    int value;
+
+    for(uint64_t i = 0; i < size/2; ++i)
+    {
+        value = (int16_t)p_data[i];
+        value |= ((int16_t)p_data[i+1]) << 8;
+
+        data.append(QString("%1\n").arg(value));
+    }
+
+
+    outAdc << data << endl;
+    outAdc.flush();    // Clear the buffered data
 }
 
 void Console::fileFlush()

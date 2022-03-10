@@ -68,6 +68,7 @@ public:
     explicit Console(QWidget *parent = nullptr);
 
     void putData(const QString &data, uint8_t priority);
+    void putDataAdc(const quint8 *p_data, quint32 size);
     //void setLocalEchoEnabled(bool set);
     void Close();
     void fileFlush();
@@ -82,10 +83,11 @@ protected:
 private:
     //bool m_localEchoEnabled = false;
 
-    // Smart pointer to log file
-    QScopedPointer<QFile> m_logFile;
+    QScopedPointer<QFile> m_logFile;        // Smart pointer to log file
+    QScopedPointer<QFile> m_adcFile;        // Smart pointer to received adc data file
 
     QTextStream out;
+    QTextStream outAdc;
 };
 
 #endif // CONSOLE_H

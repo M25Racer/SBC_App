@@ -89,6 +89,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(&m_usb_thread, &UsbWorkThread::postTxDataToSerialPort, this, &MainWindow::transmitDataSerialPort, Qt::ConnectionType::QueuedConnection);
     connect(&m_usb_thread, &UsbWorkThread::consolePutData, this, &MainWindow::consolePutData, Qt::ConnectionType::QueuedConnection);
     connect(&m_usb_thread, &UsbWorkThread::usbInitTimeoutStart, this, &MainWindow::usbInitTimeoutStart, Qt::ConnectionType::QueuedConnection);
+    connect(&m_usb_thread, &UsbWorkThread::consoleAdcFile, this, &MainWindow::consoleAdcData, Qt::ConnectionType::QueuedConnection);
 
     m_console->putData("SBC Application\n", 1);
     m_console->putData("Opening serial port...\n", 1);
@@ -145,6 +146,14 @@ void MainWindow::consolePutData(const QString &data, quint8 priority)
         return;
 
     m_console->putData(data, priority);
+}
+
+void MainWindow::consoleAdcData(const quint8 *p_data, quint32 size)
+{
+    if(m_console == nullptr)
+        return;
+
+    m_console->putDataAdc(p_data, size);
 }
 
 bool MainWindow::openSerialPort()
@@ -392,6 +401,7 @@ void MainWindow::initActionsConnections()
     connect(m_ui->actionSend_HS_command_GET_STATUS, &QAction::triggered, this, &MainWindow::sendHsCommandGetStatus);
     connect(m_ui->actionSend_HS_command_GET_DATA, &QAction::triggered, this, &MainWindow::sendHsCommandGetData);
     connect(m_ui->actionGET_DATA_SIZE, &QAction::triggered, this, &MainWindow::sendHsCommandGetDataSize);
+    connect(m_ui->actionADC_START, &QAction::triggered, this, &MainWindow::sendHsCommandAdcStart);
 }
 
 void MainWindow::showStatusMessage(const QString &message)
@@ -491,4 +501,10 @@ void MainWindow::sendHsCommandGetData()
 void MainWindow::sendHsCommandGetDataSize()
 {
     m_usb_thread.sendHsCommand(USB_CMD_GET_DATA_SIZE, 0, nullptr);
+}
+
+void MainWindow::sendHsCommandAdcStart()
+{
+    uint32_t adc_data_length = 1024;
+    m_usb_thread.sendHsCommand(USB_CMD_ADC_START, 4, (uint8_t*)&adc_data_length);
 }

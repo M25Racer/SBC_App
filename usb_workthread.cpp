@@ -484,6 +484,8 @@ void LIBUSB_CALL UsbWorkThread::rx_callback(struct libusb_transfer *transfer)
      * that the entire amount of requested data was transferred. */
     case LIBUSB_TRANSFER_COMPLETED:
     {
+//        ///////////////////////////
+//        QString d;
 //        emit consolePutData(QString("Transfer completed, actual received length %1\n").arg(transfer->actual_length), 0);
 //        uint8_t len_cut = transfer->actual_length > 254 ? 254 : uint8_t(transfer->actual_length);
 //        for(uint8_t i = 0; i < len_cut; ++i)
@@ -491,7 +493,9 @@ void LIBUSB_CALL UsbWorkThread::rx_callback(struct libusb_transfer *transfer)
 //        d.append("\n");
 //        emit consolePutData(d, 0);
 //        d.clear();
+//        ///////////////////////////
 
+        bool first_chunk = !UserRxBuffer_len ? true : false;
         UserRxBuffer_len += transfer->actual_length;
 
         USBheader_t *header = (USBheader_t*)&UserRxBuffer;
@@ -511,8 +515,8 @@ void LIBUSB_CALL UsbWorkThread::rx_callback(struct libusb_transfer *transfer)
 
         if(header->packet_length <= uint32_t(UserRxBuffer_len))
         {
-            // Packet data should be at least 1 byte in length
-            if(header->packet_length < sizeof(USBheader_t) + 1)
+            // Packet length should be at least equal to header size
+            if(header->packet_length < sizeof(USBheader_t))
             {
                 emit consolePutData(QString("Parse error, packet length is too short %1\n").arg(header->packet_length), 1);
                 UserRxBuffer_len = 0;
@@ -536,11 +540,17 @@ void LIBUSB_CALL UsbWorkThread::rx_callback(struct libusb_transfer *transfer)
         }
         else
         {
-//            // Continue receive
-//            emit consolePutData(QString("Continue usb receive\n"), 0);
-//            start_receive = true;
-            // Todo continue receive with timeout?
-            UserRxBuffer_len = 0;
+            if(!first_chunk && rx_timeout_timer.hasExpired(rx_timeout_ms))
+            {
+                UserRxBuffer_len = 0;
+                emit consolePutData(QString("Usb receive timeout, possibly broken packet\n"), 1);
+                break;
+            }
+
+            // Continue receive
+            emit consolePutData(QString("Continue usb receive\n"), 0);
+            //start_receive = true;
+            rx_timeout_timer.start();
         }
     }
         break;
@@ -590,7 +600,6 @@ void LIBUSB_CALL UsbWorkThread::rx_callback(struct libusb_transfer *transfer)
     if(rx_complete_flag)
     {
         // Start receiving again
-//        emit consolePutData("Start receiving again\n", 0);
         start_receive = true;
     }
 
@@ -880,31 +889,36 @@ void UsbWorkThread::parseHsData()
 
         case USB_CMD_GET_DATA:
             // TODO copy data to buffer
+            emit consolePutData(QString("USB_CMD_GET_DATA\n"), 0);
+            memcpy(AdcDataBuffer, UserRxBuffer + sizeof(USBheader_t), header->packet_length - sizeof(USBheader_t));
+            emit consoleAdcFile(AdcDataBuffer, header->packet_length - sizeof(USBheader_t));
+            //emit consoleAdcFile(const QByteArray &adc_data, uint32_t size);
             break;
 
         case USB_CMD_GET_STATUS:
         {
+            uint32_t ready_adc_data_size = 0;
             uint8_t AdcStatus = *p_data;
+
+            if(UserRxBuffer_len >= (int)sizeof(USBheader_t) + 1 + 4)
+            {
+                ready_adc_data_size = UserRxBuffer[sizeof(USBheader_t) + 1];
+                ready_adc_data_size |= (uint32_t)UserRxBuffer[sizeof(USBheader_t) + 2] << 8;
+                ready_adc_data_size |= (uint32_t)UserRxBuffer[sizeof(USBheader_t) + 3] << 16;
+                ready_adc_data_size |= (uint32_t)UserRxBuffer[sizeof(USBheader_t) + 4] << 24;
+                emit consolePutData(QString("Ready ADC data size = %1\n").arg(ready_adc_data_size), 0);
+            }
+
             if(AdcStatus == ADC_STATUS_READY)
             {
                 emit consolePutData("ADC status = ready\n", 0);
 
-                if(UserRxBuffer_len >= (int)sizeof(USBheader_t) + 1 + 4)
+                // If there is an ADC data available to read
+                if(ready_adc_data_size)
                 {
-                    uint32_t ready_adc_data_size = UserRxBuffer[sizeof(USBheader_t) + 1];
-                    ready_adc_data_size |= (uint32_t)UserRxBuffer[sizeof(USBheader_t) + 2] << 8;
-                    ready_adc_data_size |= (uint32_t)UserRxBuffer[sizeof(USBheader_t) + 3] << 16;
-                    ready_adc_data_size |= (uint32_t)UserRxBuffer[sizeof(USBheader_t) + 4] << 24;
-                    emit consolePutData(QString("Ready ADC data size = %1\n").arg(ready_adc_data_size), 0);
-
-                    // If there is an ADC data available to read
-                    if(ready_adc_data_size)
-                    {
-                        // Send GET_DATA command
-                        sendHsCommand(USB_CMD_GET_DATA, 0, nullptr);
-                    }
+                    // Send GET_DATA command
+                    sendHsCommand(USB_CMD_GET_DATA, 0, nullptr);
                 }
-
             }
             else if(AdcStatus == ADC_STATUS_BUSY)
             {

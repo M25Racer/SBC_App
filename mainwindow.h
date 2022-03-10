@@ -88,11 +88,13 @@ private slots:
     void sendHsCommandGetStatus();
     void sendHsCommandGetData();
     void sendHsCommandGetDataSize();
+    void sendHsCommandAdcStart();
     void readDataSerialPort();
     void transmitDataSerialPort(const uint8_t *p_data, int length);
     void postTxDataSTM(const uint8_t *p_data, const int length);
     void handleError(QSerialPort::SerialPortError error);
     void consolePutData(const QString &data, quint8 priority);
+    void consoleAdcData(const quint8 *p_data, quint32 size);
     void timeoutSerialPortRx();
     void timeoutSerialPortReconnect();
     void timeoutUsbInitCallback();

@@ -19,6 +19,7 @@ class UsbWorkThread : public QThread
 
 signals:
     void consolePutData(const QString &data, quint8 priority);
+    void consoleAdcFile(const quint8 *adc_data, quint32 size);
     void postTxDataToSerialPort(const uint8_t *p_data, int len);
     void usbInitTimeoutStart(int timeout_ms);
 
@@ -98,9 +99,14 @@ private:
     int rx_complete_flag = 0;
     int tx_complete_flag = 0;
 
+    QElapsedTimer rx_timeout_timer;
     QElapsedTimer console_spam_timer;
 
+    const qint64 rx_timeout_ms = 100;            // usb rx timeout between transfers of one big packet, ms
+
     libusb_hotplug_callback_handle h_hotplug;    // libusb callback handle for hotplug event
+
+    uint8_t AdcDataBuffer[65536];
 };
 
 #endif // USB_WORKTHREAD_H
