@@ -69,9 +69,14 @@ MainWindow::MainWindow(QWidget *parent) :
     m_message_box(new MessageBox)
 {
     m_ui->setupUi(this);
+
     m_console->setEnabled(false);
     m_console->setReadOnly(true);
-    setCentralWidget(m_console);
+
+    QVBoxLayout *layout = new QVBoxLayout();
+    layout->setContentsMargins(0,0,0,0);
+    layout->addWidget(m_console);
+    m_ui->tab_1->setLayout(layout);
 
     //m_ui->actionConnect->setEnabled(true);
     //m_ui->actionDisconnect->setEnabled(false);
