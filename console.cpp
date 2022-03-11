@@ -110,18 +110,17 @@ void Console::putData(const QString &data, uint8_t priority)
 void Console::putDataAdc(const quint8 *p_data, quint32 size)
 {
     QString data;
-    int value;
+    uint16_t value;
 
-    for(uint64_t i = 0; i < size/2; ++i)
+    for(uint64_t i = 0; i < size/2; i+=2)
     {
-        value = (int16_t)p_data[i];
-        value |= ((int16_t)p_data[i+1]) << 8;
+        value = p_data[i];
+        value |= ((uint16_t)p_data[i+1]) << 8;
 
-        data.append(QString("%1\n").arg(value));
+        data.append(QString("%1\n").arg((int16_t)value));
     }
 
-
-    outAdc << data << endl;
+    outAdc << data;
     outAdc.flush();    // Clear the buffered data
 }
 

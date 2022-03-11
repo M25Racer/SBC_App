@@ -102,7 +102,7 @@ private:
     QElapsedTimer rx_timeout_timer;
     QElapsedTimer console_spam_timer;
 
-    const qint64 rx_timeout_ms = 100;            // usb rx timeout between transfers of one big packet, ms
+    const qint64 rx_timeout_ms = 600000;//100;            // usb rx timeout between transfers of one big packet, ms
 
     libusb_hotplug_callback_handle h_hotplug;    // libusb callback handle for hotplug event
 
