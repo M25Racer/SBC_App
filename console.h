@@ -83,6 +83,15 @@ protected:
 private:
     //bool m_localEchoEnabled = false;
 
+    void mousePressEvent(QMouseEvent *e) override
+    {
+        Q_UNUSED(e);
+    }
+    void mouseDoubleClickEvent(QMouseEvent *e) override
+    {
+        Q_UNUSED(e);
+    }
+
     QScopedPointer<QFile> m_logFile;        // Smart pointer to log file
     QScopedPointer<QFile> m_adcFile;        // Smart pointer to received adc data file
 
