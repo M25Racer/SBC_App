@@ -500,7 +500,8 @@ void MainWindow::sendHsCommandGetStatus()
 
 void MainWindow::sendHsCommandGetData()
 {
-    m_usb_thread.sendHsCommand(USB_CMD_GET_DATA, 0, nullptr);
+    m_console->putData(QString("Send HS command GET_DATA, requested data size %1\n").arg(m_usb_thread.stm32_ready_data_size), 1);
+    m_usb_thread.sendHsCommand(USB_CMD_GET_DATA, 4, (uint8_t*)&m_usb_thread.stm32_ready_data_size);
 }
 
 void MainWindow::sendHsCommandGetDataSize()
@@ -510,6 +511,6 @@ void MainWindow::sendHsCommandGetDataSize()
 
 void MainWindow::sendHsCommandAdcStart()
 {
-    uint32_t adc_data_length = 1024;
+    uint32_t adc_data_length = 65536;//1024;
     m_usb_thread.sendHsCommand(USB_CMD_ADC_START, 4, (uint8_t*)&adc_data_length);
 }

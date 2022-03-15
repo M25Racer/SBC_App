@@ -877,14 +877,12 @@ void UsbWorkThread::parseHsData()
             break;
 
         case USB_CMD_GET_DATA_SIZE:
-        {
-            uint32_t ready_adc_data_size = UserRxBuffer[sizeof(USBheader_t)];
-            ready_adc_data_size |= (uint32_t)UserRxBuffer[sizeof(USBheader_t) + 1] << 8;
-            ready_adc_data_size |= (uint32_t)UserRxBuffer[sizeof(USBheader_t) + 2] << 16;
-            ready_adc_data_size |= (uint32_t)UserRxBuffer[sizeof(USBheader_t) + 3] << 24;
-            emit consolePutData(QString("parseHsData(): Ready ADC data size = %1\n").arg(ready_adc_data_size), 0);
+            stm32_ready_data_size = UserRxBuffer[sizeof(USBheader_t)];
+            stm32_ready_data_size |= (uint32_t)UserRxBuffer[sizeof(USBheader_t) + 1] << 8;
+            stm32_ready_data_size |= (uint32_t)UserRxBuffer[sizeof(USBheader_t) + 2] << 16;
+            stm32_ready_data_size |= (uint32_t)UserRxBuffer[sizeof(USBheader_t) + 3] << 24;
+            emit consolePutData(QString("parseHsData(): Ready ADC data size = %1\n").arg(stm32_ready_data_size), 0);
             break;
-        }
 
         case USB_CMD_GET_DATA:
             emit consolePutData(QString("parseHsData(): USB_CMD_GET_DATA\n"), 0);
@@ -894,16 +892,16 @@ void UsbWorkThread::parseHsData()
 
         case USB_CMD_GET_STATUS:
         {
-            uint32_t ready_adc_data_size = 0;
+            stm32_ready_data_size = 0;
             uint8_t AdcStatus = *p_data;
 
             if(UserRxBuffer_len >= (int)sizeof(USBheader_t) + 1 + 4)
             {
-                ready_adc_data_size = UserRxBuffer[sizeof(USBheader_t) + 1];
-                ready_adc_data_size |= (uint32_t)UserRxBuffer[sizeof(USBheader_t) + 2] << 8;
-                ready_adc_data_size |= (uint32_t)UserRxBuffer[sizeof(USBheader_t) + 3] << 16;
-                ready_adc_data_size |= (uint32_t)UserRxBuffer[sizeof(USBheader_t) + 4] << 24;
-                emit consolePutData(QString("parseHsData(): Ready ADC data size = %1\n").arg(ready_adc_data_size), 0);
+                stm32_ready_data_size = UserRxBuffer[sizeof(USBheader_t) + 1];
+                stm32_ready_data_size |= (uint32_t)UserRxBuffer[sizeof(USBheader_t) + 2] << 8;
+                stm32_ready_data_size |= (uint32_t)UserRxBuffer[sizeof(USBheader_t) + 3] << 16;
+                stm32_ready_data_size |= (uint32_t)UserRxBuffer[sizeof(USBheader_t) + 4] << 24;
+                emit consolePutData(QString("parseHsData(): Ready ADC data size = %1\n").arg(stm32_ready_data_size), 0);
             }
 
             if(AdcStatus == ADC_STATUS_READY)
@@ -911,10 +909,10 @@ void UsbWorkThread::parseHsData()
                 emit consolePutData("parseHsData(): ADC status = ready\n", 0);
 
                 // If there is an ADC data available to read
-                if(ready_adc_data_size)
+                if(stm32_ready_data_size)
                 {
                     // Send GET_DATA command
-                    sendHsCommand(USB_CMD_GET_DATA, 0, nullptr);
+                    sendHsCommand(USB_CMD_GET_DATA, sizeof(stm32_ready_data_size), (uint8_t*)&stm32_ready_data_size);
                 }
             }
             else if(AdcStatus == ADC_STATUS_BUSY)

@@ -112,7 +112,7 @@ void Console::putDataAdc(const quint8 *p_data, quint32 size)
     QString data;
     uint16_t value;
 
-    for(uint64_t i = 0; i < size/2; i+=2)
+    for(uint64_t i = 0; i < size; i+=2)
     {
         value = p_data[i];
         value |= ((uint16_t)p_data[i+1]) << 8;

@@ -42,7 +42,7 @@ public:
 
     UsbInitState InitState = UsbInitState::INIT;
 
-    uint8_t UserRxBuffer[65536];
+    uint8_t UserRxBuffer[65536*4];
     uint8_t UserTxBuffer[65536];
 
     bool start_transmit = false;
@@ -54,6 +54,8 @@ public:
     bool usb_receiver_drop = false;     // Drop any received usb data when this flag is active
 
     const int timeoutUsbInit_ms = 1000;
+
+    uint32_t stm32_ready_data_size = 0;
 
 private:
     void run() override;
@@ -106,7 +108,7 @@ private:
 
     libusb_hotplug_callback_handle h_hotplug;    // libusb callback handle for hotplug event
 
-    uint8_t AdcDataBuffer[65536];
+    uint8_t AdcDataBuffer[131072]; //65536];
 };
 
 #endif // USB_WORKTHREAD_H
