@@ -6,6 +6,7 @@
 #include <QWaitCondition>
 #include <libusb-1.0/libusb.h>
 #include <QElapsedTimer>
+#include <QQueue>
 
 #define VID 0x04d8
 #define PID 0x0053
@@ -104,11 +105,11 @@ private:
     QElapsedTimer rx_timeout_timer;
     QElapsedTimer console_spam_timer;
 
-    const qint64 rx_timeout_ms = 600000;//100;            // usb rx timeout between transfers of one big packet, ms
+    const qint64 rx_timeout_ms = 10;            // usb rx timeout between transfers of one big packet, ms
 
-    libusb_hotplug_callback_handle h_hotplug;    // libusb callback handle for hotplug event
+    libusb_hotplug_callback_handle h_hotplug;   // libusb callback handle for hotplug event
 
-    uint8_t AdcDataBuffer[131072]; //65536];
+    uint8_t AdcDataBuffer[131072];
 };
 
 #endif // USB_WORKTHREAD_H
