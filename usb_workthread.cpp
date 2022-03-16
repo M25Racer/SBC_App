@@ -800,6 +800,7 @@ void UsbWorkThread::USB_Init()
             // Start receiving
             emit consolePutData("Start receiving for the first time\n", 0);
             start_receive = true;
+            usb_receiver_drop = false;
             InitState = UsbWorkThread::INIT_END;
             [[fallthrough]];
             /* no break */
