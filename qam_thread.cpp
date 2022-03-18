@@ -1,0 +1,52 @@
+#include "qam_thread.h"
+
+/* Extern global variables */
+extern RingBuffer *m_ring;              // ring data buffer (ADC data) for QAM decoder
+extern QWaitCondition ringNotEmpty;
+extern QMutex m_mutex;
+
+QamThread::QamThread(QObject *parent) :
+    QThread(parent)
+{
+}
+
+QamThread::~QamThread()
+{
+    m_mutex.lock();
+    m_quit = true;
+    ringNotEmpty.wakeOne();
+    m_mutex.unlock();
+    wait();
+}
+
+void QamThread::run()
+{
+    bool res = false;
+
+    while(!m_quit)
+    {
+        m_mutex.lock();
+        if(!m_ring->DataAvailable())
+            ringNotEmpty.wait(&m_mutex);
+        m_mutex.unlock();
+
+        m_mutex.lock();
+        res = m_ring->Get(AdcDataBuffer, &Length);
+        m_mutex.unlock();
+
+        if(res)
+        {
+            QAM_Decoder();
+        }
+        else
+        {
+            emit consolePutData("Error ring buffer get returned false\n", 1);
+        }
+    }
+}
+
+void QamThread::QAM_Decoder()
+{
+    emit consolePutData(QString("QAM decoder working, length %1\n").arg(Length), 1);
+    QThread::msleep(100);
+}

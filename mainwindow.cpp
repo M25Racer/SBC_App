@@ -95,6 +95,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(&m_usb_thread, &UsbWorkThread::consolePutData, this, &MainWindow::consolePutData, Qt::ConnectionType::QueuedConnection);
     connect(&m_usb_thread, &UsbWorkThread::usbInitTimeoutStart, this, &MainWindow::usbInitTimeoutStart, Qt::ConnectionType::QueuedConnection);
     connect(&m_usb_thread, &UsbWorkThread::consoleAdcFile, this, &MainWindow::consoleAdcData, Qt::ConnectionType::QueuedConnection);
+    connect(&m_qam_thread, &QamThread::consolePutData, this, &MainWindow::consolePutData, Qt::ConnectionType::QueuedConnection);
 
     m_console->putData("SBC Application\n", 1);
     m_console->putData("Opening serial port...\n", 1);
@@ -130,6 +131,9 @@ MainWindow::MainWindow(QWidget *parent) :
 
     // Start timer for continuous usb initialization attempts
     timerUsbInit->start(m_usb_thread.timeoutUsbInit_ms);
+
+    // Start QAM decoder thread
+    m_qam_thread.start();
 }
 
 MainWindow::~MainWindow()

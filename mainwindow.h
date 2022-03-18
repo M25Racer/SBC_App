@@ -56,6 +56,7 @@
 #include <QSerialPort>
 #include <message_box.h>
 #include <usb_workthread.h>
+#include <qam_thread.h>
 
 QT_BEGIN_NAMESPACE
 
@@ -115,6 +116,7 @@ private:
     QSerialPort *m_serial = nullptr;
     MessageBox *m_message_box = nullptr;
     UsbWorkThread m_usb_thread;
+    QamThread m_qam_thread;
 
     QByteArray TtyUserRxBuffer;
 

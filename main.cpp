@@ -51,21 +51,32 @@
 
 #include "mainwindow.h"
 #include "message_box.h"
+#include "ringbuffer.h"
 
 #include <QApplication>
 
-//MainWindow *p_w = nullptr;
+/* Global variables */
+//MainWindow *p_w = nullptr;    // pointer to 'mainwindow'
+RingBuffer *m_ring = nullptr;   // ring data buffer (ADC data) for QAM decoder
+QWaitCondition ringNotEmpty;
+QMutex m_mutex;
 
+/* Exported variables */
 extern uint8_t mod_status_reg;
+
 
 int main(int argc, char *argv[])
 {
-    QApplication a(argc, argv);
-    MainWindow w;
-//    p_w = &w;
-
     // Init SRP variables
     mod_status_reg = ready_status;
+
+    // Init ring buffer for ADC data (HS EWL)
+    m_ring = new RingBuffer();
+    m_ring->Init();
+
+    QApplication a(argc, argv);
+    MainWindow w;
+    // p_w = &w;    // initialize pointer to 'mainwindow'
 
     w.show();
     return a.exec();

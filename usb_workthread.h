@@ -4,9 +4,9 @@
 #include <QMutex>
 #include <QThread>
 #include <QWaitCondition>
-#include <libusb-1.0/libusb.h>
 #include <QElapsedTimer>
-#include <QQueue>
+#include <libusb-1.0/libusb.h>
+#include <ringbuffer.h>
 
 #define VID 0x04d8
 #define PID 0x0053

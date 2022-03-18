@@ -1,4 +1,11 @@
 #include "usb_workthread.h"
+#include <message_box.h>
+#include "../SRP_HS_USB_PROTOCOL/SRP_HS_USB_Protocol.h"
+
+/* Extern global variables */
+extern RingBuffer *m_ring;              // ring data buffer (ADC data) for QAM decoder
+extern QWaitCondition ringNotEmpty;
+extern QMutex m_mutex;
 
 UsbWorkThread::UsbWorkThread(QObject *parent) :
     QThread(parent)
@@ -103,9 +110,6 @@ void UsbWorkThread::run()
         }
     }
 }
-
-#include <message_box.h>
-#include "../SRP_HS_USB_PROTOCOL/SRP_HS_USB_Protocol.h"
 
 ///*Спецификация USB определяет 4 типа потоков данных:
 // 1. bulk  transfer  -  предназначен  для  пакетной  передачи  данных с
@@ -484,17 +488,6 @@ void LIBUSB_CALL UsbWorkThread::rx_callback(struct libusb_transfer *transfer)
      * that the entire amount of requested data was transferred. */
     case LIBUSB_TRANSFER_COMPLETED:
     {
-//        ///////////////////////////
-//        QString d;
-//        emit consolePutData(QString("Transfer completed, actual received length %1\n").arg(transfer->actual_length), 0);
-//        uint8_t len_cut = transfer->actual_length > 254 ? 254 : uint8_t(transfer->actual_length);
-//        for(uint8_t i = 0; i < len_cut; ++i)
-//            d.append(QString("%1 ").arg(transfer->buffer[i], 2, 16, QLatin1Char('0')));
-//        d.append("\n");
-//        emit consolePutData(d, 0);
-//        d.clear();
-//        ///////////////////////////
-
         // If we waited for more data and timeout expired
         if(UserRxBuffer_len && rx_timeout_timer.hasExpired(rx_timeout_ms))
         {
@@ -886,10 +879,27 @@ void UsbWorkThread::parseHsData()
             break;
 
         case USB_CMD_GET_DATA:
+        {
             emit consolePutData(QString("parseHsData(): USB_CMD_GET_DATA\n"), 0);
             memcpy(AdcDataBuffer, UserRxBuffer + sizeof(USBheader_t), header->packet_length - sizeof(USBheader_t));
+
+            m_mutex.lock();
+            bool res = m_ring->Append(UserRxBuffer + sizeof(USBheader_t), header->packet_length - sizeof(USBheader_t));
+            if(res)
+            {
+                // Wake threads waiting for 'wait condiion'
+                ringNotEmpty.wakeAll();
+            }
+            else
+            {
+                // Error: can't add new data to ring buffer
+                emit consolePutData("Error: unable to add new adc data to ring buffer\n", 1);
+            }
+            m_mutex.unlock();
+
             emit consoleAdcFile(AdcDataBuffer, header->packet_length - sizeof(USBheader_t));
             break;
+        }
 
         case USB_CMD_GET_STATUS:
         {

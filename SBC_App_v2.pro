@@ -9,6 +9,8 @@ SOURCES += \
     main.cpp \
     mainwindow.cpp \
     message_box.cpp \
+    qam_thread.cpp \
+    ringbuffer.cpp \
     settingsdialog.cpp \
     console.cpp \
     statistics.cpp \
@@ -72,6 +74,8 @@ HEADERS += \
     crc16.h \
     mainwindow.h \
     message_box.h \
+    qam_thread.h \
+    ringbuffer.h \
     settingsdialog.h \
     console.h \
     statistics.h \
