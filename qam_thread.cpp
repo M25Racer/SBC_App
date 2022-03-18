@@ -27,12 +27,10 @@ void QamThread::run()
     {
         m_mutex.lock();
         if(!m_ring->DataAvailable())
-            ringNotEmpty.wait(&m_mutex);
+            ringNotEmpty.wait(&m_mutex);    // Wait condition unlocks mutex before 'wait', and will lock it again just after 'wait' is complete
         m_mutex.unlock();
 
-        m_mutex.lock();
         res = m_ring->Get(AdcDataBuffer, &Length);
-        m_mutex.unlock();
 
         if(res)
         {

@@ -883,7 +883,6 @@ void UsbWorkThread::parseHsData()
             emit consolePutData(QString("parseHsData(): USB_CMD_GET_DATA\n"), 0);
             memcpy(AdcDataBuffer, UserRxBuffer + sizeof(USBheader_t), header->packet_length - sizeof(USBheader_t));
 
-            m_mutex.lock();
             bool res = m_ring->Append(UserRxBuffer + sizeof(USBheader_t), header->packet_length - sizeof(USBheader_t));
             if(res)
             {
@@ -895,7 +894,6 @@ void UsbWorkThread::parseHsData()
                 // Error: can't add new data to ring buffer
                 emit consolePutData("Error: unable to add new adc data to ring buffer\n", 1);
             }
-            m_mutex.unlock();
 
             emit consoleAdcFile(AdcDataBuffer, header->packet_length - sizeof(USBheader_t));
             break;

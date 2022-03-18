@@ -25,9 +25,11 @@ protected:
 private:
     static const uint32_t DATA_SIZE = (256*1024);
 
+    // Access to different elements can be done in a thread safe way
     uint8_t RingBuf[N_ELEMENTS][DATA_SIZE];
     uint32_t DataLength[N_ELEMENTS];
 
+    // Access to this variables should be protected with mutex
     uint32_t tail = 0;
     uint32_t head = 0;
 };

@@ -1,30 +1,28 @@
 #include <QCoreApplication>
-//#include <QDebug>
+#include <QMutex>
 #include <ringbuffer.h>
 
-/*
-tail = head ? - no elements in ring buffer
-head points to first free element
-
- tail  head
- O     O     O     O ...
-*/
+/* Extern global variables */
+extern QMutex m_mutex;
 
 void RingBuffer::Clear()
 {
-    //todo protect
+    m_mutex.lock();
     head = tail = 0;
     memset(DataLength, 0, sizeof(DataLength));
-    //todo protect
+    m_mutex.unlock();
 }
 
 bool RingBuffer::DataAvailable()
 {
-    //todo protect
+//    m_mutex.lock();
     if(tail == head)
+    {
+//        m_mutex.unlock();
         return false;
-    //todo protect
+    }
 
+//    m_mutex.unlock();
     return true;
 }
 
@@ -45,10 +43,10 @@ bool RingBuffer::Append(const uint8_t *p_data_in, const uint32_t data_length)
     }
 
     // Move 'head'
-//todo protect
+    m_mutex.lock();
     uint32_t h = head;
     uint32_t t = tail;
-//todo protect
+    m_mutex.unlock();
 
     if(++h == N_ELEMENTS)
         h = 0;
@@ -69,9 +67,10 @@ bool RingBuffer::Append(const uint8_t *p_data_in, const uint32_t data_length)
     // Copy data length
     DataLength[h] = data_length;
 
-//todo protect
+    m_mutex.lock();
     head = h;
-//todo protect
+    m_mutex.unlock();
+
     return true;
 }
 
@@ -84,10 +83,10 @@ bool RingBuffer::Get(uint8_t *p_data_out, uint32_t *p_length)
         return false;
     }
 
-//todo protect
+    m_mutex.lock();
     uint32_t h = head;
     uint32_t t = tail;
-//todo protect
+    m_mutex.unlock();
 
     // Check if there is no new elements in ring buffer
     if(t == h)
@@ -108,9 +107,9 @@ bool RingBuffer::Get(uint8_t *p_data_out, uint32_t *p_length)
         p_data_out[i] = RingBuf[t][i];
     }
 
-//todo protect
+    m_mutex.lock();
     tail = t;
-//todo protect
+    m_mutex.unlock();
 
     return true;
 }
