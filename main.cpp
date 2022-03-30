@@ -56,8 +56,8 @@
 #include <QApplication>
 
 /* Global variables */
-//MainWindow *p_w = nullptr;    // pointer to 'mainwindow'
-RingBuffer *m_ring = nullptr;   // ring data buffer (ADC data) for QAM decoder
+//MainWindow *p_w = nullptr;        // pointer to 'mainwindow'
+RingBuffer *m_ring = nullptr;       // ring data buffer (ADC data) for QAM decoder
 QWaitCondition ringNotEmpty;
 QMutex m_mutex;
 

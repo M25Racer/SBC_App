@@ -5,6 +5,8 @@ extern RingBuffer *m_ring;              // ring data buffer (ADC data) for QAM d
 extern QWaitCondition ringNotEmpty;
 extern QMutex m_mutex;
 
+uint8_t AdcDataBufferQT[10*1024*1024];
+
 QamThread::QamThread(QObject *parent) :
     QThread(parent)
 {
@@ -30,7 +32,7 @@ void QamThread::run()
             ringNotEmpty.wait(&m_mutex);    // Wait condition unlocks mutex before 'wait', and will lock it again just after 'wait' is complete
         m_mutex.unlock();
 
-        res = m_ring->Get(AdcDataBuffer, &Length);
+        res = m_ring->Get(AdcDataBufferQT, &Length);
 
         if(res)
         {

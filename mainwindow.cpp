@@ -515,6 +515,6 @@ void MainWindow::sendHsCommandGetDataSize()
 
 void MainWindow::sendHsCommandAdcStart()
 {
-    uint32_t adc_data_length = 65536;//1024;
+    uint32_t adc_data_length = 388000;  //65536;//1024;
     m_usb_thread.sendHsCommand(USB_CMD_ADC_START, 4, (uint8_t*)&adc_data_length);
 }

@@ -26,7 +26,7 @@ private:
 
     static const uint32_t DATA_SIZE = (256*1024);
 
-    uint8_t AdcDataBuffer[DATA_SIZE];
+//    uint8_t AdcDataBuffer[DATA_SIZE];
     uint32_t Length = 0;
 
     bool m_quit = false;

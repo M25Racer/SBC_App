@@ -43,7 +43,6 @@ public:
 
     UsbInitState InitState = UsbInitState::INIT;
 
-    uint8_t UserRxBuffer[65536*4];
     uint8_t UserTxBuffer[65536];
 
     bool start_transmit = false;
@@ -51,6 +50,7 @@ public:
 
     int UserRxBuffer_len = 0;
     int UserTxBuffer_len = 0;
+    int pStartData = 0;
 
     bool usb_receiver_drop = false;     // Drop any received usb data when this flag is active
 
@@ -105,11 +105,9 @@ private:
     QElapsedTimer rx_timeout_timer;
     QElapsedTimer console_spam_timer;
 
-    const qint64 rx_timeout_ms = 10;            // usb rx timeout between transfers of one big packet, ms
+    const qint64 rx_timeout_ms = 50;//10;            // usb rx timeout between transfers of one big packet, ms
 
     libusb_hotplug_callback_handle h_hotplug;   // libusb callback handle for hotplug event
-
-    uint8_t AdcDataBuffer[131072];
 };
 
 #endif // USB_WORKTHREAD_H
