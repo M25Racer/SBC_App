@@ -4,7 +4,7 @@
 #include <QMutex>
 #include <QThread>
 #include <QWaitCondition>
-//#include <QElapsedTimer>
+#include <QElapsedTimer>
 #include <ringbuffer.h>
 
 class QamThread : public QThread
@@ -27,9 +27,12 @@ private:
     static const uint32_t DATA_SIZE = (256*1024);
 
 //    uint8_t AdcDataBuffer[DATA_SIZE];
-    uint32_t Length = 0;
+//    uint32_t Length = 0;
+    double Length;
 
     bool m_quit = false;
+
+    QElapsedTimer timer;
 };
 
 #endif // QAM_WORKTHREAD_H

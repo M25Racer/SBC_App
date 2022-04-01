@@ -9,6 +9,26 @@ SOURCES += \
     main.cpp \
     mainwindow.cpp \
     message_box.cpp \
+    qam_decoder/FIRDecimator.cpp \
+    qam_decoder/HS_EWL_FREQ_ACQ.cpp \
+    qam_decoder/HS_EWL_FREQ_ACQ_data.cpp \
+    qam_decoder/HS_EWL_FREQ_ACQ_emxAPI.cpp \
+    qam_decoder/HS_EWL_FREQ_ACQ_emxutil.cpp \
+    qam_decoder/HS_EWL_FREQ_ACQ_initialize.cpp \
+    qam_decoder/HS_EWL_FREQ_ACQ_rtwutil.cpp \
+    qam_decoder/HS_EWL_FREQ_ACQ_terminate.cpp \
+    qam_decoder/RaisedCosineReceiveFilter.cpp \
+    qam_decoder/SystemCore.cpp \
+    qam_decoder/getSquareConstellation.cpp \
+    qam_decoder/log2.cpp \
+    qam_decoder/minOrMax.cpp \
+    qam_decoder/qam_decoder.cpp \
+    qam_decoder/qammod.cpp \
+    qam_decoder/rtGetInf.cpp \
+    qam_decoder/rtGetNaN.cpp \
+    qam_decoder/rt_nonfinite.cpp \
+    qam_decoder/sum.cpp \
+    qam_decoder/unsafeSxfun.cpp \
     qam_thread.cpp \
     ringbuffer.cpp \
     settingsdialog.cpp \
@@ -74,11 +94,36 @@ HEADERS += \
     crc16.h \
     mainwindow.h \
     message_box.h \
+    qam_decoder/FIRDecimator.h \
+    qam_decoder/HS_EWL_FREQ_ACQ.h \
+    qam_decoder/HS_EWL_FREQ_ACQ_data.h \
+    qam_decoder/HS_EWL_FREQ_ACQ_emxAPI.h \
+    qam_decoder/HS_EWL_FREQ_ACQ_emxutil.h \
+    qam_decoder/HS_EWL_FREQ_ACQ_initialize.h \
+    qam_decoder/HS_EWL_FREQ_ACQ_rtwutil.h \
+    qam_decoder/HS_EWL_FREQ_ACQ_terminate.h \
+    qam_decoder/HS_EWL_FREQ_ACQ_types.h \
+    qam_decoder/RaisedCosineReceiveFilter.h \
+    qam_decoder/SystemCore.h \
+    qam_decoder/getSquareConstellation.h \
+    qam_decoder/log2.h \
+    qam_decoder/minOrMax.h \
+    qam_decoder/qam_decoder.h \
+    qam_decoder/qammod.h \
+    qam_decoder/rtGetInf.h \
+    qam_decoder/rtGetNaN.h \
+    qam_decoder/rt_defines.h \
+    qam_decoder/rt_nonfinite.h \
+    qam_decoder/rtwtypes.h \
+    qam_decoder/sum.h \
+    qam_decoder/tmwtypes.h \
+    qam_decoder/unsafeSxfun.h \
     qam_thread.h \
     ringbuffer.h \
     settingsdialog.h \
     console.h \
     statistics.h \
+    usb_global.h \
     usb_workthread.h
 
 FORMS += \
@@ -90,3 +135,9 @@ RESOURCES += \
 unix {
     INCLUDEPATH += /usr/lib/gcc/x86_64-linux-gnu/9/include
 }
+
+SUBDIRS += \
+    qam_decoder/HS_EWL_tester_6.pro
+
+DISTFILES += \
+    qam_decoder/rtw_proj.tmw

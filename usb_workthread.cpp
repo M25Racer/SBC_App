@@ -8,8 +8,8 @@ extern QWaitCondition ringNotEmpty;
 extern QMutex m_mutex;
 
 /* Global variables */
-uint8_t UserRxBuffer[10*1024*1024];
-uint8_t AdcDataBuffer[10*1024*1024];
+uint8_t UserRxBuffer[USB_MAX_DATA_SIZE];
+uint8_t AdcDataBuffer[USB_MAX_DATA_SIZE];
 
 UsbWorkThread::UsbWorkThread(QObject *parent) :
     QThread(parent)
@@ -50,10 +50,10 @@ void UsbWorkThread::run()
 
     console_spam_timer.start();
 
+    int rc = 0;
+
     while (!m_quit)
     {
-        int rc = 0;
-
         if(start_transmit)
         {
             start_transmit = false;
@@ -900,17 +900,17 @@ void UsbWorkThread::parseHsData()
             emit consolePutData(QString("parseHsData(): USB_CMD_GET_DATA\n"), 0);
             memcpy(AdcDataBuffer, UserRxBuffer + pStartData + sizeof(USBheader_t), header->packet_length - sizeof(USBheader_t));
 
-//            bool res = m_ring->Append(UserRxBuffer + sizeof(USBheader_t), header->packet_length - sizeof(USBheader_t));
-//            if(res)
-//            {
-//                // Wake threads waiting for 'wait condiion'
-//                ringNotEmpty.wakeAll();
-//            }
-//            else
-//            {
-//                // Error: can't add new data to ring buffer
-//                emit consolePutData("Error: unable to add new adc data to ring buffer\n", 1);
-//            }
+            bool res = m_ring->Append(UserRxBuffer + sizeof(USBheader_t), header->packet_length - sizeof(USBheader_t));
+            if(res)
+            {
+                // Wake threads waiting for 'wait condiion'
+                ringNotEmpty.wakeAll();
+            }
+            else
+            {
+                // Error: can't add new data to ring buffer
+                emit consolePutData("Error: unable to add new adc data to ring buffer\n", 1);
+            }
 
             emit consoleAdcFile(AdcDataBuffer, header->packet_length - sizeof(USBheader_t));
             break;

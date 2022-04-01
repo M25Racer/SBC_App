@@ -2,6 +2,15 @@
 #define RINGBUFFER_H
 
 #include <QCoreApplication>
+#include "usb_global.h"
+
+namespace RingBufferNS
+{
+    const uint32_t N_ELEMENTS = (10);
+    //const uint32_t DATA_SIZE = (10*1024*1024);//(256*1024);
+}
+
+using namespace RingBufferNS;
 
 class RingBuffer : public QObject
 {
@@ -14,19 +23,15 @@ signals:
 public:
     bool Append(const uint8_t *p_data_in, const uint32_t data_length);
     bool Get(uint8_t *p_data_out, uint32_t *p_length);
+    bool GetDouble(double *p_data_out, double *p_length);
     void Clear();
     void Init(){ Clear(); };
     bool DataAvailable();
 
-    static const uint32_t N_ELEMENTS = 10;
-
 protected:
 
 private:
-    static const uint32_t DATA_SIZE = (256*1024);
-
     // Access to different elements can be done in a thread safe way
-    uint8_t RingBuf[N_ELEMENTS][DATA_SIZE];
     uint32_t DataLength[N_ELEMENTS];
 
     // Access to this variables should be protected with mutex
