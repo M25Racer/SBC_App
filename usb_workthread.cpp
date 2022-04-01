@@ -35,7 +35,7 @@ void UsbWorkThread::USB_ThreadStart()
     if(!isRunning())
     {
         m_quit = false;
-        start();
+        start(QThread::HighestPriority);    //todo check priority
     }
     else
     {
@@ -60,9 +60,10 @@ void UsbWorkThread::run()
             USB_StartTransmit();
         }
 
-        if(start_receive)
+        if(start_receive && !usb_receiver_drop)
         {
             // Start or continue receive
+            emit consolePutData("USB start receiving\n", 0);
             start_receive = false;
             USB_StartReceive(&UserRxBuffer[UserRxBuffer_len]);
         }
@@ -481,7 +482,8 @@ void LIBUSB_CALL UsbWorkThread::rx_callback(struct libusb_transfer *transfer)
     // Drop any received data from USB if needed
     if(usb_receiver_drop)
     {
-        emit consolePutData("USB dropped received data\nStart receiving again\n", 0);
+        emit consolePutData("USB dropped received data, start receiving again\n", 0);
+        UserRxBuffer_len = pStartData = 0;
         start_receive = true;
         return;
     }
@@ -511,7 +513,7 @@ void LIBUSB_CALL UsbWorkThread::rx_callback(struct libusb_transfer *transfer)
             break;
         }
 
-        UserRxBuffer_len += transfer->actual_length;
+        UserRxBuffer_len += transfer->actual_length;    // max = USB_BULK_SIZE
 
         USBheader_t *header = (USBheader_t*)&UserRxBuffer[pStartData];
 
