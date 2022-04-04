@@ -120,6 +120,7 @@ void Console::putDataAdc(const quint8 *p_data, quint32 size)
         data.append(QString("%1\n").arg((int16_t)value));
     }
 
+    m_adcFile->resize(0);   // Clear file
     outAdc << data;
     outAdc.flush();    // Clear the buffered data
 }
