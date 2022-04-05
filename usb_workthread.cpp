@@ -35,6 +35,10 @@ void UsbWorkThread::USB_ThreadStart()
     if(!isRunning())
     {
         m_quit = false;
+
+        for(uint32_t i = 0; i < n_RxTransfers; ++i)
+            t_rx[i] = nullptr;
+
         start(QThread::HighestPriority);    //todo check priority
     }
     else
@@ -145,25 +149,27 @@ void UsbWorkThread::USB_ReceiveTransmitInit()
 
     memset(UserRxBuffer, 0, sizeof(UserRxBuffer));
 
-    if(t_rx != nullptr)
+    for(uint32_t i = 0; i < n_RxTransfers; ++i)
     {
-        emit consolePutData("Error USB_ReceiveTransmitInit reported t_rx != nullptr\n", 1);
-        return;
-    }
+        if(t_rx[i] != nullptr)
+        {
+            emit consolePutData(QString("Error USB_ReceiveTransmitInit reported t_rx != nullptr, #%1\n").arg(i), 1);
+            return;
+        }
 
-    t_rx = libusb_alloc_transfer(n_iso_packets);   // Transfers intended for non-isochronous endpoints (e.g. control, bulk, interrupt) should specify an iso_packets count of zero.
+        t_rx[i] = libusb_alloc_transfer(n_iso_packets);   // Transfers intended for non-isochronous endpoints (e.g. control, bulk, interrupt) should specify an iso_packets count of zero.
 
-    if(t_rx == nullptr)
-    {
-        emit consolePutData("Error USB_ReceiveTransmitInit: unable to allocate a libusb transfer rx\n", 1);
-        return;
+        if(t_rx[i] == nullptr)
+        {
+            emit consolePutData(QString("Error USB_ReceiveTransmitInit: unable to allocate a libusb transfer rx, #%1\n").arg(i), 1);
+            return;
+        }
+        else
+        {
+            // Filling
+            libusb_fill_bulk_transfer(t_rx[i], handle, EP_IN, static_cast<uint8_t*>(UserRxBuffer) + i*USB_BULK_SIZE, USB_BULK_SIZE, static_rx_callback, this, 0);
+        }
     }
-    else
-    {
-        // Filling
-        libusb_fill_bulk_transfer(t_rx, handle, EP_IN, static_cast<uint8_t*>(UserRxBuffer), sizeof(UserRxBuffer), static_rx_callback, this, 0);
-    }
-
 
     if(t_tx != nullptr)
     {
@@ -189,38 +195,41 @@ void UsbWorkThread::USB_StartReceive(uint8_t *p_rx_buffer_offset)
 {
     int rc = 0; // result
 
-    if(t_rx == nullptr)
+    for(uint32_t i = 0; i < n_RxTransfers; ++i)
     {
-        emit consolePutData("Error USB_StartReceive transfer = NULL\n", 1);
-        return;
-    }
-
-    if(handle == nullptr)
-    {
-        emit consolePutData("Error USB_StartReceivereported handle = nullptr\n", 1);
-        return;
-    }
-
-    // Reset completion flag
-    rx_complete_flag = 0;
-
-    // Set rx buffer
-    t_rx->buffer = p_rx_buffer_offset;
-
-    // Submission
-    rc = libusb_submit_transfer(t_rx);
-
-    if(rc < 0)
-    {
-        emit consolePutData(QString("Error USB_StartReceive libusb_submit_transfer: %1\n").arg(libusb_error_name(rc)), 1);
-
-        if (rc == LIBUSB_ERROR_NO_DEVICE)
+        if(t_rx[i] == nullptr)
         {
-            // The device has been disconnected, try to reconnect
-            USB_Reconnect();
+            emit consolePutData("Error USB_StartReceive transfer = NULL\n", 1);
+            return;
         }
 
-        return;
+        if(handle == nullptr)
+        {
+            emit consolePutData("Error USB_StartReceivereported handle = nullptr\n", 1);
+            return;
+        }
+
+        // Reset completion flag
+        rx_complete_flag = 0;
+
+        // Set rx buffer
+        t_rx[i]->buffer = p_rx_buffer_offset + i * USB_BULK_SIZE;
+
+        // Submission
+        rc = libusb_submit_transfer(t_rx[i]);
+
+        if(rc < 0)
+        {
+            emit consolePutData(QString("Error USB_StartReceive libusb_submit_transfer: %1\n").arg(libusb_error_name(rc)), 1);
+
+            if (rc == LIBUSB_ERROR_NO_DEVICE)
+            {
+                // The device has been disconnected, try to reconnect
+                USB_Reconnect();
+            }
+
+            return;
+        }
     }
 
     receive_in_progress = true;
@@ -267,28 +276,31 @@ void UsbWorkThread::USB_StartTransmit()
 
 void UsbWorkThread::USB_StopReceive()
 {
-    if(t_rx == nullptr)
+    for(uint32_t i = 0; i < n_RxTransfers; ++i)
     {
-        return;
-    }
-
-    int rc = libusb_cancel_transfer(t_rx);
-    if(rc == 0)
-    {
-        // Cancel success
-        emit consolePutData("Usb canceled ongoing receive transfer\n", 0);
-    }
-
-    if(rc < 0)
-    {
-        if(rc == LIBUSB_ERROR_NOT_FOUND)
+        if(t_rx[i] == nullptr)
         {
-            // The transfer is not in progress, already complete, or already cancelled.
             return;
         }
 
-        // Some other error
-        emit consolePutData(QString("Error USB_StopReceive libusb_cancel_transfer error: %1\n").arg(libusb_error_name(rc)), 1);
+        int rc = libusb_cancel_transfer(t_rx[i]);
+        if(rc == 0)
+        {
+            // Cancel success
+            emit consolePutData(QString("Usb canceled ongoing receive transfer, #%1\n").arg(i), 0);
+        }
+
+        if(rc < 0)
+        {
+            if(rc == LIBUSB_ERROR_NOT_FOUND)
+            {
+                // The transfer is not in progress, already complete, or already cancelled.
+                return;
+            }
+
+            // Some other error
+            emit consolePutData(QString("Error USB_StopReceive libusb_cancel_transfer error: %1, #%2\n").arg(libusb_error_name(rc)).arg(i), 1);
+        }
     }
 
     // Reset received length
@@ -347,10 +359,13 @@ void UsbWorkThread::USB_Deinit()
     libusb_hotplug_deregister_callback(context, h_hotplug);
 
     // Deallocation
-    if(t_rx != nullptr)
+    for(uint32_t i = 0; i < n_RxTransfers; ++i)
     {
-        libusb_free_transfer(t_rx);
-        t_rx = nullptr;
+        if(t_rx[i] != nullptr)
+        {
+            libusb_free_transfer(t_rx[i]);
+            t_rx[i] = nullptr;
+        }
     }
 
     if(t_tx != nullptr)
@@ -470,6 +485,14 @@ int LIBUSB_CALL UsbWorkThread::hotplug_callback(libusb_context *ctx, libusb_devi
 
 void LIBUSB_CALL UsbWorkThread::rx_callback(struct libusb_transfer *transfer)
 {
+
+    // TODO
+    // If [0] - set rx_complete[0] = true, continue to parsing
+    //  - Length is enough? - cancel other transfers, start receive again
+    // If ![0] - check if previous transfers is complete rx_complete[0..i] - not complete? - break\exit
+    //  - previous transfers complete? - length is enough? - cancel other transfers, start receive again - continue to parsing
+    // timeout?
+
     if(transfer == nullptr)
     {
         emit consolePutData("Error rx_callback reported transfer = NULL\n", 1);
