@@ -43,9 +43,7 @@ public:
     bool start_transmit = false;
     bool start_receive = false;
 
-    int UserRxBuffer_len = 0;
     int UserTxBuffer_len = 0;
-    int pStartData = 0;
 
     bool usb_receiver_drop = false;     // Drop any received usb data when this flag is active
 
@@ -59,7 +57,7 @@ private:
     bool usbInitialization();
     void USB_Reconnect();
     void USB_ReceiveTransmitInit();
-    void USB_StartReceive(uint8_t *p_rx_buffer_offset);
+    void USB_StartReceive();
     void USB_StartTransmit();
     void USB_StopReceive();
     void parseHsData();
@@ -87,15 +85,16 @@ private:
     libusb_context *context = nullptr;
     libusb_device_handle *handle = nullptr;
 
-    struct libusb_transfer *t_rx = nullptr;
+    static const uint32_t n_RxTransfers = 1;
+    struct libusb_transfer *t_rx[n_RxTransfers];
     struct libusb_transfer *t_tx = nullptr;
 
     bool m_quit = false;
     bool receive_in_progress = false;
     bool transmit_in_progress = false;
 
-    int rx_complete_flag = 0;
     int tx_complete_flag = 0;
+    //int rx_complete_flag = 0;
 
     QElapsedTimer rx_timeout_timer;
     QElapsedTimer console_spam_timer;
@@ -103,6 +102,35 @@ private:
     const qint64 rx_timeout_ms = 50;//10;            // usb rx timeout between transfers of one big packet, ms
 
     libusb_hotplug_callback_handle h_hotplug;   // libusb callback handle for hotplug event
+
+    struct asyncParams
+    {
+        // Указатель на большой буфер, в который
+        // мы принимаем массив. Он может быть размером
+        // в сотни мегабайт
+        uint8_t* pData;
+
+        // Каждая транзакция принимает маленький кусочек.
+        // Например, 64 килобайта. В этой переменной лежит
+        // текущее смещение. Поставили транзакцию в очередь -
+        // сдвинулись в буфере. Короче, это указатель
+        // запрошенной части буфера.
+        int dataOffset;
+
+        // Размер буфера в байтах. Полезен, чтобы знать,
+        // когда следует прекращать работу. Если смещение
+        // дошло до этой величины - функция обратного вызова
+        // перестанет создавать новые запросы на передачу
+        int dataSizeInBytes;
+
+        // Размер одной передачи
+        int oneTransferLen;
+
+        // Используется для отображения заполненности буфера,
+        // увеличивается по факту прихода новой порции данных.
+        // То есть, это указатель фактически заполненного буфера
+        int actualReceived;
+    } m_asyncParams;
 };
 
 #endif // USB_WORKTHREAD_H
