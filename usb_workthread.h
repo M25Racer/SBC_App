@@ -42,6 +42,7 @@ public:
 
     bool start_transmit = false;
     bool start_receive = false;
+    bool start_receive_multiple = false;
 
     int UserTxBuffer_len = 0;
 
@@ -57,9 +58,10 @@ private:
     bool usbInitialization();
     void USB_Reconnect();
     void USB_ReceiveTransmitInit();
-    void USB_StartReceive();
+    void USB_StartReceiveSingle();
     void USB_StartTransmit();
-    void USB_StopReceive();
+    void USB_StopReceiveSingle();
+    void USB_StopReceiveMultiple();
     void parseHsData();
 
     // Hack to use libusb's 'C'-callback functions in 'C++' project
@@ -85,9 +87,10 @@ private:
     libusb_context *context = nullptr;
     libusb_device_handle *handle = nullptr;
 
-    static const uint32_t n_RxTransfers = 1;
-    struct libusb_transfer *t_rx[n_RxTransfers];
+    static const uint32_t n_RxTransfers = 4;
+    struct libusb_transfer *t_rx = nullptr;
     struct libusb_transfer *t_tx = nullptr;
+    struct libusb_transfer *t_rx_multiple[n_RxTransfers];
 
     bool m_quit = false;
     bool receive_in_progress = false;
@@ -115,7 +118,7 @@ private:
         // текущее смещение. Поставили транзакцию в очередь -
         // сдвинулись в буфере. Короче, это указатель
         // запрошенной части буфера.
-        int dataOffset;
+        uint32_t dataOffset;
 
         // Размер буфера в байтах. Полезен, чтобы знать,
         // когда следует прекращать работу. Если смещение
@@ -130,6 +133,13 @@ private:
         // увеличивается по факту прихода новой порции данных.
         // То есть, это указатель фактически заполненного буфера
         int actualReceived;
+
+        // Is receive multitransfer active
+        bool multitransferInProgress;
+
+        // Current (awaited) packet length from header
+        uint32_t packet_length;
+
     } m_asyncParams;
 };
 

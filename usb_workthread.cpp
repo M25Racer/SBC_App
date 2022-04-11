@@ -16,9 +16,7 @@ UsbWorkThread::UsbWorkThread(QObject *parent) :
 {
     // Init rx transfers
     for(uint32_t i = 0; i < n_RxTransfers; ++i)
-    {
-        t_rx[i] = nullptr;
-    }
+        t_rx_multiple[i] = nullptr;
 
     // Init rx parameters
     m_asyncParams.pData = (uint8_t*)&UserRxBuffer;
@@ -26,6 +24,7 @@ UsbWorkThread::UsbWorkThread(QObject *parent) :
     m_asyncParams.oneTransferLen = USB_BULK_SIZE;
     m_asyncParams.actualReceived = 0;
     m_asyncParams.dataSizeInBytes = sizeof(UserRxBuffer);
+    m_asyncParams.multitransferInProgress = false;
 }
 
 UsbWorkThread::~UsbWorkThread()
@@ -73,7 +72,47 @@ void UsbWorkThread::run()
                 // Start or continue receive
                 emit consolePutData("USB start receiving\n", 0);
                 start_receive = false;
-                USB_StartReceive();
+                USB_StartReceiveSingle();
+            }
+        }
+
+        if(start_receive_multiple)
+        {
+            start_receive_multiple = false;
+
+            if(!usb_receiver_drop)
+            {
+                // Start multi rx transfers
+                for(uint32_t i = 0; i < n_RxTransfers; ++i)
+                {
+                    if(t_rx_multiple[i] == nullptr)
+                    {
+                         emit consolePutData(QString("Error start multi rx transfers: t_rx[] = null\n"), 1);
+                        // Continue with single transfer
+                        start_receive = true;
+                        return;
+                    }
+                }
+
+                for(uint32_t i = 0; i < n_RxTransfers; ++i)
+                {
+                    if(m_asyncParams.packet_length <= m_asyncParams.dataOffset)
+                    {
+                        emit consolePutData(QString("Multi rx transfer: enougth transfers for packet len %1\n").arg(m_asyncParams.packet_length), 1);
+                        break;
+                    }
+
+                    // Move data pointer
+                    t_rx_multiple[i]->buffer = m_asyncParams.pData + m_asyncParams.dataOffset;
+                    m_asyncParams.dataOffset += m_asyncParams.oneTransferLen;
+
+                    // Start transfer
+                    emit consolePutData(QString("Start multi rx transfer #%1\n").arg(i), 1);
+                    libusb_submit_transfer(t_rx_multiple[i]);
+                }
+
+                m_asyncParams.multitransferInProgress = true;
+                receive_in_progress = true;
             }
         }
 
@@ -146,17 +185,38 @@ void UsbWorkThread::USB_ReceiveTransmitInit()
 
     memset(UserRxBuffer, 0, sizeof(UserRxBuffer));
 
+    // Single rx transfer
+    if(t_rx != nullptr)
+    {
+        emit consolePutData(QString("Error USB_ReceiveTransmitInit reported t_rx != nullptr\n"), 1);
+        return;
+    }
+
+    t_rx = libusb_alloc_transfer(n_iso_packets);   // Transfers intended for non-isochronous endpoints (e.g. control, bulk, interrupt) should specify an iso_packets count of zero.
+
+    if(t_rx == nullptr)
+    {
+        emit consolePutData(QString("Error USB_ReceiveTransmitInit: unable to allocate a libusb transfer rx\n"), 1);
+        return;
+    }
+    else
+    {
+        // Filling
+        libusb_fill_bulk_transfer(t_rx, handle, EP_IN, UserRxBuffer, USB_BULK_SIZE, static_rx_callback, this, 0);
+    }
+
+    // Multiple rx transfers
     for(uint32_t i = 0; i < n_RxTransfers; ++i)
     {
-        if(t_rx[i] != nullptr)
+        if(t_rx_multiple[i] != nullptr)
         {
             emit consolePutData(QString("Error USB_ReceiveTransmitInit reported t_rx != nullptr, #%1\n").arg(i), 1);
             return;
         }
 
-        t_rx[i] = libusb_alloc_transfer(n_iso_packets);   // Transfers intended for non-isochronous endpoints (e.g. control, bulk, interrupt) should specify an iso_packets count of zero.
+        t_rx_multiple[i] = libusb_alloc_transfer(n_iso_packets);   // Transfers intended for non-isochronous endpoints (e.g. control, bulk, interrupt) should specify an iso_packets count of zero.
 
-        if(t_rx[i] == nullptr)
+        if(t_rx_multiple[i] == nullptr)
         {
             emit consolePutData(QString("Error USB_ReceiveTransmitInit: unable to allocate a libusb transfer rx, #%1\n").arg(i), 1);
             return;
@@ -164,10 +224,11 @@ void UsbWorkThread::USB_ReceiveTransmitInit()
         else
         {
             // Filling
-            libusb_fill_bulk_transfer(t_rx[i], handle, EP_IN, static_cast<uint8_t*>(UserRxBuffer) + i*USB_BULK_SIZE, USB_BULK_SIZE, static_rx_callback, this, 0);
+            libusb_fill_bulk_transfer(t_rx_multiple[i], handle, EP_IN, static_cast<uint8_t*>(UserRxBuffer) + i*USB_BULK_SIZE, USB_BULK_SIZE, static_rx_callback, this, 0);
         }
     }
 
+    // Single tx transfer
     if(t_tx != nullptr)
     {
         emit consolePutData("Error USB_ReceiveTransmitInit reported t_tx != nullptr\n", 1);
@@ -188,9 +249,64 @@ void UsbWorkThread::USB_ReceiveTransmitInit()
     }
 }
 
-void UsbWorkThread::USB_StartReceive()
+//void UsbWorkThread::USB_StartReceive()
+//{
+//    int rc = 0; // result
+
+//    if(handle == nullptr)
+//    {
+//        emit consolePutData("Error USB_StartReceive reported handle = nullptr\n", 1);
+//        return;
+//    }
+
+//    for(uint32_t i = 0; i < n_RxTransfers; ++i)
+//    {
+//        if(t_rx[i] == nullptr)
+//        {
+//            emit consolePutData("Error USB_StartReceive transfer = NULL\n", 1);
+//            return;
+//        }
+//    }
+
+//    m_asyncParams.dataOffset = 0;
+//    m_asyncParams.oneTransferLen = USB_BULK_SIZE;
+//    m_asyncParams.actualReceived = 0;
+
+//    for(uint32_t i = 0; i < n_RxTransfers; ++i)
+//    {
+//        // Set rx buffer
+//        t_rx[i]->buffer = m_asyncParams.pData + m_asyncParams.dataOffset;
+//        m_asyncParams.dataOffset += m_asyncParams.oneTransferLen;
+
+//        // Submission
+//        rc = libusb_submit_transfer(t_rx[i]);
+
+//        if(rc < 0)
+//        {
+//            emit consolePutData(QString("Error USB_StartReceive libusb_submit_transfer %1: %2\n").arg(i).arg(libusb_error_name(rc)), 1);
+
+//            if (rc == LIBUSB_ERROR_NO_DEVICE)
+//            {
+//                // The device has been disconnected, try to reconnect
+//                USB_Reconnect();
+//            }
+
+//            return;
+//        }
+//    }
+
+//    receive_in_progress = true;
+//}
+
+void UsbWorkThread::USB_StartReceiveSingle()
 {
     int rc = 0; // result
+
+    if(m_asyncParams.multitransferInProgress)
+    {
+        emit consolePutData("Error USB_StartReceiveSingle: rx multitransfer is progress now\n", 1);
+        return;
+    }
 
     if(handle == nullptr)
     {
@@ -198,40 +314,34 @@ void UsbWorkThread::USB_StartReceive()
         return;
     }
 
-    for(uint32_t i = 0; i < n_RxTransfers; ++i)
+    if(t_rx == nullptr)
     {
-        if(t_rx[i] == nullptr)
-        {
-            emit consolePutData("Error USB_StartReceive transfer = NULL\n", 1);
-            return;
-        }
+        emit consolePutData("Error USB_StartReceive transfer = NULL\n", 1);
+        return;
     }
 
     m_asyncParams.dataOffset = 0;
     m_asyncParams.oneTransferLen = USB_BULK_SIZE;
     m_asyncParams.actualReceived = 0;
 
-    for(uint32_t i = 0; i < n_RxTransfers; ++i)
+    // Set rx buffer
+    t_rx->buffer = m_asyncParams.pData + m_asyncParams.dataOffset;
+    m_asyncParams.dataOffset += m_asyncParams.oneTransferLen;
+
+    // Submission
+    rc = libusb_submit_transfer(t_rx);
+
+    if(rc < 0)
     {
-        // Set rx buffer
-        t_rx[i]->buffer = m_asyncParams.pData + m_asyncParams.dataOffset;
-        m_asyncParams.dataOffset += m_asyncParams.oneTransferLen;
+        emit consolePutData(QString("Error USB_StartReceive libusb_submit_transfer: %1\n").arg(libusb_error_name(rc)), 1);
 
-        // Submission
-        rc = libusb_submit_transfer(t_rx[i]);
-
-        if(rc < 0)
+        if (rc == LIBUSB_ERROR_NO_DEVICE)
         {
-            emit consolePutData(QString("Error USB_StartReceive libusb_submit_transfer %1: %2\n").arg(i).arg(libusb_error_name(rc)), 1);
-
-            if (rc == LIBUSB_ERROR_NO_DEVICE)
-            {
-                // The device has been disconnected, try to reconnect
-                USB_Reconnect();
-            }
-
-            return;
+            // The device has been disconnected, try to reconnect
+            USB_Reconnect();
         }
+
+        return;
     }
 
     receive_in_progress = true;
@@ -276,16 +386,18 @@ void UsbWorkThread::USB_StartTransmit()
     transmit_in_progress = true;
 }
 
-void UsbWorkThread::USB_StopReceive()
+void UsbWorkThread::USB_StopReceiveMultiple()
 {
+    emit consolePutData(QString("USB_StopReceiveMultiple\n"), 1);
+
     for(uint32_t i = 0; i < n_RxTransfers; ++i)
     {
-        if(t_rx[i] == nullptr)
+        if(t_rx_multiple[i] == nullptr)
         {
             continue;
         }
 
-        int rc = libusb_cancel_transfer(t_rx[i]);
+        int rc = libusb_cancel_transfer(t_rx_multiple[i]);
         if(rc == 0)
         {
             // Cancel success
@@ -305,9 +417,34 @@ void UsbWorkThread::USB_StopReceive()
         }
     }
 
-    m_asyncParams.dataOffset = 0;
-    m_asyncParams.actualReceived = 0;
+    m_asyncParams.multitransferInProgress = false;
 }
+
+void UsbWorkThread::USB_StopReceiveSingle()
+{
+    if(t_rx == nullptr)
+        return;
+
+    int rc = libusb_cancel_transfer(t_rx);
+    if(rc == 0)
+    {
+        // Cancel success
+        emit consolePutData(QString("Usb canceled ongoing receive transfer\n"), 0);
+    }
+
+    if(rc < 0)
+    {
+        if(rc == LIBUSB_ERROR_NOT_FOUND)
+        {
+            // The transfer is not in progress, already complete, or already cancelled.
+            return;
+        }
+
+        // Some other error
+        emit consolePutData(QString("Error USB_StopReceive libusb_cancel_transfer error: %1\n").arg(libusb_error_name(rc)), 1);
+    }
+}
+
 
 void UsbWorkThread::USB_StopTransmit()
 {
@@ -351,8 +488,14 @@ void UsbWorkThread::USB_Deinit()
     tx_complete_flag = 0;
     usb_receiver_drop = true;
 
-    USB_StopReceive();
+    USB_StopReceiveSingle();
     libusb_handle_events_timeout_completed(context, &tv, nullptr);
+
+    if(m_asyncParams.multitransferInProgress)
+    {
+        USB_StopReceiveMultiple();
+        libusb_handle_events_timeout_completed(context, &tv, nullptr);
+    }
 
     USB_StopTransmit();
     libusb_handle_events_timeout_completed(context, &tv, nullptr);
@@ -361,12 +504,18 @@ void UsbWorkThread::USB_Deinit()
     libusb_hotplug_deregister_callback(context, h_hotplug);
 
     // Deallocation
+    if(t_rx != nullptr)
+    {
+        libusb_free_transfer(t_rx);
+        t_rx = nullptr;
+    }
+
     for(uint32_t i = 0; i < n_RxTransfers; ++i)
     {
-        if(t_rx[i] != nullptr)
+        if(t_rx_multiple[i] != nullptr)
         {
-            libusb_free_transfer(t_rx[i]);
-            t_rx[i] = nullptr;
+            libusb_free_transfer(t_rx_multiple[i]);
+            t_rx_multiple[i] = nullptr;
         }
     }
 
@@ -493,151 +642,169 @@ void LIBUSB_CALL UsbWorkThread::rx_callback(struct libusb_transfer *transfer)
         return;
     }
 
-    // Drop any received data from USB if needed
-    if(usb_receiver_drop)
+#ifdef QT_DEBUG
+    // Find transfer number
+    if(transfer == t_rx)
+        emit consolePutData("rx_callback: single t_rx transfer\n", 0);
+    else
     {
-        emit consolePutData("USB dropped received data, start receiving again\n", 0);
-        USB_StopReceive();
-        start_receive = true;
-        return;
-    }
-
-    // Log received data
-    emit consolePutData(QString("Transfer completed, actual received length %1\n").arg(transfer->actual_length), 0);
-    uint8_t len_cut = transfer->actual_length > 16 ? 16 : uint8_t(transfer->actual_length);
-    if(len_cut)
-    {
-        QString d;
-        for(uint8_t i = 0; i < len_cut; ++i)
-            d.append(QString("%1 ").arg(transfer->buffer[i], 2, 16, QLatin1Char('0')));
-        if(len_cut < transfer->actual_length)
-            d.append("...");
-        d.append("\n");
-        emit consolePutData(d, 0);
-    }
-
-    switch(transfer->status)
-    {
-    /** Transfer completed without error. Note that this does not indicate
-     * that the entire amount of requested data was transferred. */
-    case LIBUSB_TRANSFER_COMPLETED:
-    {
-        // If we waited for more data and timeout expired
-        if(m_asyncParams.actualReceived && rx_timeout_timer.hasExpired(rx_timeout_ms))
+        for(uint32_t i = 0; i < n_RxTransfers; )
         {
-            // Drop previously received data
-            emit consolePutData(QString("Usb receive timeout detected, broken previously received packet\n"), 1);
-            //todo p_StartAddress ?
-            USB_StopReceive();
+            if(transfer == t_rx_multiple[i])
+            {
+                emit consolePutData(QString("rx_callback: multi transfer %1\n").arg(i), 0);
+                break;
+            }
+
+            if(++i == n_RxTransfers)
+                emit consolePutData("rx_callback: unknown transfer\n", 0);
+        }
+    }
+#endif
+
+    receive_in_progress = false;
+
+    // Single rx transfer
+    if(!m_asyncParams.multitransferInProgress)
+    {
+        // Drop any received data from USB if needed
+        if(usb_receiver_drop)
+        {
+            emit consolePutData("USB dropped received data, start receiving again\n", 0);
             start_receive = true;
             return;
         }
 
-        m_asyncParams.actualReceived += transfer->actual_length;    // max = USB_BULK_SIZE
-
-        USBheader_t *header = (USBheader_t*)&UserRxBuffer;
-
-        // If packet is too big already, start parsing it
-        if(m_asyncParams.actualReceived >= m_asyncParams.dataSizeInBytes)
+        switch(transfer->status)
         {
-            m_asyncParams.actualReceived = m_asyncParams.dataSizeInBytes;
-
-            if(header->packet_length > uint32_t(m_asyncParams.actualReceived))
+            /** Transfer completed without error. Note that this does not indicate
+             * that the entire amount of requested data was transferred. */
+            case LIBUSB_TRANSFER_COMPLETED:
             {
-                emit consolePutData(QString("Parse error, packet length is too long %1\n").arg(header->packet_length), 1);
-                USB_StopReceive();
-                start_receive = true;
-                return;
+                // Log received data
+                emit consolePutData(QString("Transfer completed, actual received length %1\n").arg(transfer->actual_length), 0);
+                uint8_t len_cut = transfer->actual_length > 16 ? 16 : uint8_t(transfer->actual_length);
+                if(len_cut)
+                {
+                    QString d;
+                    for(uint8_t i = 0; i < len_cut; ++i)
+                        d.append(QString("%1 ").arg(transfer->buffer[i], 2, 16, QLatin1Char('0')));
+                    if(len_cut < transfer->actual_length)
+                        d.append("...");
+                    d.append("\n");
+                    emit consolePutData(d, 0);
+                }
+
+                // If we waited for more data and timeout expired
+                if(m_asyncParams.actualReceived && rx_timeout_timer.hasExpired(rx_timeout_ms))
+                {
+                    // Drop previously received data
+                    emit consolePutData(QString("Usb receive timeout detected, broken previously received packet\n"), 1);
+                    start_receive = true;
+                    return;
+                }
+
+                m_asyncParams.actualReceived += transfer->actual_length;    // max = USB_BULK_SIZE
+
+                USBheader_t *header = (USBheader_t*)&UserRxBuffer;
+
+                // If packet is too big already, start parsing it
+                if(m_asyncParams.actualReceived >= m_asyncParams.dataSizeInBytes)
+                {
+                    m_asyncParams.actualReceived = m_asyncParams.dataSizeInBytes;
+
+                    if(header->packet_length > uint32_t(m_asyncParams.actualReceived))
+                    {
+                        emit consolePutData(QString("Parse error, packet length is too long %1\n").arg(header->packet_length), 1);
+                        start_receive = true;
+                        return;
+                    }
+                }
+
+                if(header->packet_length <= uint32_t(m_asyncParams.actualReceived))
+                {
+                    // Packet length should be at least equal to header size
+                    if(header->packet_length < sizeof(USBheader_t))
+                    {
+                        emit consolePutData(QString("Parse error, packet length is too short %1\n").arg(header->packet_length), 1);
+                        start_receive = true;
+                        return;
+                    }
+
+                    switch(header->type)
+                    {
+                        case SRP_LS_DATA:
+                            // Retransmit data to PC
+                            emit postTxDataToSerialPort(UserRxBuffer + sizeof(USBheader_t), header->packet_length - sizeof(USBheader_t));
+                            emit consolePutData(QString("Received SRP LS DATA\n"), 0);
+                            break;
+                        case SRP_HS_DATA:
+                            emit consolePutData(QString("Received SRP HS DATA, continue to parsing\n"), 0);
+                            parseHsData();
+                            break;
+                    }
+
+                    // Packet received and parsed
+                    start_receive = true;
+                    return;
+                }
+                else
+                {
+                    // Continue receive
+                    emit consolePutData(QString("Continue usb receive, start rx timeout timer\n"), 0);
+                    rx_timeout_timer.restart();
+
+                    if(transfer->actual_length == USB_BULK_SIZE)
+                    {
+                        emit consolePutData(QString("Starting multi rx transfers\n"), 0);
+
+                        // Save packet length for multi transfers
+                        m_asyncParams.packet_length = header->packet_length;
+
+                        start_receive_multiple = true;
+                        return;
+                    }
+                    else
+                    {
+                        // Continue with single transfer
+                        emit consolePutData(QString("Waring: continue usb receive with single transfer due to wrong length detected\n"), 1);
+                        start_receive = true;
+                        return;
+                    }
+                }
             }
+                break;
+
+            /** Transfer failed */
+            case LIBUSB_TRANSFER_ERROR:
+                break;
+
+            /** Transfer timed out */
+            case LIBUSB_TRANSFER_TIMED_OUT:
+                break;
+
+            /** Transfer was cancelled */
+            case LIBUSB_TRANSFER_CANCELLED:
+                break;
+
+            /** For bulk/interrupt endpoints: halt condition detected (endpoint
+             * stalled). For control endpoints: control request not supported. */
+            case LIBUSB_TRANSFER_STALL:
+                break;
+
+            /** Device was disconnected */
+            case LIBUSB_TRANSFER_NO_DEVICE:
+                break;
+
+            /** Device sent more data than requested */
+            case LIBUSB_TRANSFER_OVERFLOW:
+                break;
         }
 
-        if(header->packet_length <= uint32_t(m_asyncParams.dataSizeInBytes))
+
+        if(transfer->status != LIBUSB_TRANSFER_COMPLETED && transfer->status != LIBUSB_TRANSFER_CANCELLED)
         {
-            // Packet length should be at least equal to header size
-            if(header->packet_length < sizeof(USBheader_t))
-            {
-                emit consolePutData(QString("Parse error, packet length is too short %1\n").arg(header->packet_length), 1);
-                USB_StopReceive();
-                start_receive = true;
-                return;
-            }
-
-            switch(header->type)
-            {
-                case SRP_LS_DATA:
-                    // Retransmit data to PC
-                    emit postTxDataToSerialPort(UserRxBuffer + sizeof(USBheader_t), header->packet_length - sizeof(USBheader_t));
-                    emit consolePutData(QString("Received SRP LS DATA\n"), 0);
-                    break;
-                case SRP_HS_DATA:
-                    emit consolePutData(QString("Received SRP HS DATA, continue to parsing\n"), 0);
-                    parseHsData();
-                    break;
-            }
-
-            // Packet received and parsed, stop any ongoing rx transfers
-            USB_StopReceive();
-            start_receive = true;
-            return;
-        }
-        else
-        {
-            // Continue receive
-            emit consolePutData(QString("Continue usb receive, start rx timeout timer\n"), 0);
-            rx_timeout_timer.restart();
-
-            // Start another transfer
-            if(m_asyncParams.dataOffset >= m_asyncParams.dataSizeInBytes)
-            {
-                emit consolePutData(QString("Error continue usb receive: rx buffer overflow\n"), 0);
-                USB_StopReceive();
-                start_receive = true;
-                return;
-            }
-
-            // Move data pointer
-            transfer->buffer = m_asyncParams.pData + m_asyncParams.dataOffset;
-            m_asyncParams.dataOffset += m_asyncParams.oneTransferLen;
-
-            // Start transfer
-            libusb_submit_transfer(transfer);
-            return;
-        }
-    }
-        break;
-
-    /** Transfer failed */
-    case LIBUSB_TRANSFER_ERROR:
-        break;
-
-    /** Transfer timed out */
-    case LIBUSB_TRANSFER_TIMED_OUT:
-        break;
-
-    /** Transfer was cancelled */
-    case LIBUSB_TRANSFER_CANCELLED:
-        break;
-
-    /** For bulk/interrupt endpoints: halt condition detected (endpoint
-     * stalled). For control endpoints: control request not supported. */
-    case LIBUSB_TRANSFER_STALL:
-        break;
-
-    /** Device was disconnected */
-    case LIBUSB_TRANSFER_NO_DEVICE:
-        break;
-
-    /** Device sent more data than requested */
-    case LIBUSB_TRANSFER_OVERFLOW:
-        break;
-    }
-
-    if(transfer->status != LIBUSB_TRANSFER_COMPLETED)
-    {
-        if(transfer->status != LIBUSB_TRANSFER_CANCELLED)
-        {
-            // Transfer error, stop ongoing rx transfers, start again
-            USB_StopReceive();
+            // Transfer error
             start_receive = true;
 
             // Check time, we should not spam to console too often
@@ -646,6 +813,166 @@ void LIBUSB_CALL UsbWorkThread::rx_callback(struct libusb_transfer *transfer)
                 emit consolePutData(QString("Error rx transfer: %1\n").arg(libusb_error_name(transfer->status)), 1);
                 console_spam_timer.start();
             }
+        }
+        return;
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // Multi rx transfer
+    // Drop any received data from USB if needed
+    if(usb_receiver_drop)
+    {
+        emit consolePutData("USB dropped received data, start receiving again\n", 0);
+        USB_StopReceiveMultiple();
+        start_receive = true;
+        return;
+    }
+
+    switch(transfer->status)
+    {
+        /** Transfer completed without error. Note that this does not indicate
+         * that the entire amount of requested data was transferred. */
+        case LIBUSB_TRANSFER_COMPLETED:
+        {
+            // Log received data
+            emit consolePutData(QString("Transfer completed, actual received length %1\n").arg(transfer->actual_length), 0);
+            uint8_t len_cut = transfer->actual_length > 16 ? 16 : uint8_t(transfer->actual_length);
+            if(len_cut)
+            {
+                QString d;
+                for(uint8_t i = 0; i < len_cut; ++i)
+                    d.append(QString("%1 ").arg(transfer->buffer[i], 2, 16, QLatin1Char('0')));
+                if(len_cut < transfer->actual_length)
+                    d.append("...");
+                d.append("\n");
+                emit consolePutData(d, 0);
+            }
+
+            // If we waited for more data and timeout expired
+            if(m_asyncParams.actualReceived && rx_timeout_timer.hasExpired(rx_timeout_ms))
+            {
+                // Drop previously received data
+                emit consolePutData(QString("Usb receive timeout detected, broken previously received packet\n"), 1);
+                USB_StopReceiveMultiple();
+                start_receive = true;
+                return;
+            }
+
+            m_asyncParams.actualReceived += transfer->actual_length;    // max = USB_BULK_SIZE
+
+            USBheader_t *header = (USBheader_t*)&UserRxBuffer;
+
+            // If packet is too big already, start parsing it
+            if(m_asyncParams.actualReceived >= m_asyncParams.dataSizeInBytes)
+            {
+                m_asyncParams.actualReceived = m_asyncParams.dataSizeInBytes;
+
+                if(header->packet_length > uint32_t(m_asyncParams.actualReceived))
+                {
+                    emit consolePutData(QString("Parse error, packet length is too long %1\n").arg(header->packet_length), 1);
+                    USB_StopReceiveMultiple();
+                    start_receive = true;
+                    return;
+                }
+            }
+
+            if(header->packet_length <= uint32_t(m_asyncParams.actualReceived))
+            {
+                // Packet length should be at least equal to header size
+                if(header->packet_length < sizeof(USBheader_t))
+                {
+                    emit consolePutData(QString("Parse error, packet length is too short %1\n").arg(header->packet_length), 1);
+                    USB_StopReceiveMultiple();
+                    start_receive = true;
+                    return;
+                }
+
+                switch(header->type)
+                {
+                    case SRP_LS_DATA:
+                        // Retransmit data to PC
+                        emit postTxDataToSerialPort(UserRxBuffer + sizeof(USBheader_t), header->packet_length - sizeof(USBheader_t));
+                        emit consolePutData(QString("Received SRP LS DATA\n"), 0);
+                        break;
+                    case SRP_HS_DATA:
+                        emit consolePutData(QString("Received SRP HS DATA, continue to parsing\n"), 0);
+                        parseHsData();
+                        break;
+                }
+
+                // Packet received and parsed
+                m_asyncParams.multitransferInProgress = false;
+                start_receive = true;
+                return;
+            }
+            else
+            {
+                // Continue receive
+                emit consolePutData(QString("Continue usb receive, start rx timeout timer\n"), 0);
+                rx_timeout_timer.restart();
+
+                if(transfer->actual_length != USB_BULK_SIZE)
+                {
+                    //todo
+                    emit consolePutData(QString("TODO\n"), 0);
+                }
+
+                if(int(m_asyncParams.dataOffset) >= transfer->actual_length)
+                {
+                    // Already enougth rx transfers in a queue, just have to wait for them
+                    emit consolePutData(QString("Already enougth rx transfers in a queue, just have to wait for them\n"), 0);
+                    break;
+                }
+
+                // Move data pointer for current transfer and start it again
+                transfer->buffer = m_asyncParams.pData + m_asyncParams.dataOffset;
+                m_asyncParams.dataOffset += m_asyncParams.oneTransferLen;
+
+                // Start transfer
+                emit consolePutData(QString("Start multi rx transfer again\n"), 1);
+                libusb_submit_transfer(transfer);
+            }
+        }
+            break;
+
+        /** Transfer failed */
+        case LIBUSB_TRANSFER_ERROR:
+            break;
+
+        /** Transfer timed out */
+        case LIBUSB_TRANSFER_TIMED_OUT:
+            break;
+
+        /** Transfer was cancelled */
+        case LIBUSB_TRANSFER_CANCELLED:
+            break;
+
+        /** For bulk/interrupt endpoints: halt condition detected (endpoint
+         * stalled). For control endpoints: control request not supported. */
+        case LIBUSB_TRANSFER_STALL:
+            break;
+
+        /** Device was disconnected */
+        case LIBUSB_TRANSFER_NO_DEVICE:
+            break;
+
+        /** Device sent more data than requested */
+        case LIBUSB_TRANSFER_OVERFLOW:
+            break;
+    }
+
+
+    if(transfer->status != LIBUSB_TRANSFER_COMPLETED && transfer->status != LIBUSB_TRANSFER_CANCELLED)
+    {
+        // Transfer error
+        USB_StopReceiveMultiple();
+        start_receive = true;
+
+        // Check time, we should not spam to console too often
+        if(console_spam_timer.hasExpired(1000))
+        {
+            emit consolePutData(QString("Error rx transfer: %1\n").arg(libusb_error_name(transfer->status)), 1);
+            console_spam_timer.start();
         }
     }
 }
@@ -854,7 +1181,10 @@ void UsbWorkThread::USB_Reconnect()
 {
     emit consolePutData("USB reconnect attempt...\n", 1);
 
-    USB_StopReceive();
+    USB_StopReceiveSingle();
+    if(m_asyncParams.multitransferInProgress)
+        USB_StopReceiveMultiple();
+
     USB_StopTransmit();
 
     USB_Deinit();
