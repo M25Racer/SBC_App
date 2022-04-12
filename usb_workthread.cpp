@@ -58,6 +58,104 @@ void UsbWorkThread::run()
         {
             start_transmit = false;
             USB_StartTransmit();
+
+            if(transmit_in_progress)
+            {
+                if(!tx_complete_flag)
+                {
+                    /* Handle Events */
+                    if(context != nullptr)
+                    {
+                        // If a zero timeval is passed, this function will handle any already-pending events and then immediately return in non-blocking style.
+                        rc = libusb_handle_events_timeout_completed(context, &tv, nullptr);
+
+                        if(rc != LIBUSB_SUCCESS)
+                        {
+                            emit consolePutData(QString("Usb Transfer Error: %1\n").arg(libusb_error_name(rc)), 1);
+                        }
+                    }
+                }
+
+                if(tx_complete_flag)
+                {
+                    transmit_in_progress = false;
+                }
+            }
+
+            if(testStartBlockingReceive)
+            {
+                testStartBlockingReceive = false;
+
+                emit consolePutData("Start blocking usb receive\n", 1);
+
+                USB_StopReceive();
+                libusb_handle_events_timeout_completed(context, &tv, nullptr);
+
+                UserRxBuffer_len = 0;
+                int actual_length;
+                int res = 0;
+
+                while(1)
+                {
+                    // Start blocking transfer with 1 sec timeout
+                    res = libusb_bulk_transfer(handle, EP_IN, UserRxBuffer + UserRxBuffer_len, sizeof(UserRxBuffer), &actual_length, 1000);
+
+                    if(res == LIBUSB_SUCCESS)
+                    {
+                        emit consolePutData(QString("Blocking usb received: %1 bytes\n").arg(actual_length), 0);
+
+                        UserRxBuffer_len += actual_length;    // max = USB_BULK_SIZE
+
+                        USBheader_t *header = (USBheader_t*)&UserRxBuffer;
+
+                        // If packet is too big already, start parsing it
+                        if(UserRxBuffer_len >= int(sizeof(UserRxBuffer)))
+                        {
+                            UserRxBuffer_len = sizeof(UserRxBuffer);
+
+                            if(header->packet_length > uint32_t(UserRxBuffer_len))
+                            {
+                                emit consolePutData(QString("Parse error, packet length is too long %1\n").arg(header->packet_length), 1);
+                                UserRxBuffer_len = 0;
+                                break;
+                            }
+                        }
+
+                        // Received enough data?
+                        if(header->packet_length <= uint32_t(UserRxBuffer_len))
+                        {
+                            // Packet length should be at least equal to header size
+                            if(header->packet_length < sizeof(USBheader_t))
+                            {
+                                emit consolePutData(QString("Parse error, packet length is too short %1\n").arg(header->packet_length), 1);
+                                UserRxBuffer_len = 0;
+                                break;
+                            }
+
+                            switch(header->type)
+                            {
+                                case SRP_LS_DATA:
+                                    // Retransmit data to PC
+                                    emit postTxDataToSerialPort(UserRxBuffer + pStartData + sizeof(USBheader_t), header->packet_length - sizeof(USBheader_t));
+                                    emit consolePutData(QString("Received SRP LS DATA\n"), 0);
+                                    break;
+                                case SRP_HS_DATA:
+                                    emit consolePutData(QString("Received SRP HS DATA, continue to parsing\n"), 0);
+                                    parseHsData();
+                                    break;
+                            }
+
+                            UserRxBuffer_len = 0;
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        emit consolePutData(QString("Blocking usb Transfer Error: %1\n").arg(libusb_error_name(res)), 1);
+                        break;
+                    }
+                }
+            }
         }
 
         if(start_receive && !usb_receiver_drop)
@@ -941,6 +1039,8 @@ void UsbWorkThread::parseHsData()
                 {
                     // Send GET_DATA command
                     sendHsCommand(USB_CMD_GET_DATA, sizeof(stm32_ready_data_size), (uint8_t*)&stm32_ready_data_size);
+
+                    testStartBlockingReceive = true;
                 }
             }
             else if(AdcStatus == ADC_STATUS_BUSY)
