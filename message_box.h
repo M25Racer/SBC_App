@@ -38,25 +38,25 @@ public:
     bool message_box_srp(uint8_t* Buf, uint16_t len, uint8_t master_address, uint8_t own_address);
     uint16_t message_header_to_array(const message_header* message, uint8_t* Buf);
 
-    const uint8_t SRP_ADDR  = 0x53;
-    const uint8_t MOD_ADDR 	= 0x54;
-    const uint8_t MASTER_ADDR = 0x4D;
+    static const uint8_t SRP_ADDR  = 0x53;
+    static const uint8_t MOD_ADDR 	= 0x54;
+    static const uint8_t MASTER_ADDR = 0x4D;
 
-    const uint8_t PT_ADDR    = 0x44;
-    const uint8_t SILS_ADDR  = 0x45;
-    const uint8_t SFBS_ADDR  = 0x46;
-    const uint8_t NAV_ADDR   = 0x47;
-    const uint8_t ReCap_ADDR = 0x52;
-    const uint8_t XYC_ADDR   = 0x43;
-    const uint8_t HEX_ADDR   = 0x48;
-    const uint8_t Ind1h_ADDR = 0x21;
+    static const uint8_t PT_ADDR    = 0x44;
+    static const uint8_t SILS_ADDR  = 0x45;
+    static const uint8_t SFBS_ADDR  = 0x46;
+    static const uint8_t NAV_ADDR   = 0x47;
+    static const uint8_t ReCap_ADDR = 0x52;
+    static const uint8_t XYC_ADDR   = 0x43;
+    static const uint8_t HEX_ADDR   = 0x48;
+    static const uint8_t Ind1h_ADDR = 0x21;
 
-    const uint32_t RX_HEADER_LENGTH = 6;
-    const uint32_t TX_HEADER_LENGTH = 7;
-    const uint32_t DATA_ADDRESS_LENGTH = 4;
-    const uint32_t CRC_LENGTH = 2;
-    const uint32_t DATA_LENGTH = 256;
-    const uint32_t FRAME_LENGTH = (TX_HEADER_LENGTH + DATA_ADDRESS_LENGTH + DATA_LENGTH + CRC_LENGTH);
+    static const uint32_t RX_HEADER_LENGTH = 6;
+    static const uint32_t TX_HEADER_LENGTH = 7;
+    static const uint32_t DATA_ADDRESS_LENGTH = 4;
+    static const uint32_t CRC_LENGTH = 2;
+    static const uint32_t DATA_LENGTH = 256;
+    static const uint32_t FRAME_LENGTH = (TX_HEADER_LENGTH + DATA_ADDRESS_LENGTH + DATA_LENGTH + CRC_LENGTH);
 
 //    const uint8_t INFO_ADDRESS          = 0x00;
 

@@ -1,6 +1,7 @@
 #include "usb_workthread.h"
 #include <message_box.h>
 #include "../SRP_HS_USB_PROTOCOL/SRP_HS_USB_Protocol.h"
+#include "agc_algorithm.h"
 
 /* Extern global variables */
 extern RingBuffer *m_ring;              // ring data buffer (ADC data) for QAM decoder

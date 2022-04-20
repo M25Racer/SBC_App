@@ -6,6 +6,9 @@
 #include <QWaitCondition>
 #include <QElapsedTimer>
 #include <ringbuffer.h>
+#include <message_box.h>
+
+class MessageBox;
 
 class QamThread : public QThread
 {
@@ -13,6 +16,7 @@ class QamThread : public QThread
 
 signals:
     void consolePutData(const QString &data, quint8 priority);
+    void postTxDataToSerialPort(const uint8_t *p_data, int len);
 
 public slots:
 

@@ -96,6 +96,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(&m_usb_thread, &UsbWorkThread::usbInitTimeoutStart, this, &MainWindow::usbInitTimeoutStart, Qt::ConnectionType::QueuedConnection);
     connect(&m_usb_thread, &UsbWorkThread::consoleAdcFile, this, &MainWindow::consoleAdcData, Qt::ConnectionType::QueuedConnection);
     connect(&m_qam_thread, &QamThread::consolePutData, this, &MainWindow::consolePutData, Qt::ConnectionType::QueuedConnection);
+    connect(&m_qam_thread, &QamThread::postTxDataToSerialPort, this, &MainWindow::transmitDataSerialPort, Qt::ConnectionType::QueuedConnection);
 
     m_console->putData("SBC Application\n", 1);
     m_console->putData("Opening serial port...\n", 1);

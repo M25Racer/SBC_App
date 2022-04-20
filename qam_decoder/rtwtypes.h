@@ -1,9 +1,9 @@
-//
-// File: rtwtypes.h
-//
-// MATLAB Coder version            : 5.3
-// C/C++ source code generated on  : 24-Mar-2022 17:52:15
-//
+/*
+ * File: rtwtypes.h
+ *
+ * MATLAB Coder version            : 5.1
+ * C/C++ source code generated on  : 19-Apr-2022 11:19:13
+ */
 
 #ifndef RTWTYPES_H
 #define RTWTYPES_H
@@ -13,33 +13,32 @@
  *   int64_T                      - signed 64 bit integers               *
  *   uint64_T                     - unsigned 64 bit integers             *
  *=======================================================================*/
+#if defined(__APPLE__)
+# ifndef INT64_T
+#  define INT64_T                      long
+#  define FMT64                        "l"
+#  if defined(__LP64__) && !defined(INT_TYPE_64_IS_LONG)
+#    define INT_TYPE_64_IS_LONG
+#  endif
+# endif
+#endif
 
 #if defined(__APPLE__)
-#ifndef INT64_T
-#define INT64_T long
-#define FMT64 "l"
-#if defined(__LP64__) && !defined(INT_TYPE_64_IS_LONG)
-#define INT_TYPE_64_IS_LONG
-#endif
-#endif
-#endif
-
-#if defined(__APPLE__)
-#ifndef UINT64_T
-#define UINT64_T unsigned long
-#define FMT64 "l"
-#if defined(__LP64__) && !defined(INT_TYPE_64_IS_LONG)
-#define INT_TYPE_64_IS_LONG
-#endif
-#endif
+# ifndef UINT64_T
+#  define UINT64_T                     unsigned long
+#  define FMT64                        "l"
+#  if defined(__LP64__) && !defined(INT_TYPE_64_IS_LONG)
+#    define INT_TYPE_64_IS_LONG
+#  endif
+# endif
 #endif
 
-// Include Files
+/* Include Files */
 #include "tmwtypes.h"
-
 #endif
-//
-// File trailer for rtwtypes.h
-//
-// [EOF]
-//
+
+/*
+ * File trailer for rtwtypes.h
+ *
+ * [EOF]
+ */

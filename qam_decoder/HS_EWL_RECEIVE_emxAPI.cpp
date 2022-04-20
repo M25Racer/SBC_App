@@ -1,14 +1,14 @@
 //
-// File: HS_EWL_FREQ_ACQ_emxAPI.cpp
+// File: HS_EWL_RECEIVE_emxAPI.cpp
 //
-// MATLAB Coder version            : 5.3
-// C/C++ source code generated on  : 24-Mar-2022 17:52:15
+// MATLAB Coder version            : 5.1
+// C/C++ source code generated on  : 19-Apr-2022 11:19:13
 //
 
 // Include Files
-#include "HS_EWL_FREQ_ACQ_emxAPI.h"
-#include "HS_EWL_FREQ_ACQ_emxutil.h"
-#include "HS_EWL_FREQ_ACQ_types.h"
+#include "HS_EWL_RECEIVE_emxAPI.h"
+#include "HS_EWL_RECEIVE_emxutil.h"
+#include "HS_EWL_RECEIVE_types.h"
 #include "rt_nonfinite.h"
 #include <cstdlib>
 
@@ -24,12 +24,13 @@ emxArray_real_T *emxCreateND_real_T(int numDimensions, const int *size)
   int numEl;
   emxInit_real_T(&emx, numDimensions);
   numEl = 1;
-  for (int i{0}; i < numDimensions; i++) {
+  for (int i = 0; i < numDimensions; i++) {
     numEl *= size[i];
     emx->size[i] = size[i];
   }
-  emx->data =
-      (double *)std::calloc(static_cast<unsigned int>(numEl), sizeof(double));
+
+  emx->data = (double *)std::calloc(static_cast<unsigned int>(numEl), sizeof
+    (double));
   emx->numDimensions = numDimensions;
   emx->allocatedSize = numEl;
   return emx;
@@ -42,16 +43,17 @@ emxArray_real_T *emxCreateND_real_T(int numDimensions, const int *size)
 // Return Type  : emxArray_real_T *
 //
 emxArray_real_T *emxCreateWrapperND_real_T(double *data, int numDimensions,
-                                           const int *size)
+  const int *size)
 {
   emxArray_real_T *emx;
   int numEl;
   emxInit_real_T(&emx, numDimensions);
   numEl = 1;
-  for (int i{0}; i < numDimensions; i++) {
+  for (int i = 0; i < numDimensions; i++) {
     numEl *= size[i];
     emx->size[i] = size[i];
   }
+
   emx->data = data;
   emx->numDimensions = numDimensions;
   emx->allocatedSize = numEl;
@@ -91,8 +93,8 @@ emxArray_real_T *emxCreate_real_T(int rows, int cols)
   emx->size[0] = rows;
   numEl = rows * cols;
   emx->size[1] = cols;
-  emx->data =
-      (double *)std::calloc(static_cast<unsigned int>(numEl), sizeof(double));
+  emx->data = (double *)std::calloc(static_cast<unsigned int>(numEl), sizeof
+    (double));
   emx->numDimensions = 2;
   emx->allocatedSize = numEl;
   return emx;
@@ -118,7 +120,7 @@ void emxInitArray_real_T(emxArray_real_T **pEmxArray, int numDimensions)
 }
 
 //
-// File trailer for HS_EWL_FREQ_ACQ_emxAPI.cpp
+// File trailer for HS_EWL_RECEIVE_emxAPI.cpp
 //
 // [EOF]
 //

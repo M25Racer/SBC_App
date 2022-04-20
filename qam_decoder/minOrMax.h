@@ -1,10 +1,9 @@
 //
 // File: minOrMax.h
 //
-// MATLAB Coder version            : 5.3
-// C/C++ source code generated on  : 24-Mar-2022 17:52:15
+// MATLAB Coder version            : 5.1
+// C/C++ source code generated on  : 19-Apr-2022 11:19:13
 //
-
 #ifndef MINORMAX_H
 #define MINORMAX_H
 
@@ -13,15 +12,21 @@
 #include <cstddef>
 #include <cstdlib>
 
-// Function Declarations
-namespace coder {
-namespace internal {
-void minimum(const double x[50], double *ex, int *idx);
+// Type Declarations
+struct emxArray_real_T;
 
+// Function Declarations
+namespace coder
+{
+  namespace internal
+  {
+    double maximum(const emxArray_real_T *x);
+    void minimum(const double x[50], double *ex, int *idx);
+  }
 }
-} // namespace coder
 
 #endif
+
 //
 // File trailer for minOrMax.h
 //

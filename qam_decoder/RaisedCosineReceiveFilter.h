@@ -1,10 +1,9 @@
 //
 // File: RaisedCosineReceiveFilter.h
 //
-// MATLAB Coder version            : 5.3
-// C/C++ source code generated on  : 24-Mar-2022 17:52:15
+// MATLAB Coder version            : 5.1
+// C/C++ source code generated on  : 19-Apr-2022 11:19:13
 //
-
 #ifndef RAISEDCOSINERECEIVEFILTER_H
 #define RAISEDCOSINERECEIVEFILTER_H
 
@@ -15,27 +14,48 @@
 #include <cstdlib>
 
 // Type Declarations
+namespace coder
+{
+  namespace dspcodegen
+  {
+    class FIRDecimator;
+  }
+}
+
 struct emxArray_creal_T;
 
 // Type Definitions
-namespace coder {
-namespace comm {
-class RaisedCosineReceiveFilter {
-public:
-  void step(const emxArray_creal_T *varargin_1, emxArray_creal_T *varargout_1);
-  RaisedCosineReceiveFilter();
-  ~RaisedCosineReceiveFilter();
-  boolean_T matlabCodegenIsDeleted;
-  int isInitialized;
-  boolean_T isSetupComplete;
-  dspcodegen::FIRDecimator *pFilter;
-  dspcodegen::FIRDecimator _pobj0;
-};
-
-} // namespace comm
-} // namespace coder
+namespace coder
+{
+  namespace comm
+  {
+    class RaisedCosineReceiveFilter
+    {
+     public:
+      RaisedCosineReceiveFilter *init();
+      void step(const emxArray_creal_T *varargin_1, creal_T varargout_1_data[],
+                int varargout_1_size[2]);
+      void setupAndReset();
+      void setup();
+      void matlabCodegenDestructor();
+      void release();
+      void handle_matlabCodegenDestructor();
+      void releaseWrapper();
+      ~RaisedCosineReceiveFilter();
+      RaisedCosineReceiveFilter();
+      boolean_T matlabCodegenIsDeleted;
+      dspcodegen::FIRDecimator _pobj0;
+     protected:
+      dspcodegen::FIRDecimator *pFilter;
+     private:
+      int isInitialized;
+      boolean_T isSetupComplete;
+    };
+  }
+}
 
 #endif
+
 //
 // File trailer for RaisedCosineReceiveFilter.h
 //

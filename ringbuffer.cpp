@@ -143,11 +143,15 @@ bool RingBuffer::GetDouble(double *p_data_out, double *p_length)
         t = 0;
 
     // Copy data
-    *p_length = double(DataLength[t]);
+    *p_length = double(DataLength[t]/2);
 
-    for(uint32_t i = 0; i < DataLength[t]; ++i)
+    uint16_t value;
+    uint64_t j = 0;
+    for(uint32_t i = 0; i < DataLength[t]; i+=2)
     {
-        p_data_out[i] = double(RingBuf[t][i]);
+        value = RingBuf[t][i];
+        value |= ((uint16_t)RingBuf[t][i+1]) << 8;
+        p_data_out[j++] = double((int16_t)value);
     }
 
     m_mutex.lock();

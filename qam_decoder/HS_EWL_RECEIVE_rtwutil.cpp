@@ -1,12 +1,13 @@
 //
-// File: HS_EWL_FREQ_ACQ_rtwutil.cpp
+// File: HS_EWL_RECEIVE_rtwutil.cpp
 //
-// MATLAB Coder version            : 5.3
-// C/C++ source code generated on  : 24-Mar-2022 17:52:15
+// MATLAB Coder version            : 5.1
+// C/C++ source code generated on  : 19-Apr-2022 11:19:13
 //
 
 // Include Files
-#include "HS_EWL_FREQ_ACQ_rtwutil.h"
+#include "HS_EWL_RECEIVE_rtwutil.h"
+#include "rt_nonfinite.h"
 #include "rt_nonfinite.h"
 #include <cmath>
 
@@ -19,14 +20,14 @@
 double rt_powd_snf(double u0, double u1)
 {
   double y;
-  if (std::isnan(u0) || std::isnan(u1)) {
+  if (rtIsNaN(u0) || rtIsNaN(u1)) {
     y = rtNaN;
   } else {
     double d;
     double d1;
     d = std::abs(u0);
     d1 = std::abs(u1);
-    if (std::isinf(u1)) {
+    if (rtIsInf(u1)) {
       if (d == 1.0) {
         y = 1.0;
       } else if (d > 1.0) {
@@ -58,11 +59,34 @@ double rt_powd_snf(double u0, double u1)
       y = std::pow(u0, u1);
     }
   }
+
   return y;
 }
 
 //
-// File trailer for HS_EWL_FREQ_ACQ_rtwutil.cpp
+// Arguments    : double u
+// Return Type  : double
+//
+double rt_roundd_snf(double u)
+{
+  double y;
+  if (std::abs(u) < 4.503599627370496E+15) {
+    if (u >= 0.5) {
+      y = std::floor(u + 0.5);
+    } else if (u > -0.5) {
+      y = u * 0.0;
+    } else {
+      y = std::ceil(u - 0.5);
+    }
+  } else {
+    y = u;
+  }
+
+  return y;
+}
+
+//
+// File trailer for HS_EWL_RECEIVE_rtwutil.cpp
 //
 // [EOF]
 //

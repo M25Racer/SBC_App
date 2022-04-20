@@ -9,26 +9,33 @@ SOURCES += \
     main.cpp \
     mainwindow.cpp \
     message_box.cpp \
+    qam_decoder/FFTImplementationCallback.cpp \
     qam_decoder/FIRDecimator.cpp \
+    qam_decoder/HS_EWL_DEMOD_QAM.cpp \
     qam_decoder/HS_EWL_FREQ_ACQ.cpp \
-    qam_decoder/HS_EWL_FREQ_ACQ_data.cpp \
-    qam_decoder/HS_EWL_FREQ_ACQ_emxAPI.cpp \
-    qam_decoder/HS_EWL_FREQ_ACQ_emxutil.cpp \
-    qam_decoder/HS_EWL_FREQ_ACQ_initialize.cpp \
-    qam_decoder/HS_EWL_FREQ_ACQ_rtwutil.cpp \
-    qam_decoder/HS_EWL_FREQ_ACQ_terminate.cpp \
+    qam_decoder/HS_EWL_RECEIVE.cpp \
+    qam_decoder/HS_EWL_RECEIVE_data.cpp \
+    qam_decoder/HS_EWL_RECEIVE_emxAPI.cpp \
+    qam_decoder/HS_EWL_RECEIVE_emxutil.cpp \
+    qam_decoder/HS_EWL_RECEIVE_initialize.cpp \
+    qam_decoder/HS_EWL_RECEIVE_rtwutil.cpp \
+    qam_decoder/HS_EWL_RECEIVE_terminate.cpp \
     qam_decoder/RaisedCosineReceiveFilter.cpp \
-    qam_decoder/SystemCore.cpp \
+    qam_decoder/abs.cpp \
+    qam_decoder/exp.cpp \
+    qam_decoder/fft.cpp \
+    qam_decoder/find.cpp \
     qam_decoder/getSquareConstellation.cpp \
+    qam_decoder/ifft.cpp \
     qam_decoder/log2.cpp \
     qam_decoder/minOrMax.cpp \
-    qam_decoder/qam_decoder.cpp \
+    qam_decoder/qamdemod.cpp \
     qam_decoder/qammod.cpp \
+    qam_decoder/rat.cpp \
     qam_decoder/rtGetInf.cpp \
     qam_decoder/rtGetNaN.cpp \
     qam_decoder/rt_nonfinite.cpp \
-    qam_decoder/sum.cpp \
-    qam_decoder/unsafeSxfun.cpp \
+    qam_decoder/xcorr.cpp \
     qam_thread.cpp \
     ringbuffer.cpp \
     settingsdialog.cpp \
@@ -91,33 +98,44 @@ DEPENDPATH += $$PWD/
 
 HEADERS += \
     ../SRP_HS_USB_PROTOCOL/SRP_HS_USB_Protocol.h \
+    agc_algorithm.h \
     crc16.h \
     mainwindow.h \
     message_box.h \
+    qam_decoder/FFTImplementationCallback.h \
     qam_decoder/FIRDecimator.h \
+    qam_decoder/HS_EWL_DEMOD_QAM.h \
     qam_decoder/HS_EWL_FREQ_ACQ.h \
-    qam_decoder/HS_EWL_FREQ_ACQ_data.h \
-    qam_decoder/HS_EWL_FREQ_ACQ_emxAPI.h \
-    qam_decoder/HS_EWL_FREQ_ACQ_emxutil.h \
-    qam_decoder/HS_EWL_FREQ_ACQ_initialize.h \
-    qam_decoder/HS_EWL_FREQ_ACQ_rtwutil.h \
-    qam_decoder/HS_EWL_FREQ_ACQ_terminate.h \
-    qam_decoder/HS_EWL_FREQ_ACQ_types.h \
+    qam_decoder/HS_EWL_RECEIVE.h \
+    qam_decoder/HS_EWL_RECEIVE_data.h \
+    qam_decoder/HS_EWL_RECEIVE_emxAPI.h \
+    qam_decoder/HS_EWL_RECEIVE_emxutil.h \
+    qam_decoder/HS_EWL_RECEIVE_initialize.h \
+    qam_decoder/HS_EWL_RECEIVE_rtwutil.h \
+    qam_decoder/HS_EWL_RECEIVE_terminate.h \
+    qam_decoder/HS_EWL_RECEIVE_types.h \
     qam_decoder/RaisedCosineReceiveFilter.h \
-    qam_decoder/SystemCore.h \
+    qam_decoder/abs.h \
+    qam_decoder/exp.h \
+    qam_decoder/fft.h \
+    qam_decoder/find.h \
     qam_decoder/getSquareConstellation.h \
+    qam_decoder/ifft.h \
     qam_decoder/log2.h \
     qam_decoder/minOrMax.h \
     qam_decoder/qam_decoder.h \
+    qam_decoder/qam_decoder.h \
+    qam_decoder/qamdemod.h \
     qam_decoder/qammod.h \
+    qam_decoder/rat.h \
     qam_decoder/rtGetInf.h \
     qam_decoder/rtGetNaN.h \
     qam_decoder/rt_defines.h \
     qam_decoder/rt_nonfinite.h \
     qam_decoder/rtwtypes.h \
-    qam_decoder/sum.h \
+    qam_decoder/signal.h \
     qam_decoder/tmwtypes.h \
-    qam_decoder/unsafeSxfun.h \
+    qam_decoder/xcorr.h \
     qam_thread.h \
     ringbuffer.h \
     settingsdialog.h \
