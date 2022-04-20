@@ -103,6 +103,8 @@ private:
     const qint64 rx_timeout_ms = 50;//10;            // usb rx timeout between transfers of one big packet, ms
 
     libusb_hotplug_callback_handle h_hotplug;   // libusb callback handle for hotplug event
+
+    bool testStartBlockingReceive = false;
 };
 
 #endif // USB_WORKTHREAD_H
