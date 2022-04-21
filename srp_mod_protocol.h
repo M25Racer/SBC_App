@@ -1,0 +1,8 @@
+#ifndef SRP_MOD_PROTOCOL_H
+#define SRP_MOD_PROTOCOL_H
+
+#define MOD_SRP_PROTOCOL_HEADER_SIZE (3 + 0) // 1 byte addr, 2 bytes length
+#define MOD_SRP_PROTOCOL_CRC_SIZE 2
+#define MOD_SRP_PROTOCOL_DATA_ECC_MIN_SIZE 0
+
+#endif // SRP_MOD_PROTOCOL_H

@@ -140,6 +140,7 @@ HEADERS += \
     ringbuffer.h \
     settingsdialog.h \
     console.h \
+    srp_mod_protocol.h \
     statistics.h \
     usb_global.h \
     usb_workthread.h

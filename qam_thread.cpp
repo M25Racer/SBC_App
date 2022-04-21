@@ -9,6 +9,7 @@
 #include "qam_decoder/rt_nonfinite.h"
 #include "qam_decoder/signal.h"
 #include "crc16.h"
+#include "srp_mod_protocol.h"
 
 /* Extern global variables */
 extern RingBuffer *m_ring;              // ring data buffer (ADC data) for QAM decoder
@@ -34,6 +35,7 @@ int byte_data_size;
 double f_est_data;//estimated frequency
 int f_est_size;
 
+// QAM data related sizes & offsets
 static const uint32_t TxPacketDataSize = 212;
 static const uint32_t TxPacketDataOffset = 23;
 uint8_t data_decoded[TxPacketDataSize];
@@ -129,8 +131,13 @@ void QamThread::QAM_Decoder()
         if(packet_length > 212)
             packet_length = 212;
 
+        if(packet_length < MOD_SRP_PROTOCOL_HEADER_SIZE + MOD_SRP_PROTOCOL_CRC_SIZE + MOD_SRP_PROTOCOL_DATA_ECC_MIN_SIZE)
+        {
+            emit consolePutData(QString("HS data parsing error, packet length is too short %1\n").arg(packet_length), 1);
+            packet_length = MOD_SRP_PROTOCOL_HEADER_SIZE + MOD_SRP_PROTOCOL_CRC_SIZE + MOD_SRP_PROTOCOL_DATA_ECC_MIN_SIZE;
+        }
+
         // Check crc
-        //todo
         uint16_t crc = ((uint16_t)data_decoded[packet_length - 1] << 8)
                        | (uint16_t)data_decoded[packet_length - 2];
 
@@ -139,7 +146,8 @@ void QamThread::QAM_Decoder()
         if(res)
         {
             // Transmit decoded data to PC
-            emit postTxDataToSerialPort((uint8_t*)&data_decoded[3], packet_length);
+            packet_length -= MOD_SRP_PROTOCOL_HEADER_SIZE + MOD_SRP_PROTOCOL_CRC_SIZE;
+            emit postTxDataToSerialPort((uint8_t*)&data_decoded[MOD_SRP_PROTOCOL_HEADER_SIZE], packet_length);
         }
         else
         {

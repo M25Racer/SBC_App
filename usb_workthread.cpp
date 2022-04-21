@@ -162,7 +162,7 @@ void UsbWorkThread::USB_ReceiveTransmitInit()
     else
     {
         // Filling
-        libusb_fill_bulk_transfer(t_rx, handle, EP_IN, static_cast<uint8_t*>(UserRxBuffer), sizeof(UserRxBuffer), static_rx_callback, this, 0);
+        libusb_fill_bulk_transfer(t_rx, handle, EP_IN, static_cast<uint8_t*>(UserRxBuffer), USB_BULK_SIZE+1, static_rx_callback, this, 0);
     }
 
 
@@ -507,7 +507,7 @@ void LIBUSB_CALL UsbWorkThread::rx_callback(struct libusb_transfer *transfer)
         }
 
         // Protection from UserRxBuffer overflow
-        if(pStartData > int(sizeof(UserRxBuffer) - 512))
+        if(pStartData > int(sizeof(UserRxBuffer) - USB_BULK_SIZE))
         {
             pStartData = 0;
             emit consolePutData(QString("Usb receive warning: buffer overflow, dropping data\n"), 1);
@@ -560,7 +560,18 @@ void LIBUSB_CALL UsbWorkThread::rx_callback(struct libusb_transfer *transfer)
         {
             // Continue receive
             emit consolePutData(QString("Continue usb receive, start rx timeout timer\n"), 0);
-            rx_timeout_timer.restart();//rx_timeout_timer.start();
+            rx_timeout_timer.restart();
+
+            // Reset completion flag
+            rx_complete_flag = 0;
+
+            // Set rx buffer
+            t_rx->buffer = &UserRxBuffer[UserRxBuffer_len];
+
+            // Submission
+            libusb_submit_transfer(t_rx);
+
+            receive_in_progress = true;
         }
     }
         break;
@@ -615,16 +626,16 @@ void LIBUSB_CALL UsbWorkThread::rx_callback(struct libusb_transfer *transfer)
 
     if(transfer->status == LIBUSB_TRANSFER_COMPLETED)
     {
-        QString d;
+//        QString d;
         emit consolePutData(QString("Transfer completed, actual received length %1\n").arg(transfer->actual_length), 0);
-        uint8_t len_cut = transfer->actual_length > 16 ? 16 : uint8_t(transfer->actual_length);
-        for(uint8_t i = 0; i < len_cut; ++i)
-            d.append(QString("%1 ").arg(transfer->buffer[i], 2, 16, QLatin1Char('0')));
-        if(len_cut < transfer->actual_length)
-            d.append("...");
-        d.append("\n");
-        emit consolePutData(d, 0);
-        d.clear();
+//        uint8_t len_cut = transfer->actual_length > 16 ? 16 : uint8_t(transfer->actual_length);
+//        for(uint8_t i = 0; i < len_cut; ++i)
+//            d.append(QString("%1 ").arg(transfer->buffer[i], 2, 16, QLatin1Char('0')));
+//        if(len_cut < transfer->actual_length)
+//            d.append("...");
+//        d.append("\n");
+//        emit consolePutData(d, 0);
+//        d.clear();
     }
 }
 
@@ -901,7 +912,7 @@ void UsbWorkThread::parseHsData()
         case USB_CMD_GET_DATA:
         {
             emit consolePutData(QString("parseHsData(): USB_CMD_GET_DATA\n"), 0);
-            memcpy(AdcDataBuffer, UserRxBuffer + pStartData + sizeof(USBheader_t), header->packet_length - sizeof(USBheader_t));
+//            memcpy(AdcDataBuffer, UserRxBuffer + pStartData + sizeof(USBheader_t), header->packet_length - sizeof(USBheader_t));
 
             bool res = m_ring->Append(UserRxBuffer + sizeof(USBheader_t), header->packet_length - sizeof(USBheader_t));
             if(res)
@@ -915,7 +926,7 @@ void UsbWorkThread::parseHsData()
                 emit consolePutData("Error: unable to add new adc data to ring buffer\n", 1);
             }
 
-            emit consoleAdcFile(AdcDataBuffer, header->packet_length - sizeof(USBheader_t));
+//            emit consoleAdcFile(AdcDataBuffer, header->packet_length - sizeof(USBheader_t));
             break;
         }
 
