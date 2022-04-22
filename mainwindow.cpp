@@ -60,6 +60,8 @@
 #include <QThread>
 #include "crc16.h"
 
+extern QElapsedTimer profiler_timer;
+
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     m_ui(new Ui::MainWindow),
@@ -281,7 +283,7 @@ void MainWindow::serialPortRxCleanup()
 void MainWindow::readDataSerialPort()
 {
     // Serial port data received (from PC)
-
+profiler_timer.start();
     // Drop any USB received data to prevent old packets been transmitted to serial port (to PC)
     m_usb_thread.usb_receiver_drop = true;
 
@@ -308,6 +310,7 @@ void MainWindow::readDataSerialPort()
 
 void MainWindow::parseDataSerialPort()
 {
+//    profiler_timer.start();
     uint8_t addr = TtyUserRxBuffer.at(0);
 
     // If package for listed tools, response with 'quick answer'
@@ -423,14 +426,18 @@ void MainWindow::showStatusMessage(const QString &message)
 // Asynchronous transmit
 void MainWindow::transmitDataSerialPort(const uint8_t *p_data, int length)
 {
-    if(p_data == nullptr)
-    {
-        m_console->putData("SP Error post_data_tx reported p_data = NULL", 0);
-        return;
-    }
+//    m_console->putData(QString("Profiler timer elapsed %1 # transmit to sp begin\n").arg(profiler_timer.elapsed()), 1);
+//    if(p_data == nullptr)
+//    {
+//        m_console->putData("SP Error post_data_tx reported p_data = NULL", 0);
+//        return;
+//    }
 
     m_serial->write((const char*)p_data, length);
-    m_console->putData("SP Transmit " + QString::number(length) + " bytes\n", 0);
+    m_serial->flush();  // Sending the buffered data immediately to the serial port
+//    m_console->putData("SP Transmit " + QString::number(length) + " bytes\n", 0);
+
+    m_console->putData(QString("Profiler timer elapsed %1 # transmit to sp end\n").arg(profiler_timer.elapsed()), 1);
 }
 
 // USB to STM32H7 board
@@ -516,6 +523,6 @@ void MainWindow::sendHsCommandGetDataSize()
 
 void MainWindow::sendHsCommandAdcStart()
 {
-    uint32_t adc_data_length = 440000;//388000;  //65536;//1024;
+    uint32_t adc_data_length = 440000;
     m_usb_thread.sendHsCommand(USB_CMD_ADC_START, 4, (uint8_t*)&adc_data_length);
 }

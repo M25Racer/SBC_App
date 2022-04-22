@@ -15,6 +15,7 @@
 extern RingBuffer *m_ring;              // ring data buffer (ADC data) for QAM decoder
 extern QWaitCondition ringNotEmpty;
 extern QMutex m_mutex;
+extern QElapsedTimer profiler_timer;
 
 static double Signal[USB_MAX_DATA_SIZE];
 
@@ -84,7 +85,7 @@ void QamThread::QAM_Decoder()
 {
     static bool first_pass = true;
 
-    emit consolePutData(QString("QAM decoder starting, length %1\n").arg(Length), 1);
+//    emit consolePutData(QString("QAM decoder starting, length %1\n").arg(Length), 1);
 
     //double len = SIG_LEN;
     //double *signal = (double*)&signal_test;
@@ -92,9 +93,9 @@ void QamThread::QAM_Decoder()
     double *signal = (double*)&Signal;
     double len = 15000;
 
+    timer.start();
     emxArray_real_T *in_data = NULL;
     in_data = emxCreateWrapper_real_T(signal, 1, len);
-    timer.start();
     HS_EWL_RECEIVE(in_data, len, Fs,
                     f0, sps, mode, preamble_len,
                     message_len, QAM_order, preamble_QAM_symbol,
@@ -131,10 +132,10 @@ void QamThread::QAM_Decoder()
         if(packet_length > 212)
             packet_length = 212;
 
-        if(packet_length < MOD_SRP_PROTOCOL_HEADER_SIZE + MOD_SRP_PROTOCOL_CRC_SIZE + MOD_SRP_PROTOCOL_DATA_ECC_MIN_SIZE)
+        if(packet_length < MOD_SRP_MIN_VALID_LENGTH)
         {
             emit consolePutData(QString("HS data parsing error, packet length is too short %1\n").arg(packet_length), 1);
-            packet_length = MOD_SRP_PROTOCOL_HEADER_SIZE + MOD_SRP_PROTOCOL_CRC_SIZE + MOD_SRP_PROTOCOL_DATA_ECC_MIN_SIZE;
+            packet_length = MOD_SRP_MIN_VALID_LENGTH;
         }
 
         // Check crc
@@ -146,8 +147,9 @@ void QamThread::QAM_Decoder()
         if(res)
         {
             // Transmit decoded data to PC
-            packet_length -= MOD_SRP_PROTOCOL_HEADER_SIZE + MOD_SRP_PROTOCOL_CRC_SIZE;
-            emit postTxDataToSerialPort((uint8_t*)&data_decoded[MOD_SRP_PROTOCOL_HEADER_SIZE], packet_length);
+            packet_length -= MOD_SRP_PROTOCOL_HEADER_SIZE + MOD_SRP_PROTOCOL_CRC_SIZE + MASTER_ADDR_SIZE;
+            emit postTxDataToSerialPort((uint8_t*)&data_decoded[MOD_SRP_PROTOCOL_HEADER_SIZE + MASTER_ADDR_SIZE], packet_length);
+//emit consolePutData(QString("Profiler timer elapsed %1 # data to serial port\n").arg(profiler_timer.elapsed()), 1);
         }
         else
         {
@@ -158,13 +160,13 @@ void QamThread::QAM_Decoder()
     // Debug information
     emit consolePutData(QString("freq = %1 Hz, elapsed time = %2 ms\n").arg(f_est_data).arg(timer.elapsed()), 1);
 
-    QString s;
-    for(int i = 0; i < byte_data_size; i++)
-    {
-        s.append(QString("%1 ").arg(byte_data[i] - byte_array[i]));
-    }
-    s.append("\n");
-    emit consolePutData(s, 0);
+//    QString s;
+//    for(int i = 0; i < byte_data_size; i++)
+//    {
+//        s.append(QString("%1 ").arg(byte_data[i] - byte_array[i]));
+//    }
+//    s.append("\n");
+//    emit consolePutData(s, 0);
 
-    HS_EWL_RECEIVE_terminate();
+//    HS_EWL_RECEIVE_terminate();
 }

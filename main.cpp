@@ -60,6 +60,7 @@
 RingBuffer *m_ring = nullptr;       // ring data buffer (ADC data) for QAM decoder
 QWaitCondition ringNotEmpty;
 QMutex m_mutex;
+QElapsedTimer profiler_timer;       // debug timer for time measurements
 
 /* Exported variables */
 extern uint8_t mod_status_reg;

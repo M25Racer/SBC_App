@@ -7,6 +7,7 @@
 extern RingBuffer *m_ring;              // ring data buffer (ADC data) for QAM decoder
 extern QWaitCondition ringNotEmpty;
 extern QMutex m_mutex;
+extern QElapsedTimer profiler_timer;
 
 /* Global variables */
 uint8_t UserRxBuffer[USB_MAX_DATA_SIZE];
@@ -64,7 +65,7 @@ void UsbWorkThread::run()
         if(start_receive && !usb_receiver_drop)
         {
             // Start or continue receive
-            emit consolePutData("USB start receiving\n", 0);
+//            emit consolePutData("USB start receiving\n", 0);
             start_receive = false;
             USB_StartReceive(&UserRxBuffer[UserRxBuffer_len]);
         }
@@ -114,6 +115,8 @@ void UsbWorkThread::run()
                 receive_in_progress = false;
             }
         }
+
+        //QThread::usleep(1);
     }
 }
 
@@ -405,14 +408,14 @@ void LIBUSB_CALL UsbWorkThread::tx_callback(struct libusb_transfer *transfer)
      * that the entire amount of requested data was transferred. */
     case LIBUSB_TRANSFER_COMPLETED:
     {
-        emit consolePutData(QString("Transfer completed, actual transmitted length %1\n").arg(transfer->actual_length), 0);
-        uint8_t len_cut = transfer->actual_length > 254 ? 254 : uint8_t(transfer->actual_length);
-        QString d;
-        for(uint8_t i = 0; i < len_cut; ++i)
-            d.append(QString("%1 ").arg(transfer->buffer[i], 2, 16, QLatin1Char('0')));
-        d.append("\n");
-        emit consolePutData(d, 0);
-        d.clear();
+//        emit consolePutData(QString("Transfer completed, actual transmitted length %1\n").arg(transfer->actual_length), 0);
+//        uint8_t len_cut = transfer->actual_length > 254 ? 254 : uint8_t(transfer->actual_length);
+//        QString d;
+//        for(uint8_t i = 0; i < len_cut; ++i)
+//            d.append(QString("%1 ").arg(transfer->buffer[i], 2, 16, QLatin1Char('0')));
+//        d.append("\n");
+//        emit consolePutData(d, 0);
+//        d.clear();
 
         // TODO add code to transmit more here?
     }
@@ -546,10 +549,10 @@ void LIBUSB_CALL UsbWorkThread::rx_callback(struct libusb_transfer *transfer)
                 case SRP_LS_DATA:
                     // Retransmit data to PC
                     emit postTxDataToSerialPort(UserRxBuffer + pStartData + sizeof(USBheader_t), header->packet_length - sizeof(USBheader_t));
-                    emit consolePutData(QString("Received SRP LS DATA\n"), 0);
+//                    emit consolePutData(QString("Received SRP LS DATA\n"), 0);
                     break;
                 case SRP_HS_DATA:
-                    emit consolePutData(QString("Received SRP HS DATA, continue to parsing\n"), 0);
+//                    emit consolePutData(QString("Received SRP HS DATA, continue to parsing\n"), 0);
                     parseHsData();
                     break;
             }
@@ -559,7 +562,7 @@ void LIBUSB_CALL UsbWorkThread::rx_callback(struct libusb_transfer *transfer)
         else
         {
             // Continue receive
-            emit consolePutData(QString("Continue usb receive, start rx timeout timer\n"), 0);
+//            emit consolePutData(QString("Continue usb receive, start rx timeout timer\n"), 0);
             rx_timeout_timer.restart();
 
             // Reset completion flag
@@ -627,7 +630,7 @@ void LIBUSB_CALL UsbWorkThread::rx_callback(struct libusb_transfer *transfer)
     if(transfer->status == LIBUSB_TRANSFER_COMPLETED)
     {
 //        QString d;
-        emit consolePutData(QString("Transfer completed, actual received length %1\n").arg(transfer->actual_length), 0);
+//        emit consolePutData(QString("Transfer completed, actual received length %1\n").arg(transfer->actual_length), 0);
 //        uint8_t len_cut = transfer->actual_length > 16 ? 16 : uint8_t(transfer->actual_length);
 //        for(uint8_t i = 0; i < len_cut; ++i)
 //            d.append(QString("%1 ").arg(transfer->buffer[i], 2, 16, QLatin1Char('0')));
@@ -860,7 +863,7 @@ void UsbWorkThread::sendHsCommand(uint8_t Command, uint32_t Length, uint8_t *p_D
     header.type = SRP_HS_DATA;
     header.packet_length = sizeof(USBheader_t) + Length;
 
-    emit consolePutData("sendHsCommand\n", 1);
+//    emit consolePutData("sendHsCommand\n", 1);
 
     if(Length)
     {
@@ -886,7 +889,7 @@ void UsbWorkThread::sendHsCommand(uint8_t Command, uint32_t Length, uint8_t *p_D
     if(Length)
         memcpy(UserTxBuffer + sizeof(header), p_Data, Length);
 
-    emit consolePutData("Transmit to H7 " + QString::number(UserTxBuffer_len) + " bytes\n", 0);
+//    emit consolePutData("Transmit to H7 " + QString::number(UserTxBuffer_len) + " bytes\n", 0);
     start_transmit = true;
 }
 
@@ -911,8 +914,7 @@ void UsbWorkThread::parseHsData()
 
         case USB_CMD_GET_DATA:
         {
-            emit consolePutData(QString("parseHsData(): USB_CMD_GET_DATA\n"), 0);
-//            memcpy(AdcDataBuffer, UserRxBuffer + pStartData + sizeof(USBheader_t), header->packet_length - sizeof(USBheader_t));
+//            emit consolePutData(QString("parseHsData(): USB_CMD_GET_DATA\n"), 0);
 
             bool res = m_ring->Append(UserRxBuffer + sizeof(USBheader_t), header->packet_length - sizeof(USBheader_t));
             if(res)
@@ -926,6 +928,7 @@ void UsbWorkThread::parseHsData()
                 emit consolePutData("Error: unable to add new adc data to ring buffer\n", 1);
             }
 
+//            memcpy(AdcDataBuffer, UserRxBuffer + pStartData + sizeof(USBheader_t), header->packet_length - sizeof(USBheader_t));
 //            emit consoleAdcFile(AdcDataBuffer, header->packet_length - sizeof(USBheader_t));
             break;
         }
@@ -941,12 +944,12 @@ void UsbWorkThread::parseHsData()
                 stm32_ready_data_size |= (uint32_t)UserRxBuffer[pStartData + sizeof(USBheader_t) + 2] << 8;
                 stm32_ready_data_size |= (uint32_t)UserRxBuffer[pStartData + sizeof(USBheader_t) + 3] << 16;
                 stm32_ready_data_size |= (uint32_t)UserRxBuffer[pStartData + sizeof(USBheader_t) + 4] << 24;
-                emit consolePutData(QString("parseHsData(): Ready ADC data size = %1\n").arg(stm32_ready_data_size), 0);
+//                emit consolePutData(QString("parseHsData(): Ready ADC data size = %1\n").arg(stm32_ready_data_size), 0);
             }
 
             if(AdcStatus == ADC_STATUS_READY)
             {
-                emit consolePutData("parseHsData(): ADC status = ready\n", 0);
+//                emit consolePutData("parseHsData(): ADC status = ready\n", 0);
 
                 // If there is an ADC data available to read
                 if(stm32_ready_data_size)
