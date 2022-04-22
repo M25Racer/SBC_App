@@ -158,5 +158,8 @@ bool RingBuffer::GetDouble(double *p_data_out, double *p_length)
     tail = t;
     m_mutex.unlock();
 
+    if(!DataLength[t])
+        return false;
+
     return true;
 }

@@ -37,6 +37,14 @@ private:
     bool m_quit = false;
 
     QElapsedTimer timer;
+
+    enum {
+        CORRECT = 0,    // warning_satus = 0 input array correct
+        WARNING_1 = 1,  // warning_satus = 1 not enough sample in the end array
+        WARNING_2 = 2,  // warning_satus = 2 all or more than 0.2 array equal 0
+        WARNING_3 = 3,  // warning_satus = 3 start array sample equal 0 less than 0.2
+        WARNING_4 = 4,  // warning_satus = 4 kostyl check failed
+    } HsEwlReceive_WarningStatus;
 };
 
 #endif // QAM_WORKTHREAD_H

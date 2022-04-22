@@ -2,7 +2,7 @@
 // File: HS_EWL_RECEIVE_emxAPI.h
 //
 // MATLAB Coder version            : 5.1
-// C/C++ source code generated on  : 19-Apr-2022 11:19:13
+// C/C++ source code generated on  : 21-Apr-2022 14:09:19
 //
 #ifndef HS_EWL_RECEIVE_EMXAPI_H
 #define HS_EWL_RECEIVE_EMXAPI_H

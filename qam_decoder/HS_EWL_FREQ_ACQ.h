@@ -2,7 +2,7 @@
 // File: HS_EWL_FREQ_ACQ.h
 //
 // MATLAB Coder version            : 5.1
-// C/C++ source code generated on  : 19-Apr-2022 11:19:13
+// C/C++ source code generated on  : 21-Apr-2022 14:09:19
 //
 #ifndef HS_EWL_FREQ_ACQ_H
 #define HS_EWL_FREQ_ACQ_H
@@ -18,10 +18,13 @@ struct emxArray_real_T;
 // Function Declarations
 void HS_EWL_FREQ_ACQ(const emxArray_real_T *data, double len, double Fs, double
                      f_opt, double sps, double mode, double Pl, double msg_len,
-                     double M, double pre_qam, double *index_data, double
-                     *len_data, double f_est_data[], int f_est_size[1]);
+                     double M, double pre_qam, double warningStatusLocal, double
+                     *index_data, double *len_data, double f_est_data[], int
+                     f_est_size[1], double *warningStatus);
 void HS_EWL_FREQ_ACQ_free();
 void HS_EWL_FREQ_ACQ_init();
+void lagrange_resamp(emxArray_real_T *s, double p, double q, emxArray_real_T
+                     *resamp_data);
 
 #endif
 

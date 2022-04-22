@@ -27,6 +27,7 @@ static double preamble_len = 20;//preamble length
 static double message_len = 255;
 static double QAM_order = 256;
 static double preamble_QAM_symbol = 128;//QAM symbol used in preamble
+static double warning_status;
 
 creal_T qam_symbols_data[255];
 int qam_symbols_size;
@@ -91,7 +92,7 @@ void QamThread::QAM_Decoder()
     //double *signal = (double*)&signal_test;
 
     double *signal = (double*)&Signal;
-    double len = 15000;
+    double len = Length; //15000;
 
     timer.start();
     emxArray_real_T *in_data = NULL;
@@ -101,7 +102,8 @@ void QamThread::QAM_Decoder()
                     message_len, QAM_order, preamble_QAM_symbol,
                     qam_symbols_data, *(int(*)[1]) & qam_symbols_size, byte_data, *(int(*)[1]) & byte_data_size,
                     (double *)&f_est_data,
-                    *(int(*)[1]) & f_est_size);
+                    *(int(*)[1]) & f_est_size,
+                    &warning_status);
 
     if(first_pass)
     {
@@ -158,6 +160,31 @@ void QamThread::QAM_Decoder()
     }
 
     // Debug information
+    int r = int(warning_status);
+
+    switch(r)
+    {
+        case CORRECT:
+            // warning_status = 0 input array correct
+            break;
+        case WARNING_1:
+            // warning_status = 1 not enough sample in the end array
+            emit consolePutData("warning_status = 1 not enough sample in the end array\n", 1);
+            break;
+        case WARNING_2:
+            // warning_status = 2 all or more than 0.2 array equal 0
+            emit consolePutData("warning_status = 2 all or more than 0.2 array equal 0\n", 1);
+            break;
+        case WARNING_3:
+            // warning_status = 3 start array sample equal 0 less than 0
+            emit consolePutData("warning_status = 3 start array sample equal 0 less than 0\n", 1);
+            break;
+        case WARNING_4:
+            // warning_status = 4 kostyl check error
+            emit consolePutData("warning_status = 4 kostyl check error\n", 1);
+            break;
+    };
+
     emit consolePutData(QString("freq = %1 Hz, elapsed time = %2 ms\n").arg(f_est_data).arg(timer.elapsed()), 1);
 
 //    QString s;
@@ -168,5 +195,5 @@ void QamThread::QAM_Decoder()
 //    s.append("\n");
 //    emit consolePutData(s, 0);
 
-//    HS_EWL_RECEIVE_terminate();
+    HS_EWL_RECEIVE_terminate();
 }
