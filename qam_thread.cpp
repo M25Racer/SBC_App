@@ -17,6 +17,7 @@ extern QWaitCondition ringNotEmpty;
 extern QMutex m_mutex;
 extern QElapsedTimer profiler_timer;
 
+/* Private variables */
 static double Signal[USB_MAX_DATA_SIZE];
 
 static double Fs = 1832061;//280000;//ADC sample rate
@@ -29,19 +30,23 @@ static double QAM_order = 256;
 static double preamble_QAM_symbol = 128;//QAM symbol used in preamble
 static double warning_status;
 
-creal_T qam_symbols_data[255];
-int qam_symbols_size;
-double byte_data[255];
-int byte_data_size;
+static creal_T qam_symbols_data[255];
+static int qam_symbols_size;
+static double byte_data[255];
+static int byte_data_size;
 
-double f_est_data;//estimated frequency
-int f_est_size;
+static double f_est_data;//estimated frequency
+static int f_est_size;
 
 // QAM data related sizes & offsets
 static const uint32_t TxPacketDataSize = 212;
 static const uint32_t TxPacketDataOffset = 23;
-uint8_t data_decoded[TxPacketDataSize];
 
+//static uint8_t data_decoded[TxPacketDataSize];      // data decoded from single qam packet
+static uint8_t data_decoded[128*1024];      // data decoded from single qam packet
+//static uint8_t data_accum_buffer[128*1024];         // data buffer for storing decoded data from multiple packets
+//static uint32_t data_accum_length = 0;              // data length in data_accum_buffer (for multiple packets)
+static uint32_t data_offset = 0;
 
 QamThread::QamThread(QObject *parent) :
     QThread(parent)
@@ -68,7 +73,6 @@ void QamThread::run()
             ringNotEmpty.wait(&m_mutex);    // Wait condition unlocks mutex before 'wait', and will lock it again just after 'wait' is complete
         m_mutex.unlock();
 
-        //res = m_ring->Get(AdcDataBufferQT, &Length);
         res = m_ring->GetDouble(Signal, &Length);
 
         if(res)
@@ -86,15 +90,12 @@ void QamThread::QAM_Decoder()
 {
     static bool first_pass = true;
 
-//    emit consolePutData(QString("QAM decoder starting, length %1\n").arg(Length), 1);
-
-    //double len = SIG_LEN;
-    //double *signal = (double*)&signal_test;
+    emit consolePutData(QString("QAM decoder starting, length %1\n").arg(Length), 1);
 
     double *signal = (double*)&Signal;
     double len = Length; //15000;
 
-    timer.start();
+    peformance_timer.start();
     emxArray_real_T *in_data = NULL;
     in_data = emxCreateWrapper_real_T(signal, 1, len);
     HS_EWL_RECEIVE(in_data, len, Fs,
@@ -112,27 +113,30 @@ void QamThread::QAM_Decoder()
         mode = 0;
     }
 
-//    qDebug() << "freq = " << f_est_data << "Hz" << "elapsed time = " << timer.elapsed() << "ms";
-//    for(int i=0;i<byte_data_size;i++){
-//        qDebug() << byte_data[i] - byte_array[i];
-//    }
-//    //    qDebug() << "byte_data[" <<0<< "]= " << byte_data_size;
-//    qDebug() << "re_qam_symbol[" << qam_symbols_size-1 << "] =" << qam_symbols_data[qam_symbols_size-1].re;
-//    qDebug() << "im_qam_symbol[" << qam_symbols_size-1 << "] =" << qam_symbols_data[qam_symbols_size-1].im;
+    // Data parsing
+    // If receive timeout elapsed
+    if(data_timeout_tim.hasExpired(qam_rx_timeout_ms))
+    {
+        data_offset = 0;
+    }
 
-    // Convert decoded data from 'double' to 'uint8'
+    // Restart receive timeout
+    data_timeout_tim.restart();
+
+    if(data_offset + TxPacketDataSize > sizeof(data_decoded))
+    {
+        emit consolePutData(QString("Error: HS too long continuous data received %1\n").arg(data_offset), 1);
+        data_offset = 0;
+    }
+
+    // Convert decoded data from 'double' to 'uint8', copy to data_decoded[] buffer
     for(uint8_t i = 0; i < TxPacketDataSize; ++i)
-        //data_decoded[i] = (uint8_t)byte_data[TxPacketDataOffset + i];
-        data_decoded[i] = (uint8_t)byte_data[i];
+        data_decoded[data_offset + i] = (uint8_t)byte_data[i];
 
     // Parse decoded data
     if(data_decoded[0] == MessageBox::SRP_ADDR)
     {
         uint16_t packet_length = (uint16_t)data_decoded[1] | ((uint16_t)data_decoded[2] << 8);
-
-        //todo
-        if(packet_length > 212)
-            packet_length = 212;
 
         if(packet_length < MOD_SRP_MIN_VALID_LENGTH)
         {
@@ -140,23 +144,40 @@ void QamThread::QAM_Decoder()
             packet_length = MOD_SRP_MIN_VALID_LENGTH;
         }
 
-        // Check crc
-        uint16_t crc = ((uint16_t)data_decoded[packet_length - 1] << 8)
-                       | (uint16_t)data_decoded[packet_length - 2];
+//        // (Re)start receive timeout
+//        if(packet_length > TxPacketDataSize)
+//            data_timeout_tim.restart();
 
-        bool res = check_crc16(data_decoded, packet_length - 2, crc);
+        data_offset += TxPacketDataSize;
 
-        if(res)
+        // Whole data received?
+        if(data_offset >= packet_length)
         {
-            // Transmit decoded data to PC
-            packet_length -= MOD_SRP_PROTOCOL_HEADER_SIZE + MOD_SRP_PROTOCOL_CRC_SIZE + MASTER_ADDR_SIZE;
-            emit postTxDataToSerialPort((uint8_t*)&data_decoded[MOD_SRP_PROTOCOL_HEADER_SIZE + MASTER_ADDR_SIZE], packet_length);
-//emit consolePutData(QString("Profiler timer elapsed %1 # data to serial port\n").arg(profiler_timer.elapsed()), 1);
+            data_offset = 0;
+
+            // Check crc
+            uint16_t crc = ((uint16_t)data_decoded[packet_length - 1] << 8)
+                           | (uint16_t)data_decoded[packet_length - 2];
+
+            bool res = check_crc16(data_decoded, packet_length - 2, crc);
+
+            if(res)
+            {
+                // Transmit decoded data to PC
+                packet_length -= MOD_SRP_PROTOCOL_HEADER_SIZE + MOD_SRP_PROTOCOL_CRC_SIZE + MASTER_ADDR_SIZE;
+                emit postTxDataToSerialPort((uint8_t*)&data_decoded[MOD_SRP_PROTOCOL_HEADER_SIZE + MASTER_ADDR_SIZE], packet_length);
+                //emit consolePutData(QString("Profiler timer elapsed %1 # data to serial port\n").arg(profiler_timer.elapsed()), 1);
+            }
+            else
+            {
+                emit consolePutData(QString("HS data parsing crc error, packet length %1\n").arg(packet_length), 1);
+            }
         }
-        else
-        {
-            emit consolePutData(QString("HS data parsing crc error, packet length %1\n").arg(packet_length), 1);
-        }
+    }
+    else
+    {
+        emit consolePutData(QString("HS data parsing error, addr != SRP\n"), 1);
+        data_offset = 0;
     }
 
     // Debug information
@@ -185,7 +206,7 @@ void QamThread::QAM_Decoder()
             break;
     };
 
-    emit consolePutData(QString("freq = %1 Hz, elapsed time = %2 ms\n").arg(f_est_data).arg(timer.elapsed()), 1);
+    emit consolePutData(QString("freq = %1 Hz, elapsed time = %2 ms\n").arg(f_est_data).arg(peformance_timer.elapsed()), 1);
 
 //    QString s;
 //    for(int i = 0; i < byte_data_size; i++)

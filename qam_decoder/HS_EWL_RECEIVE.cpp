@@ -2,7 +2,7 @@
 // File: HS_EWL_RECEIVE.cpp
 //
 // MATLAB Coder version            : 5.1
-// C/C++ source code generated on  : 21-Apr-2022 14:09:19
+// C/C++ source code generated on  : 25-Apr-2022 13:09:26
 //
 
 // Include Files
@@ -231,13 +231,13 @@ void HS_EWL_RECEIVE(emxArray_real_T *data, double len, double Fs, double f_opt,
     c->size[0] = nx;
     emxEnsureCapacity_real_T(c, i);
     for (i = 0; i < nx; i++) {
-
       // Kostyl check
       if(b_time->allocatedSize < i)
       {
         *warning_satus = 4.0;
         return;
       }
+
       c->data[i] = receiveByteLen * b_time->data[i];
     }
 

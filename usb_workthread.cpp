@@ -928,8 +928,10 @@ void UsbWorkThread::parseHsData()
                 emit consolePutData("Error: unable to add new adc data to ring buffer\n", 1);
             }
 
-//            memcpy(AdcDataBuffer, UserRxBuffer + pStartData + sizeof(USBheader_t), header->packet_length - sizeof(USBheader_t));
-//            emit consoleAdcFile(AdcDataBuffer, header->packet_length - sizeof(USBheader_t));
+#ifdef QT_DEBUG
+            memcpy(AdcDataBuffer, UserRxBuffer + pStartData + sizeof(USBheader_t), header->packet_length - sizeof(USBheader_t));
+            emit consoleAdcFile(AdcDataBuffer, header->packet_length - sizeof(USBheader_t));
+#endif
             break;
         }
 

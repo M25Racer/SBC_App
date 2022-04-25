@@ -296,7 +296,13 @@ profiler_timer.start();
         if(TtyUserRxBuffer_len)
             m_console->putData("SP Received " + QString::number(TtyUserRxBuffer_len) + " + " + QString::number(length_rx) + " bytes\n", 0);
         else
+        {
             m_console->putData("SP Received " + QString::number(length_rx) + " bytes\n", 0);
+//            if(length_rx == 269)
+//            {
+//                timerSpRxTimeout->stop();   // debug remove
+//            }
+        }
 
         TtyUserRxBuffer.append(m_serial->readAll());
         TtyUserRxBuffer_len += length_rx;

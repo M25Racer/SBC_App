@@ -36,7 +36,10 @@ private:
 
     bool m_quit = false;
 
-    QElapsedTimer timer;
+    QElapsedTimer peformance_timer;     // timer for QAM decoder performance measurements
+    QElapsedTimer data_timeout_tim;     // data receive timeout timer fro multi frame\packet QAM transfers
+
+    const qint64 qam_rx_timeout_ms = 100;// rx timeout between QAM packets when decoding multi frame packet, ms
 
     enum {
         CORRECT = 0,    // warning_satus = 0 input array correct
