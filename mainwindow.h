@@ -90,6 +90,7 @@ private slots:
     void sendHsCommandGetData();
     void sendHsCommandGetDataSize();
     void sendHsCommandAdcStart();
+    void sendHsCommandAgcStart();
     void readDataSerialPort();
     void transmitDataSerialPort(const uint8_t *p_data, int length);
     void postTxDataSTM(const uint8_t *p_data, const int length);

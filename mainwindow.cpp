@@ -421,6 +421,7 @@ void MainWindow::initActionsConnections()
     connect(m_ui->actionSend_HS_command_GET_DATA, &QAction::triggered, this, &MainWindow::sendHsCommandGetData);
     connect(m_ui->actionGET_DATA_SIZE, &QAction::triggered, this, &MainWindow::sendHsCommandGetDataSize);
     connect(m_ui->actionADC_START, &QAction::triggered, this, &MainWindow::sendHsCommandAdcStart);
+    connect(m_ui->actionSend_AGC_Start, &QAction::triggered, this, &MainWindow::sendHsCommandAgcStart);
 }
 
 void MainWindow::showStatusMessage(const QString &message)
@@ -531,4 +532,9 @@ void MainWindow::sendHsCommandAdcStart()
 {
     uint32_t adc_data_length = 440000;
     m_usb_thread.sendHsCommand(USB_CMD_ADC_START, 4, (uint8_t*)&adc_data_length);
+}
+
+void MainWindow::sendHsCommandAgcStart()
+{
+    m_usb_thread.sendHsCommand(USB_CMD_AGC_START, 0, nullptr);
 }

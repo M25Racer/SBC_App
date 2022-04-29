@@ -863,7 +863,9 @@ void UsbWorkThread::sendHsCommand(uint8_t Command, uint32_t Length, uint8_t *p_D
     header.type = SRP_HS_DATA;
     header.packet_length = sizeof(USBheader_t) + Length;
 
-//    emit consolePutData("sendHsCommand\n", 1);
+#ifdef QT_DEBUG
+    emit consolePutData("sendHsCommand\n", 1);
+#endif
 
     if(Length)
     {
@@ -937,6 +939,9 @@ void UsbWorkThread::parseHsData()
 
         case USB_CMD_GET_STATUS:
         {
+#ifdef QT_DEBUG
+            emit consolePutData("parseHsData(): ADC status received\n", 0);
+#endif
             stm32_ready_data_size = 0;
             uint8_t AdcStatus = *p_data;
 
@@ -946,7 +951,9 @@ void UsbWorkThread::parseHsData()
                 stm32_ready_data_size |= (uint32_t)UserRxBuffer[pStartData + sizeof(USBheader_t) + 2] << 8;
                 stm32_ready_data_size |= (uint32_t)UserRxBuffer[pStartData + sizeof(USBheader_t) + 3] << 16;
                 stm32_ready_data_size |= (uint32_t)UserRxBuffer[pStartData + sizeof(USBheader_t) + 4] << 24;
-//                emit consolePutData(QString("parseHsData(): Ready ADC data size = %1\n").arg(stm32_ready_data_size), 0);
+#ifdef QT_DEBUG
+                emit consolePutData(QString("parseHsData(): Ready ADC data size = %1\n").arg(stm32_ready_data_size), 0);
+#endif
             }
 
             if(AdcStatus == ADC_STATUS_READY)
