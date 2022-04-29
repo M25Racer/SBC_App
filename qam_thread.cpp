@@ -92,6 +92,8 @@ static uint8_t data_decoded[128*1024];      // data decoded from single qam pack
 //static uint32_t data_accum_length = 0;              // data length in data_accum_buffer (for multiple packets)
 static uint32_t data_offset = 0;
 
+bool kostyl_check_error = false;    // TODO
+
 QamThread::QamThread(QObject *parent) :
     QThread(parent)
 {
@@ -139,6 +141,9 @@ void QamThread::QAM_Decoder()
     double *signal = (double*)&Signal;
     double len = Length;
 
+    for(uint32_t i = 0; i < 50000; ++i)
+        Signal[i] = i;
+
     peformance_timer.start();
     emxArray_real_T *data_qam256 = NULL;
     data_qam256 = emxCreateWrapper_real_T(signal, 1, len);
@@ -158,6 +163,9 @@ void QamThread::QAM_Decoder()
                      Fs, sps, preamble_QAM_symbol,
                      QAM_order, qam_symbols_data, &qam_symbols_size,
                      byte_data, &byte_data_size);
+
+    if(kostyl_check_error)
+        warning_status = 4;
 
     if(first_pass)
     {
