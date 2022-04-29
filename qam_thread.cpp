@@ -1,13 +1,19 @@
 #include "qam_thread.h"
 #include "usb_global.h"
 #include "qam_decoder/qam_decoder.h"
+#include "qam_decoder/HS_EWL_DEMOD_QAM.h"
+#include "qam_decoder/HS_EWL_DEMOD_QAM_emxAPI.h"
+#include "qam_decoder/HS_EWL_DEMOD_QAM_terminate.h"
+#include "qam_decoder/HS_EWL_DEMOD_QAM_types.h"
 #include "qam_decoder/HS_EWL_FREQ_ACQ.h"
-#include "qam_decoder/HS_EWL_RECEIVE.h"
-#include "qam_decoder/HS_EWL_RECEIVE_emxAPI.h"
-#include "qam_decoder/HS_EWL_RECEIVE_terminate.h"
-#include "qam_decoder/HS_EWL_RECEIVE_types.h"
-#include "qam_decoder/rt_nonfinite.h"
+#include "qam_decoder/HS_EWL_FREQ_EST_FOR_SWEEP.h"
+#include "qam_decoder/HS_EWL_TR_FUN_EST.h"
+#include <QElapsedTimer>
+#include "qam_decoder/signal_sweep.h"
 #include "qam_decoder/signal.h"
+#include "qam_decoder/math_sweep.h"
+#include "qam_decoder/rt_nonfinite.h"
+
 #include "crc16.h"
 #include "srp_mod_protocol.h"
 
@@ -20,23 +26,61 @@ extern QElapsedTimer profiler_timer;
 /* Private variables */
 static double Signal[USB_MAX_DATA_SIZE];
 
-static double Fs = 1832061;//280000;//ADC sample rate
-static double f0 = 35000;//carrier freq
-static double sps = qRound(Fs/f0);//sample per symbol
-static double mode = 1;//1-both stages enabled, 0-only second stage
-static double preamble_len = 20;//preamble length
-static double message_len = 255;
-static double QAM_order = 256;
-static double preamble_QAM_symbol = 128;//QAM symbol used in preamble
-static double warning_status;
+double len = SIG_LEN;
+double Fs = 1832061;//280000;//ADC sample rate
+double f0 = 35000;//carrier freq
+double sps = round(Fs/f0);//sample per symbol
+double mode = 1;//1-both stages enabled, 0-only sevond stage
+double preamble_len = 20;//preamble length
+double message_len = 255;
+double QAM_order = 256;
+double preamble_QAM_symbol = 128;//QAM symbol used in preamble
+//  input var for sweep
+double f_sine = 20000;
+double period_amount = 500;
+double sine_sps = Fs/f_sine;
+double f_pream = 2000;
+double Fs_math_sweep = 280000;
+double pream_sps = Fs_math_sweep/f_pream;
+//  output var for HS_EWL_FREQ_ACQ
+double warning_status;
+double index_data;
+double len_data;
+double f_est_data;//estimated frequency
+int f_est_size;
+//  output var for HS_EWL_DEMOD_QAM
+creal_T qam_symbols_data[255];
+int qam_symbols_size;
+double byte_data[255];
+int byte_data_size;
+//  output var HS_EWL_FREQ_EST_FOR_SWEEP
+double f_opt;
+double ph_opt;
+double sweep_freq_warning_status;
+//  output var HS_EWL_TR_FUN_EST
+double  gain_data[2048];
+double  phase_data[2048];
+int     gain_size[2];
+int     phase_size[2];
+double  sweep_warning_status;
 
-static creal_T qam_symbols_data[255];
-static int qam_symbols_size;
-static double byte_data[255];
-static int byte_data_size;
+//static double Fs = 1832061;//280000;//ADC sample rate
+//static double f0 = 35000;//carrier freq
+//static double sps = qRound(Fs/f0);//sample per symbol
+//static double mode = 1;//1-both stages enabled, 0-only second stage
+//static double preamble_len = 20;//preamble length
+//static double message_len = 255;
+//static double QAM_order = 256;
+//static double preamble_QAM_symbol = 128;//QAM symbol used in preamble
+//static double warning_status;
 
-static double f_est_data;//estimated frequency
-static int f_est_size;
+//static creal_T qam_symbols_data[255];
+//static int qam_symbols_size;
+//static double byte_data[255];
+//static int byte_data_size;
+
+//static double f_est_data;//estimated frequency
+//static int f_est_size;
 
 // QAM data related sizes & offsets
 static const uint32_t TxPacketDataSize = 212;
@@ -93,18 +137,27 @@ void QamThread::QAM_Decoder()
     emit consolePutData(QString("QAM decoder starting, length %1\n").arg(Length), 1);
 
     double *signal = (double*)&Signal;
-    double len = Length; //15000;
+    double len = Length;
 
     peformance_timer.start();
-    emxArray_real_T *in_data = NULL;
-    in_data = emxCreateWrapper_real_T(signal, 1, len);
-    HS_EWL_RECEIVE(in_data, len, Fs,
-                    f0, sps, mode, preamble_len,
-                    message_len, QAM_order, preamble_QAM_symbol,
-                    qam_symbols_data, *(int(*)[1]) & qam_symbols_size, byte_data, *(int(*)[1]) & byte_data_size,
-                    (double *)&f_est_data,
-                    *(int(*)[1]) & f_est_size,
-                    &warning_status);
+    emxArray_real_T *data_qam256 = NULL;
+    data_qam256 = emxCreateWrapper_real_T(signal, 1, len);
+//    HS_EWL_RECEIVE(in_data, len, Fs,
+//                    f0, sps, mode, preamble_len,
+//                    message_len, QAM_order, preamble_QAM_symbol,
+//                    qam_symbols_data, *(int(*)[1]) & qam_symbols_size, byte_data, *(int(*)[1]) & byte_data_size,
+//                    (double *)&f_est_data,
+//                    *(int(*)[1]) & f_est_size,
+//                    &warning_status);
+
+    HS_EWL_FREQ_ACQ(data_qam256, len, Fs, f0, sps, mode, preamble_len,
+                      message_len, QAM_order, preamble_QAM_symbol, &index_data, &len_data, (double *)&f_est_data,
+                      *(int(*)[1]) & f_est_size, &warning_status);
+
+    HS_EWL_DEMOD_QAM(data_qam256, index_data, len_data, f_est_data,
+                     Fs, sps, preamble_QAM_symbol,
+                     QAM_order, qam_symbols_data, &qam_symbols_size,
+                     byte_data, &byte_data_size);
 
     if(first_pass)
     {
@@ -216,5 +269,5 @@ void QamThread::QAM_Decoder()
 //    s.append("\n");
 //    emit consolePutData(s, 0);
 
-    HS_EWL_RECEIVE_terminate();
+    //HS_EWL_RECEIVE_terminate();
 }

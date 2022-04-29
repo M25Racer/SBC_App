@@ -1,14 +1,15 @@
 //
-// File: HS_EWL_RECEIVE_types.h
+// File: HS_EWL_DEMOD_QAM_types.h
 //
 // MATLAB Coder version            : 5.1
-// C/C++ source code generated on  : 25-Apr-2022 13:09:26
+// C/C++ source code generated on  : 29-Apr-2022 10:21:15
 //
-#ifndef HS_EWL_RECEIVE_TYPES_H
-#define HS_EWL_RECEIVE_TYPES_H
+#ifndef HS_EWL_DEMOD_QAM_TYPES_H
+#define HS_EWL_DEMOD_QAM_TYPES_H
 
 // Include Files
 #include "rtwtypes.h"
+#define MAX_THREADS                    omp_get_max_threads()
 
 // Type Definitions
 struct emxArray_real_T
@@ -29,15 +30,6 @@ struct emxArray_creal_T
   boolean_T canFreeData;
 };
 
-struct emxArray_boolean_T
-{
-  boolean_T *data;
-  int *size;
-  int allocatedSize;
-  int numDimensions;
-  boolean_T canFreeData;
-};
-
 struct emxArray_int32_T
 {
   int *data;
@@ -47,10 +39,19 @@ struct emxArray_int32_T
   boolean_T canFreeData;
 };
 
+struct emxArray_boolean_T
+{
+  boolean_T *data;
+  int *size;
+  int allocatedSize;
+  int numDimensions;
+  boolean_T canFreeData;
+};
+
 #endif
 
 //
-// File trailer for HS_EWL_RECEIVE_types.h
+// File trailer for HS_EWL_DEMOD_QAM_types.h
 //
 // [EOF]
 //

@@ -2,50 +2,21 @@
 // File: qamdemod.cpp
 //
 // MATLAB Coder version            : 5.1
-// C/C++ source code generated on  : 25-Apr-2022 13:09:26
+// C/C++ source code generated on  : 29-Apr-2022 10:21:15
 //
 
 // Include Files
 #include "qamdemod.h"
-#include "HS_EWL_RECEIVE_emxutil.h"
-#include "HS_EWL_RECEIVE_rtwutil.h"
-#include "HS_EWL_RECEIVE_types.h"
+#include "HS_EWL_DEMOD_QAM_emxutil.h"
+#include "HS_EWL_DEMOD_QAM_rtwutil.h"
+#include "HS_EWL_DEMOD_QAM_types.h"
 #include "getSquareConstellation.h"
 #include "log2.h"
 #include "rt_nonfinite.h"
 #include "rt_nonfinite.h"
 #include <cmath>
 
-// Function Declarations
-static double rt_hypotd_snf(double u0, double u1);
-
 // Function Definitions
-//
-// Arguments    : double u0
-//                double u1
-// Return Type  : double
-//
-static double rt_hypotd_snf(double u0, double u1)
-{
-  double a;
-  double y;
-  a = std::abs(u0);
-  y = std::abs(u1);
-  if (a < y) {
-    a /= y;
-    y *= std::sqrt(a * a + 1.0);
-  } else if (a > y) {
-    y /= a;
-    y = a * std::sqrt(y * y + 1.0);
-  } else {
-    if (!rtIsNaN(y)) {
-      y = a * 1.4142135623730951;
-    }
-  }
-
-  return y;
-}
-
 //
 // Arguments    : const creal_T y_data[]
 //                const int y_size[1]

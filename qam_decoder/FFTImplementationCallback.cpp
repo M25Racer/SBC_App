@@ -2,398 +2,311 @@
 // File: FFTImplementationCallback.cpp
 //
 // MATLAB Coder version            : 5.1
-// C/C++ source code generated on  : 25-Apr-2022 13:09:26
+// C/C++ source code generated on  : 29-Apr-2022 10:21:15
 //
 
 // Include Files
 #include "FFTImplementationCallback.h"
-#include "HS_EWL_RECEIVE_emxutil.h"
-#include "HS_EWL_RECEIVE_types.h"
+#include "HS_EWL_DEMOD_QAM_emxutil.h"
+#include "HS_EWL_DEMOD_QAM_types.h"
 #include "rt_nonfinite.h"
 #include <cmath>
 
 // Function Definitions
 //
-// Arguments    : const emxArray_real_T *x
-//                emxArray_creal_T *y
-//                int nrowsx
-//                int nRows
-//                int nfft
-//                const emxArray_creal_T *wwc
-//                const emxArray_real_T *costab
-//                const emxArray_real_T *sintab
-//                const emxArray_real_T *costabinv
-//                const emxArray_real_T *sintabinv
+// Arguments    : int nRows
+//                emxArray_real_T *costab
+//                emxArray_real_T *sintab
+//                emxArray_real_T *sintabinv
 // Return Type  : void
 //
 namespace coder
 {
   namespace internal
   {
+    void FFTImplementationCallback::b_generate_twiddle_tables(int nRows,
+      emxArray_real_T *costab, emxArray_real_T *sintab, emxArray_real_T
+      *sintabinv)
+    {
+      emxArray_real_T *costab1q;
+      double e;
+      int i;
+      int k;
+      int n;
+      int nd2;
+      emxInit_real_T(&costab1q, 2);
+      e = 6.2831853071795862 / static_cast<double>(nRows);
+      n = nRows / 2 / 2;
+      i = costab1q->size[0] * costab1q->size[1];
+      costab1q->size[0] = 1;
+      costab1q->size[1] = n + 1;
+      emxEnsureCapacity_real_T(costab1q, i);
+      costab1q->data[0] = 1.0;
+      nd2 = n / 2 - 1;
+      for (k = 0; k <= nd2; k++) {
+        costab1q->data[k + 1] = std::cos(e * (static_cast<double>(k) + 1.0));
+      }
+
+      i = nd2 + 2;
+      nd2 = n - 1;
+      for (k = i; k <= nd2; k++) {
+        costab1q->data[k] = std::sin(e * static_cast<double>(n - k));
+      }
+
+      costab1q->data[n] = 0.0;
+      n = costab1q->size[1] - 1;
+      nd2 = (costab1q->size[1] - 1) << 1;
+      i = costab->size[0] * costab->size[1];
+      costab->size[0] = 1;
+      costab->size[1] = nd2 + 1;
+      emxEnsureCapacity_real_T(costab, i);
+      i = sintab->size[0] * sintab->size[1];
+      sintab->size[0] = 1;
+      sintab->size[1] = nd2 + 1;
+      emxEnsureCapacity_real_T(sintab, i);
+      costab->data[0] = 1.0;
+      sintab->data[0] = 0.0;
+      i = sintabinv->size[0] * sintabinv->size[1];
+      sintabinv->size[0] = 1;
+      sintabinv->size[1] = nd2 + 1;
+      emxEnsureCapacity_real_T(sintabinv, i);
+      for (k = 0; k < n; k++) {
+        sintabinv->data[k + 1] = costab1q->data[(n - k) - 1];
+      }
+
+      i = costab1q->size[1];
+      for (k = i; k <= nd2; k++) {
+        sintabinv->data[k] = costab1q->data[k - n];
+      }
+
+      for (k = 0; k < n; k++) {
+        costab->data[k + 1] = costab1q->data[k + 1];
+        sintab->data[k + 1] = -costab1q->data[(n - k) - 1];
+      }
+
+      i = costab1q->size[1];
+      for (k = i; k <= nd2; k++) {
+        costab->data[k] = -costab1q->data[nd2 - k];
+        sintab->data[k] = -costab1q->data[k - n];
+      }
+
+      emxFree_real_T(&costab1q);
+    }
+
+    //
+    // Arguments    : const emxArray_real_T *x
+    //                emxArray_creal_T *y
+    //                int nrowsx
+    //                int nRows
+    //                int nfft
+    //                const emxArray_creal_T *wwc
+    //                const emxArray_real_T *costab
+    //                const emxArray_real_T *sintab
+    //                const emxArray_real_T *costabinv
+    //                const emxArray_real_T *sintabinv
+    // Return Type  : void
+    //
     void FFTImplementationCallback::doHalfLengthBluestein(const emxArray_real_T *
       x, emxArray_creal_T *y, int nrowsx, int nRows, int nfft, const
       emxArray_creal_T *wwc, const emxArray_real_T *costab, const
       emxArray_real_T *sintab, const emxArray_real_T *costabinv, const
       emxArray_real_T *sintabinv)
     {
+      emxArray_creal_T *b_fv;
       emxArray_creal_T *fv;
-      emxArray_creal_T *fy;
       emxArray_creal_T *reconVar1;
       emxArray_creal_T *reconVar2;
       emxArray_creal_T *ytmp;
       emxArray_int32_T *wrapIndex;
-      emxArray_real_T *b_costab;
-      emxArray_real_T *b_sintab;
-      emxArray_real_T *costab1q;
+      emxArray_real_T *costable;
       emxArray_real_T *hcostabinv;
       emxArray_real_T *hsintab;
       emxArray_real_T *hsintabinv;
-      double e;
-      double temp_im;
-      double temp_re;
-      double twid_im;
-      double twid_re;
-      double z;
+      emxArray_real_T *sintable;
+      emxArray_real_T *unusedU0;
+      double a_im;
+      double a_re;
+      double b_re;
+      double z_tmp;
       int hnRows;
-      int hszCostab;
       int i;
-      int ihi;
-      int ix;
-      int j;
-      int ju;
-      int k;
-      int nRowsD2;
-      int nd2;
-      int temp_re_tmp;
-      boolean_T tst;
+      int idx;
+      int u0;
+      int xidx;
+      boolean_T nxeven;
       emxInit_creal_T(&ytmp, 1);
       hnRows = nRows / 2;
-      ju = ytmp->size[0];
+      i = ytmp->size[0];
       ytmp->size[0] = hnRows;
-      emxEnsureCapacity_creal_T(ytmp, ju);
+      emxEnsureCapacity_creal_T(ytmp, i);
       if (hnRows > nrowsx) {
-        ju = ytmp->size[0];
+        i = ytmp->size[0];
         ytmp->size[0] = hnRows;
-        emxEnsureCapacity_creal_T(ytmp, ju);
-        for (ju = 0; ju < hnRows; ju++) {
-          ytmp->data[ju].re = 0.0;
-          ytmp->data[ju].im = 0.0;
+        emxEnsureCapacity_creal_T(ytmp, i);
+        for (i = 0; i < hnRows; i++) {
+          ytmp->data[i].re = 0.0;
+          ytmp->data[i].im = 0.0;
         }
       }
 
       if ((x->size[0] & 1) == 0) {
-        tst = true;
-        ix = x->size[0];
+        nxeven = true;
+        u0 = x->size[0];
       } else if (x->size[0] >= nRows) {
-        tst = true;
-        ix = nRows;
+        nxeven = true;
+        u0 = nRows;
       } else {
-        tst = false;
-        ix = x->size[0] - 1;
+        nxeven = false;
+        u0 = x->size[0] - 1;
       }
 
-      emxInit_real_T(&costab1q, 2);
-      if (ix >= nRows) {
-        ix = nRows;
-      }
-
-      nd2 = nRows << 1;
-      e = 6.2831853071795862 / static_cast<double>(nd2);
-      ihi = nd2 / 2 / 2;
-      ju = costab1q->size[0] * costab1q->size[1];
-      costab1q->size[0] = 1;
-      costab1q->size[1] = ihi + 1;
-      emxEnsureCapacity_real_T(costab1q, ju);
-      costab1q->data[0] = 1.0;
-      nd2 = ihi / 2 - 1;
-      for (k = 0; k <= nd2; k++) {
-        costab1q->data[k + 1] = std::cos(e * (static_cast<double>(k) + 1.0));
-      }
-
-      ju = nd2 + 2;
-      nd2 = ihi - 1;
-      for (k = ju; k <= nd2; k++) {
-        costab1q->data[k] = std::sin(e * static_cast<double>(ihi - k));
-      }
-
-      emxInit_real_T(&b_costab, 2);
-      emxInit_real_T(&b_sintab, 2);
-      costab1q->data[ihi] = 0.0;
-      ihi = costab1q->size[1] - 1;
-      nd2 = (costab1q->size[1] - 1) << 1;
-      ju = b_costab->size[0] * b_costab->size[1];
-      b_costab->size[0] = 1;
-      b_costab->size[1] = nd2 + 1;
-      emxEnsureCapacity_real_T(b_costab, ju);
-      ju = b_sintab->size[0] * b_sintab->size[1];
-      b_sintab->size[0] = 1;
-      b_sintab->size[1] = nd2 + 1;
-      emxEnsureCapacity_real_T(b_sintab, ju);
-      b_costab->data[0] = 1.0;
-      b_sintab->data[0] = 0.0;
-      for (k = 0; k < ihi; k++) {
-        b_costab->data[k + 1] = costab1q->data[k + 1];
-        b_sintab->data[k + 1] = -costab1q->data[(ihi - k) - 1];
-      }
-
-      ju = costab1q->size[1];
-      for (k = ju; k <= nd2; k++) {
-        b_costab->data[k] = -costab1q->data[nd2 - k];
-        b_sintab->data[k] = -costab1q->data[k - ihi];
-      }
-
+      emxInit_real_T(&unusedU0, 2);
+      emxInit_int32_T(&wrapIndex, 2);
+      emxInit_real_T(&costable, 2);
+      emxInit_real_T(&sintable, 2);
       emxInit_real_T(&hsintab, 2);
       emxInit_real_T(&hcostabinv, 2);
       emxInit_real_T(&hsintabinv, 2);
-      hszCostab = costab->size[1] / 2;
-      ju = costab1q->size[0] * costab1q->size[1];
-      costab1q->size[0] = 1;
-      costab1q->size[1] = hszCostab;
-      emxEnsureCapacity_real_T(costab1q, ju);
-      ju = hsintab->size[0] * hsintab->size[1];
-      hsintab->size[0] = 1;
-      hsintab->size[1] = hszCostab;
-      emxEnsureCapacity_real_T(hsintab, ju);
-      ju = hcostabinv->size[0] * hcostabinv->size[1];
-      hcostabinv->size[0] = 1;
-      hcostabinv->size[1] = hszCostab;
-      emxEnsureCapacity_real_T(hcostabinv, ju);
-      ju = hsintabinv->size[0] * hsintabinv->size[1];
-      hsintabinv->size[0] = 1;
-      hsintabinv->size[1] = hszCostab;
-      emxEnsureCapacity_real_T(hsintabinv, ju);
-      for (i = 0; i < hszCostab; i++) {
-        nd2 = ((i + 1) << 1) - 2;
-        costab1q->data[i] = costab->data[nd2];
-        hsintab->data[i] = sintab->data[nd2];
-        hcostabinv->data[i] = costabinv->data[nd2];
-        hsintabinv->data[i] = sintabinv->data[nd2];
-      }
-
-      emxInit_int32_T(&wrapIndex, 2);
       emxInit_creal_T(&reconVar1, 1);
       emxInit_creal_T(&reconVar2, 1);
-      ju = reconVar1->size[0];
+      if (u0 >= nRows) {
+        u0 = nRows;
+      }
+
+      FFTImplementationCallback::b_generate_twiddle_tables((nRows << 1),
+        (costable), (sintable), (unusedU0));
+      FFTImplementationCallback::get_half_twiddle_tables((costab), (sintab),
+        (costabinv), (sintabinv), (unusedU0), (hsintab), (hcostabinv),
+        (hsintabinv));
+      i = reconVar1->size[0];
       reconVar1->size[0] = hnRows;
-      emxEnsureCapacity_creal_T(reconVar1, ju);
-      ju = reconVar2->size[0];
+      emxEnsureCapacity_creal_T(reconVar1, i);
+      i = reconVar2->size[0];
       reconVar2->size[0] = hnRows;
-      emxEnsureCapacity_creal_T(reconVar2, ju);
-      nd2 = 0;
-      ju = wrapIndex->size[0] * wrapIndex->size[1];
+      emxEnsureCapacity_creal_T(reconVar2, i);
+      idx = 0;
+      i = wrapIndex->size[0] * wrapIndex->size[1];
       wrapIndex->size[0] = 1;
       wrapIndex->size[1] = hnRows;
-      emxEnsureCapacity_int32_T(wrapIndex, ju);
-      for (i = 0; i < hnRows; i++) {
-        reconVar1->data[i].re = b_sintab->data[nd2] + 1.0;
-        reconVar1->data[i].im = -b_costab->data[nd2];
-        reconVar2->data[i].re = 1.0 - b_sintab->data[nd2];
-        reconVar2->data[i].im = b_costab->data[nd2];
-        nd2 += 2;
-        if (i + 1 != 1) {
-          wrapIndex->data[i] = (hnRows - i) + 1;
+      emxEnsureCapacity_int32_T(wrapIndex, i);
+      for (xidx = 0; xidx < hnRows; xidx++) {
+        reconVar1->data[xidx].re = sintable->data[idx] + 1.0;
+        reconVar1->data[xidx].im = -costable->data[idx];
+        reconVar2->data[xidx].re = 1.0 - sintable->data[idx];
+        reconVar2->data[xidx].im = costable->data[idx];
+        idx += 2;
+        if (xidx + 1 != 1) {
+          wrapIndex->data[xidx] = (hnRows - xidx) + 1;
         } else {
           wrapIndex->data[0] = 1;
         }
       }
 
-      emxFree_real_T(&b_sintab);
-      emxFree_real_T(&b_costab);
-      nd2 = 0;
-      e = static_cast<double>(ix) / 2.0;
-      ju = static_cast<int>(e);
-      for (hszCostab = 0; hszCostab < ju; hszCostab++) {
-        temp_re_tmp = (hnRows + hszCostab) - 1;
-        temp_re = wwc->data[temp_re_tmp].re;
-        temp_im = wwc->data[temp_re_tmp].im;
-        twid_re = x->data[nd2];
-        twid_im = x->data[nd2 + 1];
-        ytmp->data[hszCostab].re = temp_re * twid_re + temp_im * twid_im;
-        ytmp->data[hszCostab].im = temp_re * twid_im - temp_im * twid_re;
-        nd2 += 2;
+      emxFree_real_T(&sintable);
+      emxFree_real_T(&costable);
+      xidx = 0;
+      z_tmp = static_cast<double>(u0) / 2.0;
+      i = static_cast<int>(z_tmp);
+      for (int k1 = 0; k1 < i; k1++) {
+        double b_im;
+        idx = (hnRows + k1) - 1;
+        a_re = wwc->data[idx].re;
+        a_im = wwc->data[idx].im;
+        b_re = x->data[xidx];
+        b_im = x->data[xidx + 1];
+        ytmp->data[k1].re = a_re * b_re + a_im * b_im;
+        ytmp->data[k1].im = a_re * b_im - a_im * b_re;
+        xidx += 2;
       }
 
-      if (!tst) {
-        temp_re_tmp = (hnRows + static_cast<int>(e)) - 1;
-        temp_re = wwc->data[temp_re_tmp].re;
-        temp_im = wwc->data[temp_re_tmp].im;
-        twid_re = x->data[nd2];
-        ju = static_cast<int>(static_cast<double>(ix) / 2.0);
-        ytmp->data[ju].re = temp_re * twid_re + temp_im * 0.0;
-        ytmp->data[ju].im = temp_re * 0.0 - temp_im * twid_re;
-        if (static_cast<int>(e) + 2 <= hnRows) {
-          ju = static_cast<int>(static_cast<double>(ix) / 2.0) + 2;
-          for (i = ju; i <= hnRows; i++) {
-            ytmp->data[i - 1].re = 0.0;
-            ytmp->data[i - 1].im = 0.0;
+      if (!nxeven) {
+        idx = (hnRows + static_cast<int>(z_tmp)) - 1;
+        a_re = wwc->data[idx].re;
+        a_im = wwc->data[idx].im;
+        b_re = x->data[xidx];
+        i = static_cast<int>(static_cast<double>(u0) / 2.0);
+        ytmp->data[i].re = a_re * b_re + a_im * 0.0;
+        ytmp->data[i].im = a_re * 0.0 - a_im * b_re;
+        if (static_cast<int>(z_tmp) + 2 <= hnRows) {
+          i = static_cast<int>(static_cast<double>(u0) / 2.0) + 2;
+          for (xidx = i; xidx <= hnRows; xidx++) {
+            ytmp->data[xidx - 1].re = 0.0;
+            ytmp->data[xidx - 1].im = 0.0;
           }
         }
       } else {
-        if (static_cast<int>(e) + 1 <= hnRows) {
-          ju = static_cast<int>(static_cast<double>(ix) / 2.0) + 1;
-          for (i = ju; i <= hnRows; i++) {
-            ytmp->data[i - 1].re = 0.0;
-            ytmp->data[i - 1].im = 0.0;
+        if (static_cast<int>(z_tmp) + 1 <= hnRows) {
+          i = static_cast<int>(static_cast<double>(u0) / 2.0) + 1;
+          for (xidx = i; xidx <= hnRows; xidx++) {
+            ytmp->data[xidx - 1].re = 0.0;
+            ytmp->data[xidx - 1].im = 0.0;
           }
         }
-      }
-
-      emxInit_creal_T(&fy, 1);
-      z = static_cast<double>(nfft) / 2.0;
-      ju = fy->size[0];
-      fy->size[0] = static_cast<int>(z);
-      emxEnsureCapacity_creal_T(fy, ju);
-      if (static_cast<int>(z) > ytmp->size[0]) {
-        nd2 = static_cast<int>(z);
-        ju = fy->size[0];
-        fy->size[0] = static_cast<int>(z);
-        emxEnsureCapacity_creal_T(fy, ju);
-        for (ju = 0; ju < nd2; ju++) {
-          fy->data[ju].re = 0.0;
-          fy->data[ju].im = 0.0;
-        }
-      }
-
-      ix = ytmp->size[0];
-      j = static_cast<int>(z);
-      if (ix < j) {
-        j = ix;
-      }
-
-      hszCostab = static_cast<int>(z) - 2;
-      nRowsD2 = static_cast<int>(z) / 2;
-      k = nRowsD2 / 2;
-      ix = 0;
-      nd2 = 0;
-      ju = 0;
-      for (i = 0; i <= j - 2; i++) {
-        fy->data[nd2] = ytmp->data[ix];
-        ihi = static_cast<int>(z);
-        tst = true;
-        while (tst) {
-          ihi >>= 1;
-          ju ^= ihi;
-          tst = ((ju & ihi) == 0);
-        }
-
-        nd2 = ju;
-        ix++;
-      }
-
-      fy->data[nd2] = ytmp->data[ix];
-      if (static_cast<int>(z) > 1) {
-        for (i = 0; i <= hszCostab; i += 2) {
-          temp_re = fy->data[i + 1].re;
-          temp_im = fy->data[i + 1].im;
-          e = fy->data[i].re;
-          twid_re = fy->data[i].im;
-          fy->data[i + 1].re = fy->data[i].re - fy->data[i + 1].re;
-          fy->data[i + 1].im = fy->data[i].im - fy->data[i + 1].im;
-          e += temp_re;
-          twid_re += temp_im;
-          fy->data[i].re = e;
-          fy->data[i].im = twid_re;
-        }
-      }
-
-      nd2 = 2;
-      hszCostab = 4;
-      ix = ((k - 1) << 2) + 1;
-      while (k > 0) {
-        for (i = 0; i < ix; i += hszCostab) {
-          temp_re_tmp = i + nd2;
-          temp_re = fy->data[temp_re_tmp].re;
-          temp_im = fy->data[temp_re_tmp].im;
-          fy->data[temp_re_tmp].re = fy->data[i].re - temp_re;
-          fy->data[temp_re_tmp].im = fy->data[i].im - temp_im;
-          fy->data[i].re += temp_re;
-          fy->data[i].im += temp_im;
-        }
-
-        ju = 1;
-        for (j = k; j < nRowsD2; j += k) {
-          twid_re = costab1q->data[j];
-          twid_im = hsintab->data[j];
-          i = ju;
-          ihi = ju + ix;
-          while (i < ihi) {
-            temp_re_tmp = i + nd2;
-            temp_re = twid_re * fy->data[temp_re_tmp].re - twid_im * fy->
-              data[temp_re_tmp].im;
-            temp_im = twid_re * fy->data[temp_re_tmp].im + twid_im * fy->
-              data[temp_re_tmp].re;
-            fy->data[temp_re_tmp].re = fy->data[i].re - temp_re;
-            fy->data[temp_re_tmp].im = fy->data[i].im - temp_im;
-            fy->data[i].re += temp_re;
-            fy->data[i].im += temp_im;
-            i += hszCostab;
-          }
-
-          ju++;
-        }
-
-        k /= 2;
-        nd2 = hszCostab;
-        hszCostab += hszCostab;
-        ix -= nd2;
       }
 
       emxInit_creal_T(&fv, 1);
-      FFTImplementationCallback::r2br_r2dit_trig_impl((wwc), (static_cast<int>(
-        static_cast<double>(nfft) / 2.0)), (costab1q), (hsintab), (fv));
-      nd2 = fy->size[0];
-      emxFree_real_T(&costab1q);
+      emxInit_creal_T(&b_fv, 1);
+      idx = static_cast<int>(static_cast<double>(nfft) / 2.0);
+      FFTImplementationCallback::r2br_r2dit_trig_impl((ytmp), (idx), (unusedU0),
+        (hsintab), (fv));
+      FFTImplementationCallback::r2br_r2dit_trig_impl((wwc), (idx), (unusedU0),
+        (hsintab), (b_fv));
+      i = b_fv->size[0];
+      b_fv->size[0] = fv->size[0];
+      emxEnsureCapacity_creal_T(b_fv, i);
+      xidx = fv->size[0];
       emxFree_real_T(&hsintab);
-      for (ju = 0; ju < nd2; ju++) {
-        twid_re = fy->data[ju].re * fv->data[ju].im + fy->data[ju].im * fv->
-          data[ju].re;
-        fy->data[ju].re = fy->data[ju].re * fv->data[ju].re - fy->data[ju].im *
-          fv->data[ju].im;
-        fy->data[ju].im = twid_re;
+      emxFree_real_T(&unusedU0);
+      for (i = 0; i < xidx; i++) {
+        z_tmp = fv->data[i].re * b_fv->data[i].im + fv->data[i].im * b_fv->
+          data[i].re;
+        b_fv->data[i].re = fv->data[i].re * b_fv->data[i].re - fv->data[i].im *
+          b_fv->data[i].im;
+        b_fv->data[i].im = z_tmp;
       }
 
-      FFTImplementationCallback::r2br_r2dit_trig_impl((fy), (static_cast<int>(z)),
-        (hcostabinv), (hsintabinv), (fv));
-      emxFree_creal_T(&fy);
+      FFTImplementationCallback::r2br_r2dit_trig_impl((b_fv), (idx), (hcostabinv),
+        (hsintabinv), (fv));
+      emxFree_creal_T(&b_fv);
       emxFree_real_T(&hsintabinv);
       emxFree_real_T(&hcostabinv);
       if (fv->size[0] > 1) {
-        e = 1.0 / static_cast<double>(fv->size[0]);
-        nd2 = fv->size[0];
-        for (ju = 0; ju < nd2; ju++) {
-          fv->data[ju].re *= e;
-          fv->data[ju].im *= e;
+        z_tmp = 1.0 / static_cast<double>(fv->size[0]);
+        xidx = fv->size[0];
+        for (i = 0; i < xidx; i++) {
+          fv->data[i].re *= z_tmp;
+          fv->data[i].im *= z_tmp;
         }
       }
 
-      nd2 = 0;
-      ju = wwc->size[0];
-      for (k = hnRows; k <= ju; k++) {
-        ytmp->data[nd2].re = wwc->data[k - 1].re * fv->data[k - 1].re +
-          wwc->data[k - 1].im * fv->data[k - 1].im;
-        ytmp->data[nd2].im = wwc->data[k - 1].re * fv->data[k - 1].im -
-          wwc->data[k - 1].im * fv->data[k - 1].re;
-        nd2++;
+      idx = 0;
+      i = wwc->size[0];
+      for (xidx = hnRows; xidx <= i; xidx++) {
+        ytmp->data[idx].re = wwc->data[xidx - 1].re * fv->data[xidx - 1].re +
+          wwc->data[xidx - 1].im * fv->data[xidx - 1].im;
+        ytmp->data[idx].im = wwc->data[xidx - 1].re * fv->data[xidx - 1].im -
+          wwc->data[xidx - 1].im * fv->data[xidx - 1].re;
+        idx++;
       }
 
       emxFree_creal_T(&fv);
-      for (i = 0; i < hnRows; i++) {
-        ju = wrapIndex->data[i];
-        e = ytmp->data[ju - 1].re;
-        twid_re = -ytmp->data[ju - 1].im;
-        y->data[i].re = 0.5 * ((ytmp->data[i].re * reconVar1->data[i].re -
-          ytmp->data[i].im * reconVar1->data[i].im) + (e * reconVar2->data[i].re
-          - twid_re * reconVar2->data[i].im));
-        y->data[i].im = 0.5 * ((ytmp->data[i].re * reconVar1->data[i].im +
-          ytmp->data[i].im * reconVar1->data[i].re) + (e * reconVar2->data[i].im
-          + twid_re * reconVar2->data[i].re));
-        ju = hnRows + i;
-        y->data[ju].re = 0.5 * ((ytmp->data[i].re * reconVar2->data[i].re -
-          ytmp->data[i].im * reconVar2->data[i].im) + (e * reconVar1->data[i].re
-          - twid_re * reconVar1->data[i].im));
-        y->data[ju].im = 0.5 * ((ytmp->data[i].re * reconVar2->data[i].im +
-          ytmp->data[i].im * reconVar2->data[i].re) + (e * reconVar1->data[i].im
-          + twid_re * reconVar1->data[i].re));
+      for (xidx = 0; xidx < hnRows; xidx++) {
+        i = wrapIndex->data[xidx];
+        z_tmp = ytmp->data[i - 1].re;
+        a_re = -ytmp->data[i - 1].im;
+        y->data[xidx].re = 0.5 * ((ytmp->data[xidx].re * reconVar1->data[xidx].
+          re - ytmp->data[xidx].im * reconVar1->data[xidx].im) + (z_tmp *
+          reconVar2->data[xidx].re - a_re * reconVar2->data[xidx].im));
+        y->data[xidx].im = 0.5 * ((ytmp->data[xidx].re * reconVar1->data[xidx].
+          im + ytmp->data[xidx].im * reconVar1->data[xidx].re) + (z_tmp *
+          reconVar2->data[xidx].im + a_re * reconVar2->data[xidx].re));
+        i = hnRows + xidx;
+        y->data[i].re = 0.5 * ((ytmp->data[xidx].re * reconVar2->data[xidx].re -
+          ytmp->data[xidx].im * reconVar2->data[xidx].im) + (z_tmp *
+          reconVar1->data[xidx].re - a_re * reconVar1->data[xidx].im));
+        y->data[i].im = 0.5 * ((ytmp->data[xidx].re * reconVar2->data[xidx].im +
+          ytmp->data[xidx].im * reconVar2->data[xidx].re) + (z_tmp *
+          reconVar1->data[xidx].im + a_re * reconVar1->data[xidx].re));
       }
 
       emxFree_creal_T(&reconVar2);
@@ -420,70 +333,59 @@ namespace coder
       emxArray_int32_T *wrapIndex;
       emxArray_real_T *hcostab;
       emxArray_real_T *hsintab;
-      double temp2_im;
-      double temp2_re;
       double temp_im;
       double temp_re;
-      double y_im;
-      double y_im_tmp;
       double z;
-      int b_j1;
       int hszCostab;
       int i;
-      int ihi;
-      int ix;
+      int iDelta;
+      int istart;
       int j;
-      int ju;
       int k;
       int nRows;
       int nRowsD2;
-      boolean_T tst;
+      boolean_T nxeven;
       emxInit_real_T(&hcostab, 2);
       emxInit_real_T(&hsintab, 2);
       nRows = unsigned_nRows / 2;
-      j = y->size[0];
-      if (j >= nRows) {
-        j = nRows;
-      }
-
-      ihi = nRows - 2;
+      istart = nRows - 2;
       nRowsD2 = nRows / 2;
       k = nRowsD2 / 2;
       hszCostab = costab->size[1] / 2;
-      b_j1 = hcostab->size[0] * hcostab->size[1];
+      iDelta = hcostab->size[0] * hcostab->size[1];
       hcostab->size[0] = 1;
       hcostab->size[1] = hszCostab;
-      emxEnsureCapacity_real_T(hcostab, b_j1);
-      b_j1 = hsintab->size[0] * hsintab->size[1];
+      emxEnsureCapacity_real_T(hcostab, iDelta);
+      iDelta = hsintab->size[0] * hsintab->size[1];
       hsintab->size[0] = 1;
       hsintab->size[1] = hszCostab;
-      emxEnsureCapacity_real_T(hsintab, b_j1);
+      emxEnsureCapacity_real_T(hsintab, iDelta);
       for (i = 0; i < hszCostab; i++) {
-        ix = ((i + 1) << 1) - 2;
-        hcostab->data[i] = costab->data[ix];
-        hsintab->data[i] = sintab->data[ix];
+        iDelta = ((i + 1) << 1) - 2;
+        hcostab->data[i] = costab->data[iDelta];
+        hsintab->data[i] = sintab->data[iDelta];
       }
 
       emxInit_int32_T(&wrapIndex, 2);
       emxInit_creal_T(&reconVar1, 1);
       emxInit_creal_T(&reconVar2, 1);
-      b_j1 = reconVar1->size[0];
+      iDelta = reconVar1->size[0];
       reconVar1->size[0] = nRows;
-      emxEnsureCapacity_creal_T(reconVar1, b_j1);
-      b_j1 = reconVar2->size[0];
+      emxEnsureCapacity_creal_T(reconVar1, iDelta);
+      iDelta = reconVar2->size[0];
       reconVar2->size[0] = nRows;
-      emxEnsureCapacity_creal_T(reconVar2, b_j1);
-      b_j1 = wrapIndex->size[0] * wrapIndex->size[1];
+      emxEnsureCapacity_creal_T(reconVar2, iDelta);
+      iDelta = wrapIndex->size[0] * wrapIndex->size[1];
       wrapIndex->size[0] = 1;
       wrapIndex->size[1] = nRows;
-      emxEnsureCapacity_int32_T(wrapIndex, b_j1);
+      emxEnsureCapacity_int32_T(wrapIndex, iDelta);
       for (i = 0; i < nRows; i++) {
-        temp2_im = sintab->data[i];
-        temp2_re = costab->data[i];
-        reconVar1->data[i].re = temp2_im + 1.0;
-        reconVar1->data[i].im = -temp2_re;
-        reconVar2->data[i].re = 1.0 - temp2_im;
-        reconVar2->data[i].im = temp2_re;
+        temp_im = sintab->data[i];
+        temp_re = costab->data[i];
+        reconVar1->data[i].re = temp_im + 1.0;
+        reconVar1->data[i].im = -temp_re;
+        reconVar2->data[i].re = 1.0 - temp_im;
+        reconVar2->data[i].im = temp_re;
         if (i + 1 != 1) {
           wrapIndex->data[i] = (nRows - i) + 1;
         } else {
@@ -493,63 +395,46 @@ namespace coder
 
       emxInit_int32_T(&bitrevIndex, 1);
       z = static_cast<double>(unsigned_nRows) / 2.0;
-      ju = 0;
-      hszCostab = 1;
-      b_j1 = bitrevIndex->size[0];
-      bitrevIndex->size[0] = static_cast<int>(z);
-      emxEnsureCapacity_int32_T(bitrevIndex, b_j1);
-      ix = static_cast<int>(z);
-      for (b_j1 = 0; b_j1 < ix; b_j1++) {
-        bitrevIndex->data[b_j1] = 0;
+      iDelta = y->size[0];
+      if (iDelta >= nRows) {
+        iDelta = nRows;
       }
 
-      for (b_j1 = 0; b_j1 <= j - 2; b_j1++) {
-        bitrevIndex->data[b_j1] = hszCostab;
-        ix = static_cast<int>(z);
-        tst = true;
-        while (tst) {
-          ix >>= 1;
-          ju ^= ix;
-          tst = ((ju & ix) == 0);
-        }
-
-        hszCostab = ju + 1;
-      }
-
-      bitrevIndex->data[j - 1] = hszCostab;
+      FFTImplementationCallback::get_bitrevIndex((iDelta - 1), (static_cast<int>
+        (z)), (bitrevIndex));
       if ((x->size[0] & 1) == 0) {
-        tst = true;
-        j = x->size[0];
+        nxeven = true;
+        iDelta = x->size[0];
       } else if (x->size[0] >= unsigned_nRows) {
-        tst = true;
-        j = unsigned_nRows;
+        nxeven = true;
+        iDelta = unsigned_nRows;
       } else {
-        tst = false;
-        j = x->size[0] - 1;
+        nxeven = false;
+        iDelta = x->size[0] - 1;
       }
 
-      ix = 0;
-      if (j >= unsigned_nRows) {
-        j = unsigned_nRows;
+      hszCostab = 0;
+      if (iDelta >= unsigned_nRows) {
+        iDelta = unsigned_nRows;
       }
 
-      temp2_im = static_cast<double>(j) / 2.0;
-      b_j1 = static_cast<int>(temp2_im);
-      for (i = 0; i < b_j1; i++) {
-        y->data[bitrevIndex->data[i] - 1].re = x->data[ix];
-        y->data[bitrevIndex->data[i] - 1].im = x->data[ix + 1];
-        ix += 2;
+      temp_im = static_cast<double>(iDelta) / 2.0;
+      iDelta = static_cast<int>(temp_im);
+      for (i = 0; i < iDelta; i++) {
+        y->data[bitrevIndex->data[i] - 1].re = x->data[hszCostab];
+        y->data[bitrevIndex->data[i] - 1].im = x->data[hszCostab + 1];
+        hszCostab += 2;
       }
 
-      if (!tst) {
-        b_j1 = bitrevIndex->data[static_cast<int>(temp2_im)] - 1;
-        y->data[b_j1].re = x->data[ix];
-        y->data[b_j1].im = 0.0;
+      if (!nxeven) {
+        iDelta = bitrevIndex->data[static_cast<int>(temp_im)] - 1;
+        y->data[iDelta].re = x->data[hszCostab];
+        y->data[iDelta].im = 0.0;
       }
 
       emxFree_int32_T(&bitrevIndex);
       if (nRows > 1) {
-        for (i = 0; i <= ihi; i += 2) {
+        for (i = 0; i <= istart; i += 2) {
           temp_re = y->data[i + 1].re;
           temp_im = y->data[i + 1].im;
           y->data[i + 1].re = y->data[i].re - y->data[i + 1].re;
@@ -559,125 +444,597 @@ namespace coder
         }
       }
 
-      ix = 2;
+      iDelta = 2;
       hszCostab = 4;
-      ju = ((k - 1) << 2) + 1;
+      nRows = ((k - 1) << 2) + 1;
       while (k > 0) {
-        for (i = 0; i < ju; i += hszCostab) {
-          b_j1 = i + ix;
-          temp_re = y->data[b_j1].re;
-          temp_im = y->data[b_j1].im;
-          y->data[b_j1].re = y->data[i].re - temp_re;
-          y->data[b_j1].im = y->data[i].im - temp_im;
+        int temp_re_tmp;
+        for (i = 0; i < nRows; i += hszCostab) {
+          temp_re_tmp = i + iDelta;
+          temp_re = y->data[temp_re_tmp].re;
+          temp_im = y->data[temp_re_tmp].im;
+          y->data[temp_re_tmp].re = y->data[i].re - temp_re;
+          y->data[temp_re_tmp].im = y->data[i].im - temp_im;
           y->data[i].re += temp_re;
           y->data[i].im += temp_im;
         }
 
-        nRows = 1;
+        istart = 1;
         for (j = k; j < nRowsD2; j += k) {
-          temp2_re = hcostab->data[j];
-          temp2_im = hsintab->data[j];
-          i = nRows;
-          ihi = nRows + ju;
+          double twid_im;
+          double twid_re;
+          int ihi;
+          twid_re = hcostab->data[j];
+          twid_im = hsintab->data[j];
+          i = istart;
+          ihi = istart + nRows;
           while (i < ihi) {
-            b_j1 = i + ix;
-            temp_re = temp2_re * y->data[b_j1].re - temp2_im * y->data[b_j1].im;
-            temp_im = temp2_re * y->data[b_j1].im + temp2_im * y->data[b_j1].re;
-            y->data[b_j1].re = y->data[i].re - temp_re;
-            y->data[b_j1].im = y->data[i].im - temp_im;
+            temp_re_tmp = i + iDelta;
+            temp_re = twid_re * y->data[temp_re_tmp].re - twid_im * y->
+              data[temp_re_tmp].im;
+            temp_im = twid_re * y->data[temp_re_tmp].im + twid_im * y->
+              data[temp_re_tmp].re;
+            y->data[temp_re_tmp].re = y->data[i].re - temp_re;
+            y->data[temp_re_tmp].im = y->data[i].im - temp_im;
             y->data[i].re += temp_re;
             y->data[i].im += temp_im;
             i += hszCostab;
           }
 
-          nRows++;
+          istart++;
         }
 
         k /= 2;
-        ix = hszCostab;
+        iDelta = hszCostab;
         hszCostab += hszCostab;
-        ju -= ix;
+        nRows -= iDelta;
       }
 
       emxFree_real_T(&hsintab);
       emxFree_real_T(&hcostab);
-      ix = static_cast<int>(z) / 2;
-      temp_re = y->data[0].re;
-      temp_im = y->data[0].im;
-      y_im = y->data[0].re * reconVar1->data[0].im + y->data[0].im *
-        reconVar1->data[0].re;
-      temp2_re = y->data[0].re;
-      temp2_im = -y->data[0].im;
-      y->data[0].re = 0.5 * ((y->data[0].re * reconVar1->data[0].re - y->data[0]
-        .im * reconVar1->data[0].im) + (temp2_re * reconVar2->data[0].re -
-        temp2_im * reconVar2->data[0].im));
-      y->data[0].im = 0.5 * (y_im + (temp2_re * reconVar2->data[0].im + temp2_im
-        * reconVar2->data[0].re));
-      y->data[static_cast<int>(z)].re = 0.5 * ((temp_re * reconVar2->data[0].re
-        - temp_im * reconVar2->data[0].im) + (temp_re * reconVar1->data[0].re -
-        -temp_im * reconVar1->data[0].im));
-      y->data[static_cast<int>(z)].im = 0.5 * ((temp_re * reconVar2->data[0].im
-        + temp_im * reconVar2->data[0].re) + (temp_re * reconVar1->data[0].im +
-        -temp_im * reconVar1->data[0].re));
-      for (i = 2; i <= ix; i++) {
-        temp_re = y->data[i - 1].re;
-        temp_im = y->data[i - 1].im;
-        b_j1 = wrapIndex->data[i - 1];
-        temp2_re = y->data[b_j1 - 1].re;
-        temp2_im = y->data[b_j1 - 1].im;
-        y_im = y->data[i - 1].re * reconVar1->data[i - 1].im + y->data[i - 1].im
-          * reconVar1->data[i - 1].re;
-        y_im_tmp = -y->data[b_j1 - 1].im;
-        y->data[i - 1].re = 0.5 * ((y->data[i - 1].re * reconVar1->data[i - 1].
-          re - y->data[i - 1].im * reconVar1->data[i - 1].im) + (temp2_re *
-          reconVar2->data[i - 1].re - y_im_tmp * reconVar2->data[i - 1].im));
-        y->data[i - 1].im = 0.5 * (y_im + (temp2_re * reconVar2->data[i - 1].im
-          + y_im_tmp * reconVar2->data[i - 1].re));
-        hszCostab = (static_cast<int>(z) + i) - 1;
-        y->data[hszCostab].re = 0.5 * ((temp_re * reconVar2->data[i - 1].re -
-          temp_im * reconVar2->data[i - 1].im) + (temp2_re * reconVar1->data[i -
-          1].re - -temp2_im * reconVar1->data[i - 1].im));
-        y->data[hszCostab].im = 0.5 * ((temp_re * reconVar2->data[i - 1].im +
-          temp_im * reconVar2->data[i - 1].re) + (temp2_re * reconVar1->data[i -
-          1].im + -temp2_im * reconVar1->data[i - 1].re));
-        y->data[b_j1 - 1].re = 0.5 * ((temp2_re * reconVar1->data[b_j1 - 1].re -
-          temp2_im * reconVar1->data[b_j1 - 1].im) + (temp_re * reconVar2->
-          data[b_j1 - 1].re - -temp_im * reconVar2->data[b_j1 - 1].im));
-        y->data[b_j1 - 1].im = 0.5 * ((temp2_re * reconVar1->data[b_j1 - 1].im +
-          temp2_im * reconVar1->data[b_j1 - 1].re) + (temp_re * reconVar2->
-          data[b_j1 - 1].im + -temp_im * reconVar2->data[b_j1 - 1].re));
-        hszCostab = (b_j1 + static_cast<int>(z)) - 1;
-        y->data[hszCostab].re = 0.5 * ((temp2_re * reconVar2->data[b_j1 - 1].re
-          - temp2_im * reconVar2->data[b_j1 - 1].im) + (temp_re *
-          reconVar1->data[b_j1 - 1].re - -temp_im * reconVar1->data[b_j1 - 1].im));
-        y->data[hszCostab].im = 0.5 * ((temp2_re * reconVar2->data[b_j1 - 1].im
-          + temp2_im * reconVar2->data[b_j1 - 1].re) + (temp_re *
-          reconVar1->data[b_j1 - 1].im + -temp_im * reconVar1->data[b_j1 - 1].re));
+      FFTImplementationCallback::getback_radix2_fft((y), (reconVar1), (reconVar2),
+        (wrapIndex), (static_cast<int>(z)));
+      emxFree_creal_T(&reconVar2);
+      emxFree_creal_T(&reconVar1);
+      emxFree_int32_T(&wrapIndex);
+    }
+
+    //
+    // Arguments    : int nRowsM1
+    //                int nfftLen
+    //                emxArray_int32_T *bitrevIndex
+    // Return Type  : void
+    //
+    void FFTImplementationCallback::get_bitrevIndex(int nRowsM1, int nfftLen,
+      emxArray_int32_T *bitrevIndex)
+    {
+      int b_j1;
+      int iy;
+      int ju;
+      ju = 0;
+      iy = 1;
+      b_j1 = bitrevIndex->size[0];
+      bitrevIndex->size[0] = nfftLen;
+      emxEnsureCapacity_int32_T(bitrevIndex, b_j1);
+      for (b_j1 = 0; b_j1 < nfftLen; b_j1++) {
+        bitrevIndex->data[b_j1] = 0;
       }
 
-      emxFree_int32_T(&wrapIndex);
-      if (ix != 0) {
-        temp2_im = y->data[ix].re;
-        temp_im = y->data[ix].im;
-        y_im = y->data[ix].re * reconVar1->data[ix].im + y->data[ix].im *
-          reconVar1->data[ix].re;
-        y_im_tmp = -y->data[ix].im;
-        y->data[ix].re = 0.5 * ((y->data[ix].re * reconVar1->data[ix].re -
-          y->data[ix].im * reconVar1->data[ix].im) + (temp2_im * reconVar2->
-          data[ix].re - y_im_tmp * reconVar2->data[ix].im));
-        y->data[ix].im = 0.5 * (y_im + (temp2_im * reconVar2->data[ix].im +
-          y_im_tmp * reconVar2->data[ix].re));
-        b_j1 = static_cast<int>(z) + ix;
-        y->data[b_j1].re = 0.5 * ((temp2_im * reconVar2->data[ix].re - temp_im *
-          reconVar2->data[ix].im) + (temp2_im * reconVar1->data[ix].re -
-          -temp_im * reconVar1->data[ix].im));
-        y->data[b_j1].im = 0.5 * ((temp2_im * reconVar2->data[ix].im + temp_im *
-          reconVar2->data[ix].re) + (temp2_im * reconVar1->data[ix].im +
-          -temp_im * reconVar1->data[ix].re));
+      for (b_j1 = 0; b_j1 < nRowsM1; b_j1++) {
+        boolean_T tst;
+        bitrevIndex->data[b_j1] = iy;
+        iy = nfftLen;
+        tst = true;
+        while (tst) {
+          iy >>= 1;
+          ju ^= iy;
+          tst = ((ju & iy) == 0);
+        }
+
+        iy = ju + 1;
+      }
+
+      bitrevIndex->data[nRowsM1] = iy;
+    }
+
+    //
+    // Arguments    : const emxArray_real_T *costab
+    //                const emxArray_real_T *sintab
+    //                const emxArray_real_T *costabinv
+    //                const emxArray_real_T *sintabinv
+    //                emxArray_real_T *hcostab
+    //                emxArray_real_T *hsintab
+    //                emxArray_real_T *hcostabinv
+    //                emxArray_real_T *hsintabinv
+    // Return Type  : void
+    //
+    void FFTImplementationCallback::get_half_twiddle_tables(const
+      emxArray_real_T *costab, const emxArray_real_T *sintab, const
+      emxArray_real_T *costabinv, const emxArray_real_T *sintabinv,
+      emxArray_real_T *hcostab, emxArray_real_T *hsintab, emxArray_real_T
+      *hcostabinv, emxArray_real_T *hsintabinv)
+    {
+      int hcostab_tmp;
+      int hszCostab;
+      hszCostab = costab->size[1] / 2;
+      hcostab_tmp = hcostab->size[0] * hcostab->size[1];
+      hcostab->size[0] = 1;
+      hcostab->size[1] = hszCostab;
+      emxEnsureCapacity_real_T(hcostab, hcostab_tmp);
+      hcostab_tmp = hsintab->size[0] * hsintab->size[1];
+      hsintab->size[0] = 1;
+      hsintab->size[1] = hszCostab;
+      emxEnsureCapacity_real_T(hsintab, hcostab_tmp);
+      hcostab_tmp = hcostabinv->size[0] * hcostabinv->size[1];
+      hcostabinv->size[0] = 1;
+      hcostabinv->size[1] = hszCostab;
+      emxEnsureCapacity_real_T(hcostabinv, hcostab_tmp);
+      hcostab_tmp = hsintabinv->size[0] * hsintabinv->size[1];
+      hsintabinv->size[0] = 1;
+      hsintabinv->size[1] = hszCostab;
+      emxEnsureCapacity_real_T(hsintabinv, hcostab_tmp);
+      for (int i = 0; i < hszCostab; i++) {
+        hcostab_tmp = ((i + 1) << 1) - 2;
+        hcostab->data[i] = costab->data[hcostab_tmp];
+        hsintab->data[i] = sintab->data[hcostab_tmp];
+        hcostabinv->data[i] = costabinv->data[hcostab_tmp];
+        hsintabinv->data[i] = sintabinv->data[hcostab_tmp];
+      }
+    }
+
+    //
+    // Arguments    : emxArray_creal_T *y
+    //                const emxArray_creal_T *reconVar1
+    //                const emxArray_creal_T *reconVar2
+    //                const emxArray_int32_T *wrapIndex
+    //                int hnRows
+    // Return Type  : void
+    //
+    void FFTImplementationCallback::getback_radix2_fft(emxArray_creal_T *y,
+      const emxArray_creal_T *reconVar1, const emxArray_creal_T *reconVar2,
+      const emxArray_int32_T *wrapIndex, int hnRows)
+    {
+      double b_y_im;
+      double temp1_im;
+      double temp1_re;
+      double temp2_im;
+      double y_im;
+      double y_im_tmp;
+      int b_i;
+      int iterVar;
+      iterVar = hnRows / 2;
+      temp1_re = y->data[0].re;
+      temp1_im = y->data[0].im;
+      y_im = y->data[0].re * reconVar1->data[0].im + y->data[0].im *
+        reconVar1->data[0].re;
+      temp2_im = y->data[0].re;
+      b_y_im = -y->data[0].im;
+      y->data[0].re = 0.5 * ((y->data[0].re * reconVar1->data[0].re - y->data[0]
+        .im * reconVar1->data[0].im) + (temp2_im * reconVar2->data[0].re -
+        b_y_im * reconVar2->data[0].im));
+      y->data[0].im = 0.5 * (y_im + (temp2_im * reconVar2->data[0].im + b_y_im *
+        reconVar2->data[0].re));
+      y->data[hnRows].re = 0.5 * ((temp1_re * reconVar2->data[0].re - temp1_im *
+        reconVar2->data[0].im) + (temp1_re * reconVar1->data[0].re - -temp1_im *
+        reconVar1->data[0].im));
+      y->data[hnRows].im = 0.5 * ((temp1_re * reconVar2->data[0].im + temp1_im *
+        reconVar2->data[0].re) + (temp1_re * reconVar1->data[0].im + -temp1_im *
+        reconVar1->data[0].re));
+      for (int i = 2; i <= iterVar; i++) {
+        int i1;
+        temp1_re = y->data[i - 1].re;
+        temp1_im = y->data[i - 1].im;
+        b_i = wrapIndex->data[i - 1];
+        b_y_im = y->data[b_i - 1].re;
+        temp2_im = y->data[b_i - 1].im;
+        y_im = y->data[i - 1].re * reconVar1->data[i - 1].im + y->data[i - 1].im
+          * reconVar1->data[i - 1].re;
+        y_im_tmp = -y->data[b_i - 1].im;
+        y->data[i - 1].re = 0.5 * ((y->data[i - 1].re * reconVar1->data[i - 1].
+          re - y->data[i - 1].im * reconVar1->data[i - 1].im) + (b_y_im *
+          reconVar2->data[i - 1].re - y_im_tmp * reconVar2->data[i - 1].im));
+        y->data[i - 1].im = 0.5 * (y_im + (b_y_im * reconVar2->data[i - 1].im +
+          y_im_tmp * reconVar2->data[i - 1].re));
+        i1 = (hnRows + i) - 1;
+        y->data[i1].re = 0.5 * ((temp1_re * reconVar2->data[i - 1].re - temp1_im
+          * reconVar2->data[i - 1].im) + (b_y_im * reconVar1->data[i - 1].re -
+          -temp2_im * reconVar1->data[i - 1].im));
+        y->data[i1].im = 0.5 * ((temp1_re * reconVar2->data[i - 1].im + temp1_im
+          * reconVar2->data[i - 1].re) + (b_y_im * reconVar1->data[i - 1].im +
+          -temp2_im * reconVar1->data[i - 1].re));
+        y->data[b_i - 1].re = 0.5 * ((b_y_im * reconVar1->data[b_i - 1].re -
+          temp2_im * reconVar1->data[b_i - 1].im) + (temp1_re * reconVar2->
+          data[b_i - 1].re - -temp1_im * reconVar2->data[b_i - 1].im));
+        y->data[b_i - 1].im = 0.5 * ((b_y_im * reconVar1->data[b_i - 1].im +
+          temp2_im * reconVar1->data[b_i - 1].re) + (temp1_re * reconVar2->
+          data[b_i - 1].im + -temp1_im * reconVar2->data[b_i - 1].re));
+        i1 = (b_i + hnRows) - 1;
+        y->data[i1].re = 0.5 * ((b_y_im * reconVar2->data[b_i - 1].re - temp2_im
+          * reconVar2->data[b_i - 1].im) + (temp1_re * reconVar1->data[b_i - 1].
+          re - -temp1_im * reconVar1->data[b_i - 1].im));
+        y->data[i1].im = 0.5 * ((b_y_im * reconVar2->data[b_i - 1].im + temp2_im
+          * reconVar2->data[b_i - 1].re) + (temp1_re * reconVar1->data[b_i - 1].
+          im + -temp1_im * reconVar1->data[b_i - 1].re));
+      }
+
+      if (iterVar != 0) {
+        temp2_im = y->data[iterVar].re;
+        temp1_im = y->data[iterVar].im;
+        y_im = y->data[iterVar].re * reconVar1->data[iterVar].im + y->
+          data[iterVar].im * reconVar1->data[iterVar].re;
+        y_im_tmp = -y->data[iterVar].im;
+        y->data[iterVar].re = 0.5 * ((y->data[iterVar].re * reconVar1->
+          data[iterVar].re - y->data[iterVar].im * reconVar1->data[iterVar].im)
+          + (temp2_im * reconVar2->data[iterVar].re - y_im_tmp * reconVar2->
+             data[iterVar].im));
+        y->data[iterVar].im = 0.5 * (y_im + (temp2_im * reconVar2->data[iterVar]
+          .im + y_im_tmp * reconVar2->data[iterVar].re));
+        b_i = hnRows + iterVar;
+        y->data[b_i].re = 0.5 * ((temp2_im * reconVar2->data[iterVar].re -
+          temp1_im * reconVar2->data[iterVar].im) + (temp2_im * reconVar1->
+          data[iterVar].re - -temp1_im * reconVar1->data[iterVar].im));
+        y->data[b_i].im = 0.5 * ((temp2_im * reconVar2->data[iterVar].im +
+          temp1_im * reconVar2->data[iterVar].re) + (temp2_im * reconVar1->
+          data[iterVar].im + -temp1_im * reconVar1->data[iterVar].re));
+      }
+    }
+
+    //
+    // Arguments    : const double x[1820]
+    //                emxArray_creal_T *y
+    //                int nRows
+    //                int nfft
+    //                const emxArray_creal_T *wwc
+    //                const emxArray_real_T *costab
+    //                const emxArray_real_T *sintab
+    //                const emxArray_real_T *costabinv
+    //                const emxArray_real_T *sintabinv
+    // Return Type  : void
+    //
+    void FFTImplementationCallback::doHalfLengthBluestein(const double x[1820],
+      emxArray_creal_T *y, int nRows, int nfft, const emxArray_creal_T *wwc,
+      const emxArray_real_T *costab, const emxArray_real_T *sintab, const
+      emxArray_real_T *costabinv, const emxArray_real_T *sintabinv)
+    {
+      emxArray_creal_T *b_fv;
+      emxArray_creal_T *fv;
+      emxArray_creal_T *reconVar1;
+      emxArray_creal_T *reconVar2;
+      emxArray_creal_T *ytmp;
+      emxArray_int32_T *wrapIndex;
+      emxArray_real_T *costable;
+      emxArray_real_T *hcostabinv;
+      emxArray_real_T *hsintab;
+      emxArray_real_T *hsintabinv;
+      emxArray_real_T *sintable;
+      emxArray_real_T *unusedU0;
+      double a_im;
+      double a_re;
+      int hnRows;
+      int i;
+      int idx;
+      int minHnrowsNx;
+      int xidx;
+      emxInit_creal_T(&ytmp, 1);
+      hnRows = nRows / 2;
+      i = ytmp->size[0];
+      ytmp->size[0] = hnRows;
+      emxEnsureCapacity_creal_T(ytmp, i);
+      if (hnRows > 1820) {
+        i = ytmp->size[0];
+        ytmp->size[0] = hnRows;
+        emxEnsureCapacity_creal_T(ytmp, i);
+        for (i = 0; i < hnRows; i++) {
+          ytmp->data[i].re = 0.0;
+          ytmp->data[i].im = 0.0;
+        }
+      }
+
+      emxInit_real_T(&unusedU0, 2);
+      emxInit_int32_T(&wrapIndex, 2);
+      emxInit_real_T(&costable, 2);
+      emxInit_real_T(&sintable, 2);
+      emxInit_real_T(&hsintab, 2);
+      emxInit_real_T(&hcostabinv, 2);
+      emxInit_real_T(&hsintabinv, 2);
+      emxInit_creal_T(&reconVar1, 1);
+      emxInit_creal_T(&reconVar2, 1);
+      if (1820 < nRows) {
+        minHnrowsNx = 1820;
+      } else {
+        minHnrowsNx = nRows;
+      }
+
+      FFTImplementationCallback::b_generate_twiddle_tables((nRows << 1),
+        (costable), (sintable), (unusedU0));
+      FFTImplementationCallback::get_half_twiddle_tables((costab), (sintab),
+        (costabinv), (sintabinv), (unusedU0), (hsintab), (hcostabinv),
+        (hsintabinv));
+      i = reconVar1->size[0];
+      reconVar1->size[0] = hnRows;
+      emxEnsureCapacity_creal_T(reconVar1, i);
+      i = reconVar2->size[0];
+      reconVar2->size[0] = hnRows;
+      emxEnsureCapacity_creal_T(reconVar2, i);
+      idx = 0;
+      i = wrapIndex->size[0] * wrapIndex->size[1];
+      wrapIndex->size[0] = 1;
+      wrapIndex->size[1] = hnRows;
+      emxEnsureCapacity_int32_T(wrapIndex, i);
+      for (xidx = 0; xidx < hnRows; xidx++) {
+        reconVar1->data[xidx].re = sintable->data[idx] + 1.0;
+        reconVar1->data[xidx].im = -costable->data[idx];
+        reconVar2->data[xidx].re = 1.0 - sintable->data[idx];
+        reconVar2->data[xidx].im = costable->data[idx];
+        idx += 2;
+        if (xidx + 1 != 1) {
+          wrapIndex->data[xidx] = (hnRows - xidx) + 1;
+        } else {
+          wrapIndex->data[0] = 1;
+        }
+      }
+
+      emxFree_real_T(&sintable);
+      emxFree_real_T(&costable);
+      xidx = 1;
+      i = static_cast<int>(static_cast<double>(minHnrowsNx) / 2.0);
+      for (int k1 = 0; k1 < i; k1++) {
+        double b_im;
+        double b_re;
+        idx = (hnRows + k1) - 1;
+        a_re = wwc->data[idx].re;
+        a_im = wwc->data[idx].im;
+        b_re = x[xidx - 1];
+        b_im = x[xidx];
+        ytmp->data[k1].re = a_re * b_re + a_im * b_im;
+        ytmp->data[k1].im = a_re * b_im - a_im * b_re;
+        xidx += 2;
+      }
+
+      if (i + 1 <= hnRows) {
+        i = static_cast<int>(static_cast<double>(minHnrowsNx) / 2.0) + 1;
+        for (xidx = i; xidx <= hnRows; xidx++) {
+          ytmp->data[xidx - 1].re = 0.0;
+          ytmp->data[xidx - 1].im = 0.0;
+        }
+      }
+
+      emxInit_creal_T(&fv, 1);
+      emxInit_creal_T(&b_fv, 1);
+      idx = static_cast<int>(static_cast<double>(nfft) / 2.0);
+      FFTImplementationCallback::r2br_r2dit_trig_impl((ytmp), (idx), (unusedU0),
+        (hsintab), (fv));
+      FFTImplementationCallback::r2br_r2dit_trig_impl((wwc), (idx), (unusedU0),
+        (hsintab), (b_fv));
+      i = b_fv->size[0];
+      b_fv->size[0] = fv->size[0];
+      emxEnsureCapacity_creal_T(b_fv, i);
+      xidx = fv->size[0];
+      emxFree_real_T(&hsintab);
+      emxFree_real_T(&unusedU0);
+      for (i = 0; i < xidx; i++) {
+        a_re = fv->data[i].re * b_fv->data[i].im + fv->data[i].im * b_fv->data[i]
+          .re;
+        b_fv->data[i].re = fv->data[i].re * b_fv->data[i].re - fv->data[i].im *
+          b_fv->data[i].im;
+        b_fv->data[i].im = a_re;
+      }
+
+      FFTImplementationCallback::r2br_r2dit_trig_impl((b_fv), (idx), (hcostabinv),
+        (hsintabinv), (fv));
+      emxFree_creal_T(&b_fv);
+      emxFree_real_T(&hsintabinv);
+      emxFree_real_T(&hcostabinv);
+      if (fv->size[0] > 1) {
+        a_re = 1.0 / static_cast<double>(fv->size[0]);
+        xidx = fv->size[0];
+        for (i = 0; i < xidx; i++) {
+          fv->data[i].re *= a_re;
+          fv->data[i].im *= a_re;
+        }
+      }
+
+      idx = 0;
+      i = wwc->size[0];
+      for (xidx = hnRows; xidx <= i; xidx++) {
+        ytmp->data[idx].re = wwc->data[xidx - 1].re * fv->data[xidx - 1].re +
+          wwc->data[xidx - 1].im * fv->data[xidx - 1].im;
+        ytmp->data[idx].im = wwc->data[xidx - 1].re * fv->data[xidx - 1].im -
+          wwc->data[xidx - 1].im * fv->data[xidx - 1].re;
+        idx++;
+      }
+
+      emxFree_creal_T(&fv);
+      for (xidx = 0; xidx < hnRows; xidx++) {
+        i = wrapIndex->data[xidx];
+        a_re = ytmp->data[i - 1].re;
+        a_im = -ytmp->data[i - 1].im;
+        y->data[xidx].re = 0.5 * ((ytmp->data[xidx].re * reconVar1->data[xidx].
+          re - ytmp->data[xidx].im * reconVar1->data[xidx].im) + (a_re *
+          reconVar2->data[xidx].re - a_im * reconVar2->data[xidx].im));
+        y->data[xidx].im = 0.5 * ((ytmp->data[xidx].re * reconVar1->data[xidx].
+          im + ytmp->data[xidx].im * reconVar1->data[xidx].re) + (a_re *
+          reconVar2->data[xidx].im + a_im * reconVar2->data[xidx].re));
+        i = hnRows + xidx;
+        y->data[i].re = 0.5 * ((ytmp->data[xidx].re * reconVar2->data[xidx].re -
+          ytmp->data[xidx].im * reconVar2->data[xidx].im) + (a_re *
+          reconVar1->data[xidx].re - a_im * reconVar1->data[xidx].im));
+        y->data[i].im = 0.5 * ((ytmp->data[xidx].re * reconVar2->data[xidx].im +
+          ytmp->data[xidx].im * reconVar2->data[xidx].re) + (a_re *
+          reconVar1->data[xidx].im + a_im * reconVar1->data[xidx].re));
       }
 
       emxFree_creal_T(&reconVar2);
       emxFree_creal_T(&reconVar1);
+      emxFree_int32_T(&wrapIndex);
+      emxFree_creal_T(&ytmp);
+    }
+
+    //
+    // Arguments    : const double x[1820]
+    //                emxArray_creal_T *y
+    //                int unsigned_nRows
+    //                const emxArray_real_T *costab
+    //                const emxArray_real_T *sintab
+    // Return Type  : void
+    //
+    void FFTImplementationCallback::doHalfLengthRadix2(const double x[1820],
+      emxArray_creal_T *y, int unsigned_nRows, const emxArray_real_T *costab,
+      const emxArray_real_T *sintab)
+    {
+      emxArray_creal_T *reconVar1;
+      emxArray_creal_T *reconVar2;
+      emxArray_int32_T *bitrevIndex;
+      emxArray_int32_T *wrapIndex;
+      emxArray_real_T *hcostab;
+      emxArray_real_T *hsintab;
+      double temp_im;
+      double temp_re;
+      double z;
+      int hszCostab;
+      int i;
+      int iDelta;
+      int istart;
+      int j;
+      int k;
+      int nRows;
+      int nRowsD2;
+      emxInit_real_T(&hcostab, 2);
+      emxInit_real_T(&hsintab, 2);
+      nRows = unsigned_nRows / 2;
+      istart = nRows - 2;
+      nRowsD2 = nRows / 2;
+      k = nRowsD2 / 2;
+      hszCostab = costab->size[1] / 2;
+      iDelta = hcostab->size[0] * hcostab->size[1];
+      hcostab->size[0] = 1;
+      hcostab->size[1] = hszCostab;
+      emxEnsureCapacity_real_T(hcostab, iDelta);
+      iDelta = hsintab->size[0] * hsintab->size[1];
+      hsintab->size[0] = 1;
+      hsintab->size[1] = hszCostab;
+      emxEnsureCapacity_real_T(hsintab, iDelta);
+      for (i = 0; i < hszCostab; i++) {
+        iDelta = ((i + 1) << 1) - 2;
+        hcostab->data[i] = costab->data[iDelta];
+        hsintab->data[i] = sintab->data[iDelta];
+      }
+
+      emxInit_int32_T(&wrapIndex, 2);
+      emxInit_creal_T(&reconVar1, 1);
+      emxInit_creal_T(&reconVar2, 1);
+      iDelta = reconVar1->size[0];
+      reconVar1->size[0] = nRows;
+      emxEnsureCapacity_creal_T(reconVar1, iDelta);
+      iDelta = reconVar2->size[0];
+      reconVar2->size[0] = nRows;
+      emxEnsureCapacity_creal_T(reconVar2, iDelta);
+      iDelta = wrapIndex->size[0] * wrapIndex->size[1];
+      wrapIndex->size[0] = 1;
+      wrapIndex->size[1] = nRows;
+      emxEnsureCapacity_int32_T(wrapIndex, iDelta);
+      for (i = 0; i < nRows; i++) {
+        z = sintab->data[i];
+        temp_re = costab->data[i];
+        reconVar1->data[i].re = z + 1.0;
+        reconVar1->data[i].im = -temp_re;
+        reconVar2->data[i].re = 1.0 - z;
+        reconVar2->data[i].im = temp_re;
+        if (i + 1 != 1) {
+          wrapIndex->data[i] = (nRows - i) + 1;
+        } else {
+          wrapIndex->data[0] = 1;
+        }
+      }
+
+      emxInit_int32_T(&bitrevIndex, 1);
+      z = static_cast<double>(unsigned_nRows) / 2.0;
+      iDelta = y->size[0];
+      if (iDelta >= nRows) {
+        iDelta = nRows;
+      }
+
+      FFTImplementationCallback::get_bitrevIndex((iDelta - 1), (static_cast<int>
+        (z)), (bitrevIndex));
+      hszCostab = 0;
+      if (1820 < unsigned_nRows) {
+        iDelta = 1820;
+      } else {
+        iDelta = unsigned_nRows;
+      }
+
+      iDelta = static_cast<int>(static_cast<double>(iDelta) / 2.0);
+      for (i = 0; i < iDelta; i++) {
+        y->data[bitrevIndex->data[i] - 1].re = x[hszCostab];
+        y->data[bitrevIndex->data[i] - 1].im = x[hszCostab + 1];
+        hszCostab += 2;
+      }
+
+      emxFree_int32_T(&bitrevIndex);
+      if (nRows > 1) {
+        for (i = 0; i <= istart; i += 2) {
+          temp_re = y->data[i + 1].re;
+          temp_im = y->data[i + 1].im;
+          y->data[i + 1].re = y->data[i].re - y->data[i + 1].re;
+          y->data[i + 1].im = y->data[i].im - y->data[i + 1].im;
+          y->data[i].re += temp_re;
+          y->data[i].im += temp_im;
+        }
+      }
+
+      iDelta = 2;
+      hszCostab = 4;
+      nRows = ((k - 1) << 2) + 1;
+      while (k > 0) {
+        int temp_re_tmp;
+        for (i = 0; i < nRows; i += hszCostab) {
+          temp_re_tmp = i + iDelta;
+          temp_re = y->data[temp_re_tmp].re;
+          temp_im = y->data[temp_re_tmp].im;
+          y->data[temp_re_tmp].re = y->data[i].re - temp_re;
+          y->data[temp_re_tmp].im = y->data[i].im - temp_im;
+          y->data[i].re += temp_re;
+          y->data[i].im += temp_im;
+        }
+
+        istart = 1;
+        for (j = k; j < nRowsD2; j += k) {
+          double twid_im;
+          double twid_re;
+          int ihi;
+          twid_re = hcostab->data[j];
+          twid_im = hsintab->data[j];
+          i = istart;
+          ihi = istart + nRows;
+          while (i < ihi) {
+            temp_re_tmp = i + iDelta;
+            temp_re = twid_re * y->data[temp_re_tmp].re - twid_im * y->
+              data[temp_re_tmp].im;
+            temp_im = twid_re * y->data[temp_re_tmp].im + twid_im * y->
+              data[temp_re_tmp].re;
+            y->data[temp_re_tmp].re = y->data[i].re - temp_re;
+            y->data[temp_re_tmp].im = y->data[i].im - temp_im;
+            y->data[i].re += temp_re;
+            y->data[i].im += temp_im;
+            i += hszCostab;
+          }
+
+          istart++;
+        }
+
+        k /= 2;
+        iDelta = hszCostab;
+        hszCostab += hszCostab;
+        nRows -= iDelta;
+      }
+
+      emxFree_real_T(&hsintab);
+      emxFree_real_T(&hcostab);
+      FFTImplementationCallback::getback_radix2_fft((y), (reconVar1), (reconVar2),
+        (wrapIndex), (static_cast<int>(z)));
+      emxFree_creal_T(&reconVar2);
+      emxFree_creal_T(&reconVar1);
+      emxFree_int32_T(&wrapIndex);
     }
 
     //
@@ -880,6 +1237,111 @@ namespace coder
     }
 
     //
+    // Arguments    : int nRows
+    //                boolean_T useRadix2
+    //                emxArray_real_T *costab
+    //                emxArray_real_T *sintab
+    //                emxArray_real_T *sintabinv
+    // Return Type  : void
+    //
+    void FFTImplementationCallback::generate_twiddle_tables(int nRows, boolean_T
+      useRadix2, emxArray_real_T *costab, emxArray_real_T *sintab,
+      emxArray_real_T *sintabinv)
+    {
+      emxArray_real_T *costab1q;
+      double e;
+      int i;
+      int k;
+      int n;
+      int nd2;
+      emxInit_real_T(&costab1q, 2);
+      e = 6.2831853071795862 / static_cast<double>(nRows);
+      n = nRows / 2 / 2;
+      i = costab1q->size[0] * costab1q->size[1];
+      costab1q->size[0] = 1;
+      costab1q->size[1] = n + 1;
+      emxEnsureCapacity_real_T(costab1q, i);
+      costab1q->data[0] = 1.0;
+      nd2 = n / 2 - 1;
+      for (k = 0; k <= nd2; k++) {
+        costab1q->data[k + 1] = std::cos(e * (static_cast<double>(k) + 1.0));
+      }
+
+      i = nd2 + 2;
+      nd2 = n - 1;
+      for (k = i; k <= nd2; k++) {
+        costab1q->data[k] = std::sin(e * static_cast<double>(n - k));
+      }
+
+      costab1q->data[n] = 0.0;
+      if (!useRadix2) {
+        n = costab1q->size[1] - 1;
+        nd2 = (costab1q->size[1] - 1) << 1;
+        i = costab->size[0] * costab->size[1];
+        costab->size[0] = 1;
+        costab->size[1] = nd2 + 1;
+        emxEnsureCapacity_real_T(costab, i);
+        i = sintab->size[0] * sintab->size[1];
+        sintab->size[0] = 1;
+        sintab->size[1] = nd2 + 1;
+        emxEnsureCapacity_real_T(sintab, i);
+        costab->data[0] = 1.0;
+        sintab->data[0] = 0.0;
+        i = sintabinv->size[0] * sintabinv->size[1];
+        sintabinv->size[0] = 1;
+        sintabinv->size[1] = nd2 + 1;
+        emxEnsureCapacity_real_T(sintabinv, i);
+        for (k = 0; k < n; k++) {
+          sintabinv->data[k + 1] = costab1q->data[(n - k) - 1];
+        }
+
+        i = costab1q->size[1];
+        for (k = i; k <= nd2; k++) {
+          sintabinv->data[k] = costab1q->data[k - n];
+        }
+
+        for (k = 0; k < n; k++) {
+          costab->data[k + 1] = costab1q->data[k + 1];
+          sintab->data[k + 1] = -costab1q->data[(n - k) - 1];
+        }
+
+        i = costab1q->size[1];
+        for (k = i; k <= nd2; k++) {
+          costab->data[k] = -costab1q->data[nd2 - k];
+          sintab->data[k] = -costab1q->data[k - n];
+        }
+      } else {
+        n = costab1q->size[1] - 1;
+        nd2 = (costab1q->size[1] - 1) << 1;
+        i = costab->size[0] * costab->size[1];
+        costab->size[0] = 1;
+        costab->size[1] = nd2 + 1;
+        emxEnsureCapacity_real_T(costab, i);
+        i = sintab->size[0] * sintab->size[1];
+        sintab->size[0] = 1;
+        sintab->size[1] = nd2 + 1;
+        emxEnsureCapacity_real_T(sintab, i);
+        costab->data[0] = 1.0;
+        sintab->data[0] = 0.0;
+        for (k = 0; k < n; k++) {
+          costab->data[k + 1] = costab1q->data[k + 1];
+          sintab->data[k + 1] = -costab1q->data[(n - k) - 1];
+        }
+
+        i = costab1q->size[1];
+        for (k = i; k <= nd2; k++) {
+          costab->data[k] = -costab1q->data[nd2 - k];
+          sintab->data[k] = -costab1q->data[k - n];
+        }
+
+        sintabinv->size[0] = 1;
+        sintabinv->size[1] = 0;
+      }
+
+      emxFree_real_T(&costab1q);
+    }
+
+    //
     // Arguments    : int nfft
     //                boolean_T useRadix2
     //                int *n2blue
@@ -925,6 +1387,60 @@ namespace coder
         }
 
         *nRows = *n2blue;
+      }
+    }
+
+    //
+    // Arguments    : const emxArray_real_T *x
+    //                int n1_unsigned
+    //                const emxArray_real_T *costab
+    //                const emxArray_real_T *sintab
+    //                emxArray_creal_T *y
+    // Return Type  : void
+    //
+    void FFTImplementationCallback::r2br_r2dit_trig(const emxArray_real_T *x,
+      int n1_unsigned, const emxArray_real_T *costab, const emxArray_real_T
+      *sintab, emxArray_creal_T *y)
+    {
+      int u0;
+      u0 = y->size[0];
+      y->size[0] = n1_unsigned;
+      emxEnsureCapacity_creal_T(y, u0);
+      if (n1_unsigned > x->size[0]) {
+        u0 = y->size[0];
+        y->size[0] = n1_unsigned;
+        emxEnsureCapacity_creal_T(y, u0);
+        for (u0 = 0; u0 < n1_unsigned; u0++) {
+          y->data[u0].re = 0.0;
+          y->data[u0].im = 0.0;
+        }
+      }
+
+      if (n1_unsigned != 1) {
+        FFTImplementationCallback::doHalfLengthRadix2((x), (y), (n1_unsigned),
+          (costab), (sintab));
+      } else {
+        int i;
+        int loop_ub;
+        u0 = x->size[0];
+        if (u0 >= 1) {
+          u0 = 1;
+        }
+
+        loop_ub = u0 - 2;
+        i = 0;
+        int exitg1;
+        do {
+          if (i <= loop_ub) {
+            y->data[0].re = x->data[0];
+            y->data[0].im = 0.0;
+            exitg1 = 1;
+          } else {
+            y->data[0].re = x->data[0];
+            y->data[0].im = 0.0;
+            exitg1 = 1;
+          }
+        } while (exitg1 == 0);
       }
     }
 

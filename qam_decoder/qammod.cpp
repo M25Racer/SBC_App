@@ -2,14 +2,14 @@
 // File: qammod.cpp
 //
 // MATLAB Coder version            : 5.1
-// C/C++ source code generated on  : 25-Apr-2022 13:09:26
+// C/C++ source code generated on  : 29-Apr-2022 10:21:15
 //
 
 // Include Files
 #include "qammod.h"
-#include "HS_EWL_RECEIVE_emxutil.h"
-#include "HS_EWL_RECEIVE_rtwutil.h"
-#include "HS_EWL_RECEIVE_types.h"
+#include "HS_EWL_DEMOD_QAM_emxutil.h"
+#include "HS_EWL_DEMOD_QAM_rtwutil.h"
+#include "HS_EWL_DEMOD_QAM_types.h"
 #include "getSquareConstellation.h"
 #include "log2.h"
 #include "rt_nonfinite.h"

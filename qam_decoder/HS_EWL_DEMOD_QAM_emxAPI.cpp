@@ -1,14 +1,14 @@
 //
-// File: HS_EWL_RECEIVE_emxAPI.cpp
+// File: HS_EWL_DEMOD_QAM_emxAPI.cpp
 //
 // MATLAB Coder version            : 5.1
-// C/C++ source code generated on  : 25-Apr-2022 13:09:26
+// C/C++ source code generated on  : 29-Apr-2022 10:21:15
 //
 
 // Include Files
-#include "HS_EWL_RECEIVE_emxAPI.h"
-#include "HS_EWL_RECEIVE_emxutil.h"
-#include "HS_EWL_RECEIVE_types.h"
+#include "HS_EWL_DEMOD_QAM_emxAPI.h"
+#include "HS_EWL_DEMOD_QAM_emxutil.h"
+#include "HS_EWL_DEMOD_QAM_types.h"
 #include "rt_nonfinite.h"
 #include <cstdlib>
 
@@ -120,7 +120,7 @@ void emxInitArray_real_T(emxArray_real_T **pEmxArray, int numDimensions)
 }
 
 //
-// File trailer for HS_EWL_RECEIVE_emxAPI.cpp
+// File trailer for HS_EWL_DEMOD_QAM_emxAPI.cpp
 //
 // [EOF]
 //

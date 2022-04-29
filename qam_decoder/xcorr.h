@@ -2,13 +2,14 @@
 // File: xcorr.h
 //
 // MATLAB Coder version            : 5.1
-// C/C++ source code generated on  : 25-Apr-2022 13:09:26
+// C/C++ source code generated on  : 29-Apr-2022 10:21:15
 //
 #ifndef XCORR_H
 #define XCORR_H
 
 // Include Files
 #include "rtwtypes.h"
+#include "omp.h"
 #include <cstddef>
 #include <cstdlib>
 
@@ -19,6 +20,8 @@ struct emxArray_real_T;
 namespace coder
 {
   void xcorr(const emxArray_real_T *x, const emxArray_real_T *varargin_1,
+             emxArray_real_T *c, emxArray_real_T *lags);
+  void xcorr(const emxArray_real_T *x, const double varargin_1[1820],
              emxArray_real_T *c, emxArray_real_T *lags);
 }
 

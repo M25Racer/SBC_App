@@ -2,17 +2,15 @@
 // File: FIRDecimator.cpp
 //
 // MATLAB Coder version            : 5.1
-// C/C++ source code generated on  : 25-Apr-2022 13:09:26
+// C/C++ source code generated on  : 29-Apr-2022 10:21:15
 //
 
 // Include Files
 #include "FIRDecimator.h"
-#include "HS_EWL_RECEIVE_types.h"
+#include "HS_EWL_DEMOD_QAM_types.h"
 #include "rt_nonfinite.h"
+#include "setup.h"
 #include <cstring>
-
-// Function Declarations
-static int div_nde_s32_floor(int numerator, int denominator);
 
 // Function Definitions
 //
@@ -49,34 +47,9 @@ namespace coder
     }
 
     //
-    // Arguments    : int numerator
-    //                int denominator
-    // Return Type  : int
+    // Arguments    : void
+    // Return Type  : void
     //
-  }
-}
-
-static int div_nde_s32_floor(int numerator, int denominator)
-{
-  int b_numerator;
-  if (((numerator < 0) != (denominator < 0)) && (numerator % denominator != 0))
-  {
-    b_numerator = -1;
-  } else {
-    b_numerator = 0;
-  }
-
-  return numerator / denominator + b_numerator;
-}
-
-//
-// Arguments    : void
-// Return Type  : void
-//
-namespace coder
-{
-  namespace dspcodegen
-  {
     FIRDecimator::FIRDecimator()
     {
       this->matlabCodegenIsDeleted = true;
@@ -367,92 +340,21 @@ namespace coder
     void FIRDecimator::step(const emxArray_creal_T *varargin_1, creal_T
       varargout_1_data[], int varargout_1_size[2])
     {
-      dsp_FIRDecimator_0 *obj;
-      int curTapIdx;
-      int inputIdx;
-      int maxWindow;
+      emxArray_creal_T b_varargin_1;
+      int c_varargin_1[2];
+      int varargin_1_idx_0;
       if (this->isInitialized != 1) {
         this->setupAndReset();
       }
 
-      obj = &this->cSFunObject;
-
-      // System object Outputs function: dsp.FIRDecimator
-      this->cSFunObject.O0_Y0.size[0] = static_cast<int>(static_cast<double>
-        (varargin_1->size[0]) / 52.0);
-      this->cSFunObject.O0_Y0.size[1] = 1;
-      if (this->cSFunObject.W5_PrevNumChan == -1) {
-        this->cSFunObject.W5_PrevNumChan = 1;
-      }
-
-      this->cSFunObject.O0_Y0.size[0] = div_nde_s32_floor(varargin_1->size[0],
-        52);
-      this->cSFunObject.O0_Y0.size[1] = 1;
-      if (varargin_1->size[0] != 0) {
-        int cffIdx;
-        int outBufIdx;
-        int phaseIdx;
-        inputIdx = 0;
-        curTapIdx = obj->W4_TapDelayIndex;
-        phaseIdx = obj->W0_PhaseIdx;
-        cffIdx = obj->W2_CoeffIdx;
-        outBufIdx = 0;
-        maxWindow = (phaseIdx + 1) * 10;
-        for (int iIdx = 0; iIdx < varargin_1->size[0]; iIdx++) {
-          int jIdx;
-          obj->W1_Sums.re += varargin_1->data[inputIdx].re * obj->P1_FILT[cffIdx];
-          obj->W1_Sums.im += varargin_1->data[inputIdx].im * obj->P1_FILT[cffIdx];
-          cffIdx++;
-          for (jIdx = curTapIdx + 1; jIdx < maxWindow; jIdx++) {
-            obj->W1_Sums.re += obj->W3_StatesBuff[jIdx].re * obj->P1_FILT[cffIdx];
-            obj->W1_Sums.im += obj->W3_StatesBuff[jIdx].im * obj->P1_FILT[cffIdx];
-            cffIdx++;
-          }
-
-          for (jIdx = maxWindow - 10; jIdx <= curTapIdx; jIdx++) {
-            obj->W1_Sums.re += obj->W3_StatesBuff[jIdx].re * obj->P1_FILT[cffIdx];
-            obj->W1_Sums.im += obj->W3_StatesBuff[jIdx].im * obj->P1_FILT[cffIdx];
-            cffIdx++;
-          }
-
-          obj->W3_StatesBuff[curTapIdx] = varargin_1->data[inputIdx];
-          inputIdx++;
-          curTapIdx += 10;
-          if (curTapIdx >= 520) {
-            curTapIdx -= 520;
-          }
-
-          phaseIdx++;
-          if (phaseIdx < 52) {
-            maxWindow += 10;
-          } else {
-            obj->O0_Y0.data[outBufIdx] = obj->W1_Sums;
-            outBufIdx++;
-            obj->W1_Sums.re = 0.0;
-            obj->W1_Sums.im = 0.0;
-            phaseIdx = 0;
-            cffIdx = 0;
-            curTapIdx--;
-            if (curTapIdx < 0) {
-              curTapIdx += 10;
-            }
-
-            maxWindow = 10;
-          }
-        }
-
-        this->cSFunObject.W4_TapDelayIndex = curTapIdx;
-        this->cSFunObject.W2_CoeffIdx = cffIdx;
-        this->cSFunObject.W0_PhaseIdx = phaseIdx;
-      }
-
-      varargout_1_size[0] = this->cSFunObject.O0_Y0.size[0];
-      varargout_1_size[1] = this->cSFunObject.O0_Y0.size[1];
-      inputIdx = this->cSFunObject.O0_Y0.size[0] * this->cSFunObject.O0_Y0.size
-        [1];
-      for (curTapIdx = 0; curTapIdx < inputIdx; curTapIdx++) {
-        varargout_1_data[curTapIdx] = this->cSFunObject.O0_Y0.data[curTapIdx];
-      }
+      varargin_1_idx_0 = varargin_1->size[0];
+      b_varargin_1 = *varargin_1;
+      c_varargin_1[0] = varargin_1_idx_0;
+      c_varargin_1[1] = 1;
+      b_varargin_1.size = &c_varargin_1[0];
+      b_varargin_1.numDimensions = 2;
+      Outputs(&this->cSFunObject, &b_varargin_1, varargout_1_data,
+              varargout_1_size);
     }
   }
 }

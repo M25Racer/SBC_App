@@ -2,138 +2,35 @@
 // File: HS_EWL_FREQ_ACQ.cpp
 //
 // MATLAB Coder version            : 5.1
-// C/C++ source code generated on  : 25-Apr-2022 13:09:26
+// C/C++ source code generated on  : 29-Apr-2022 10:21:15
 //
 
 // Include Files
 #include "HS_EWL_FREQ_ACQ.h"
 #include "FIRDecimator.h"
-#include "HS_EWL_RECEIVE_data.h"
-#include "HS_EWL_RECEIVE_emxutil.h"
-#include "HS_EWL_RECEIVE_rtwutil.h"
-#include "HS_EWL_RECEIVE_types.h"
+#include "HS_EWL_DEMOD_QAM.h"
+#include "HS_EWL_DEMOD_QAM_data.h"
+#include "HS_EWL_DEMOD_QAM_emxutil.h"
+#include "HS_EWL_DEMOD_QAM_initialize.h"
+#include "HS_EWL_DEMOD_QAM_rtwutil.h"
+#include "HS_EWL_DEMOD_QAM_types.h"
 #include "RaisedCosineReceiveFilter.h"
 #include "minOrMax.h"
 #include "qammod.h"
 #include "rat.h"
 #include "rt_nonfinite.h"
-#include "rt_defines.h"
 #include "rt_nonfinite.h"
 #include <cmath>
 
 // Variable Definitions
-static coder::comm::RaisedCosineReceiveFilter rxFilter1;
-static boolean_T rxFilter1_not_empty;
+static coder::comm::RaisedCosineReceiveFilter b_rxFilter1;
+static boolean_T b_rxFilter1_not_empty;
 
 // Function Declarations
-static double absolute_min(double idx, const double FF[50]);
 static double optimize_sin(const emxArray_real_T *t, const emxArray_real_T *s2,
   const double bounds[2], double f0);
-static double rt_atan2d_snf(double u0, double u1);
 
 // Function Definitions
-//
-// Arguments    : double idx
-//                const double FF[50]
-// Return Type  : double
-//
-static double absolute_min(double idx, const double FF[50])
-{
-  static const short iv1[9] = { 2304, 2401, 2500, 48, 49, 50, 1, 1, 1 };
-
-  static const signed char iv[9] = { 1, 4, 9, 1, 2, 3, 1, 1, 1 };
-
-  double X[9];
-  double Y[3];
-  double a21;
-  double maxval;
-  double mn_idx;
-  int r1;
-  int r2;
-  int r3;
-  switch (static_cast<int>(idx)) {
-   case 1:
-    for (r1 = 0; r1 < 9; r1++) {
-      X[r1] = iv[r1];
-    }
-
-    Y[0] = FF[0];
-    Y[1] = FF[1];
-    Y[2] = FF[2];
-    break;
-
-   case 50:
-    for (r1 = 0; r1 < 9; r1++) {
-      X[r1] = iv1[r1];
-    }
-
-    Y[0] = FF[47];
-    Y[1] = FF[48];
-    Y[2] = FF[49];
-    break;
-
-   default:
-    X[0] = (idx - 1.0) * (idx - 1.0);
-    X[3] = idx - 1.0;
-    X[6] = 1.0;
-    X[1] = idx * idx;
-    X[4] = idx;
-    X[7] = 1.0;
-    X[2] = (idx + 1.0) * (idx + 1.0);
-    X[5] = idx + 1.0;
-    X[8] = 1.0;
-    Y[0] = FF[static_cast<int>(idx - 1.0) - 1];
-    Y[1] = FF[static_cast<int>(idx) - 1];
-    Y[2] = FF[static_cast<int>(idx + 1.0) - 1];
-    break;
-  }
-
-  r1 = 0;
-  r2 = 1;
-  r3 = 2;
-  maxval = std::abs(X[0]);
-  a21 = std::abs(X[1]);
-  if (a21 > maxval) {
-    maxval = a21;
-    r1 = 1;
-    r2 = 0;
-  }
-
-  if (std::abs(X[2]) > maxval) {
-    r1 = 2;
-    r2 = 1;
-    r3 = 0;
-  }
-
-  X[r2] /= X[r1];
-  X[r3] /= X[r1];
-  X[r2 + 3] -= X[r2] * X[r1 + 3];
-  X[r3 + 3] -= X[r3] * X[r1 + 3];
-  X[r2 + 6] -= X[r2] * X[r1 + 6];
-  X[r3 + 6] -= X[r3] * X[r1 + 6];
-  if (std::abs(X[r3 + 3]) > std::abs(X[r2 + 3])) {
-    int rtemp;
-    rtemp = r2;
-    r2 = r3;
-    r3 = rtemp;
-  }
-
-  X[r3 + 3] /= X[r2 + 3];
-  X[r3 + 6] -= X[r3 + 3] * X[r2 + 6];
-  a21 = Y[r2] - Y[r1] * X[r2];
-  maxval = ((Y[r3] - Y[r1] * X[r3]) - a21 * X[r3 + 3]) / X[r3 + 6];
-  a21 -= maxval * X[r2 + 6];
-  a21 /= X[r2 + 3];
-  maxval = ((Y[r1] - maxval * X[r1 + 6]) - a21 * X[r1 + 3]) / X[r1];
-  if (maxval > 0.0) {
-    mn_idx = -a21 / 2.0 / maxval;
-  } else {
-    mn_idx = idx;
-  }
-
-  return mn_idx;
-}
-
 //
 // Arguments    : const emxArray_real_T *t
 //                const emxArray_real_T *s2
@@ -278,7 +175,7 @@ static double optimize_sin(const emxArray_real_T *t, const emxArray_real_T *s2,
       emxEnsureCapacity_real_T(y, i2);
       nx = a->size[0];
       for (k = 0; k < nx; k++) {
-        y->data[k] = a->data[k] * a->data[k];
+        y->data[k] = rt_powd_snf(a->data[k], 2.0);
       }
 
       nx = y->size[0];
@@ -310,7 +207,7 @@ static double optimize_sin(const emxArray_real_T *t, const emxArray_real_T *s2,
       emxEnsureCapacity_real_T(y, i2);
       nx = a->size[0];
       for (k = 0; k < nx; k++) {
-        y->data[k] = a->data[k] * a->data[k];
+        y->data[k] = rt_powd_snf(a->data[k], 2.0);
       }
 
       nx = y->size[0];
@@ -364,7 +261,7 @@ static double optimize_sin(const emxArray_real_T *t, const emxArray_real_T *s2,
       emxEnsureCapacity_real_T(y, i2);
       nx = a->size[0];
       for (k = 0; k < nx; k++) {
-        y->data[k] = a->data[k] * a->data[k];
+        y->data[k] = rt_powd_snf(a->data[k], 2.0);
       }
 
       nx = y->size[0];
@@ -396,7 +293,7 @@ static double optimize_sin(const emxArray_real_T *t, const emxArray_real_T *s2,
       emxEnsureCapacity_real_T(y, i2);
       nx = a->size[0];
       for (k = 0; k < nx; k++) {
-        y->data[k] = a->data[k] * a->data[k];
+        y->data[k] = rt_powd_snf(a->data[k], 2.0);
       }
 
       nx = y->size[0];
@@ -482,7 +379,7 @@ static double optimize_sin(const emxArray_real_T *t, const emxArray_real_T *s2,
     emxEnsureCapacity_real_T(y, i2);
     nx = a->size[0];
     for (k = 0; k < nx; k++) {
-      y->data[k] = a->data[k] * a->data[k];
+      y->data[k] = rt_powd_snf(a->data[k], 2.0);
     }
 
     nx = y->size[0];
@@ -509,52 +406,12 @@ static double optimize_sin(const emxArray_real_T *t, const emxArray_real_T *s2,
 }
 
 //
-// Arguments    : double u0
-//                double u1
-// Return Type  : double
-//
-static double rt_atan2d_snf(double u0, double u1)
-{
-  double y;
-  if (rtIsNaN(u0) || rtIsNaN(u1)) {
-    y = rtNaN;
-  } else if (rtIsInf(u0) && rtIsInf(u1)) {
-    int b_u0;
-    int b_u1;
-    if (u0 > 0.0) {
-      b_u0 = 1;
-    } else {
-      b_u0 = -1;
-    }
-
-    if (u1 > 0.0) {
-      b_u1 = 1;
-    } else {
-      b_u1 = -1;
-    }
-
-    y = std::atan2(static_cast<double>(b_u0), static_cast<double>(b_u1));
-  } else if (u1 == 0.0) {
-    if (u0 > 0.0) {
-      y = RT_PI / 2.0;
-    } else if (u0 < 0.0) {
-      y = -(RT_PI / 2.0);
-    } else {
-      y = 0.0;
-    }
-  } else {
-    y = std::atan2(u0, u1);
-  }
-
-  return y;
-}
-
-//
 // %#codegen
 //                % Length of a preambule in symbols
 //               % Length of whole message in symbols
 //               % QAM order
-// Arguments    : const emxArray_real_T *data
+//  Preamble QAM symbol
+// Arguments    : emxArray_real_T *data
 //                double len
 //                double Fs
 //                double f_opt
@@ -564,7 +421,6 @@ static double rt_atan2d_snf(double u0, double u1)
 //                double msg_len
 //                double M
 //                double pre_qam
-//                double warningStatusLocal
 //                double *index_data
 //                double *len_data
 //                double f_est_data[]
@@ -572,11 +428,11 @@ static double rt_atan2d_snf(double u0, double u1)
 //                double *warningStatus
 // Return Type  : void
 //
-void HS_EWL_FREQ_ACQ(const emxArray_real_T *data, double len, double Fs, double
-                     f_opt, double sps, double mode, double Pl, double msg_len,
-                     double M, double pre_qam, double warningStatusLocal, double
-                     *index_data, double *len_data, double f_est_data[], int
-                     f_est_size[1], double *warningStatus)
+void HS_EWL_FREQ_ACQ(emxArray_real_T *data, double len, double Fs, double f_opt,
+                     double sps, double mode, double Pl, double msg_len, double
+                     M, double pre_qam, double *index_data, double *len_data,
+                     double f_est_data[], int f_est_size[1], double
+                     *warningStatus)
 {
   static const double dv[1001] = { 36.999398630366194, 36.957771062942847,
     36.915723654879763, 36.873280846438, 36.8304670778786, 36.78730678946264,
@@ -1085,24 +941,22 @@ void HS_EWL_FREQ_ACQ(const emxArray_real_T *data, double len, double Fs, double
   emxArray_real_T *tt;
   creal_T z2_data[255];
   double b_x[5];
-  double position[4];
   double b_sps[2];
-  double count;
   double endPreamPoint_im;
   double endPreamPoint_re;
-  double sa;
+  double pre_from;
+  double receiveByteLen;
   double startPreamPoint_im;
   double startPreamPoint_re;
   int z2_size[2];
-  int b_i;
-  int flag_amp;
   int i;
-  int k;
+  int i1;
   int loop_ub;
   int nx;
-  short i_data[1];
-  boolean_T exitg1;
-  emxInit_real_T(&t0, 2);
+  short ii_data[1];
+  if (!isInitialized_HS_EWL_DEMOD_QAM) {
+    HS_EWL_DEMOD_QAM_initialize();
+  }
 
   //  function f_est =  HS_EWL_FREQ_ACQ(data, len, Fs, f_opt, mode, ... %#codegen 
   //      Pl          ,...               % Length of a preambule in symbols
@@ -1126,7 +980,25 @@ void HS_EWL_FREQ_ACQ(const emxArray_real_T *data, double len, double Fs, double
   //          'FilterSpanInSymbols',10, ...
   //          'InputSamplesPerSymbol',8,'DecimationFactor',8);
   //  end
-  //  Preamble QAM symbol
+  *warningStatus = 0.0;
+  receiveByteLen = rt_roundd_snf(len / sps);
+  if (receiveByteLen < msg_len) {
+    i = data->size[1];
+    receiveByteLen = (msg_len - receiveByteLen) * sps;
+    nx = static_cast<int>(receiveByteLen);
+    i1 = data->size[0] * data->size[1];
+    data->size[1] += static_cast<int>(receiveByteLen);
+    emxEnsureCapacity_real_T(data, i1);
+    for (i1 = 0; i1 < nx; i1++) {
+      data->data[i + i1] = 0.0;
+    }
+
+    len += receiveByteLen;
+    *warningStatus = 1.0;
+  }
+
+  emxInit_real_T(&t0, 2);
+
   // load
   // generate time vector
   f_est_size[0] = 1;
@@ -1162,17 +1034,17 @@ void HS_EWL_FREQ_ACQ(const emxArray_real_T *data, double len, double Fs, double
   }
 
   i = t0->size[0] * t0->size[1];
-  k = t0->size[0] * t0->size[1];
+  i1 = t0->size[0] * t0->size[1];
   t0->size[0] = 1;
-  emxEnsureCapacity_real_T(t0, k);
+  emxEnsureCapacity_real_T(t0, i1);
   loop_ub = i - 1;
   for (i = 0; i <= loop_ub; i++) {
     t0->data[i] /= Fs;
   }
 
-  if (!rxFilter1_not_empty) {
-    rxFilter1.init();
-    rxFilter1_not_empty = true;
+  if (!b_rxFilter1_not_empty) {
+    b_rxFilter1.init();
+    b_rxFilter1_not_empty = true;
   }
 
   startPreamPoint_re = 0.0;
@@ -1183,66 +1055,13 @@ void HS_EWL_FREQ_ACQ(const emxArray_real_T *data, double len, double Fs, double
   //  preamble window
   //  dispersion for reamble point
   //  find preamble start
-  position[0] = 0.0;
-  position[1] = 0.0;
-  position[2] = 0.0;
-  position[3] = 0.0;
-  count = 0.0;
-  flag_amp = 1;
-
-  // win = s(i:i+win_len-1);
-  b_i = 0;
-  exitg1 = false;
-  while ((!exitg1) && (b_i <= static_cast<int>(len - 11.0) - 1)) {
-    if (static_cast<double>(b_i) + 1.0 > ((static_cast<double>(b_i) + 1.0) +
-         11.0) - 1.0) {
-      i = -1;
-      k = -1;
-    } else {
-      i = b_i - 1;
-      k = static_cast<int>(((static_cast<double>(b_i) + 1.0) + 11.0) - 1.0) - 1;
-    }
-
-    nx = k - i;
-    if (nx == 0) {
-      sa = 0.0;
-    } else {
-      sa = data->data[i + 1];
-      for (k = 2; k <= nx; k++) {
-        sa += data->data[i + k];
-      }
-    }
-
-    sa /= static_cast<double>(nx);
-    if ((sa > 0.2) && (flag_amp == 1)) {
-      count++;
-      position[static_cast<int>(count) - 1] = static_cast<double>(b_i) + 1.0;
-      flag_amp = 0;
-    }
-
-    if (sa < -0.2) {
-      flag_amp = 1;
-    }
-
-    if (count == 4.0) {
-      exitg1 = true;
-    } else {
-      b_i++;
-    }
-  }
-
-  if (count > 0.0) {
-    count = position[static_cast<int>(count) - 1];
-  } else {
-    count = -1.0;
-  }
-
+  pre_from = preambule_from(data, len);
   emxInit_real_T(&s2, 2);
   emxInit_real_T(&testSignal, 1);
   emxInit_real_T(&tt, 1);
   emxInit_creal_T(&r, 1);
   emxInit_creal_T(&b_testSignal, 1);
-  if ((count < 0.0) || (rt_roundd_snf(count / sps) > 50.0)) {
+  if ((pre_from < 0.0) || (rt_roundd_snf(pre_from / sps) > 50.0)) {
     *warningStatus = 2.0;
   } else {
     creal_T x;
@@ -1251,75 +1070,78 @@ void HS_EWL_FREQ_ACQ(const emxArray_real_T *data, double len, double Fs, double
     double del_re;
     double endPreamPoint_re_tmp;
     double startPreamPoint_re_tmp;
+    int k;
+    boolean_T exitg1;
 
     // find preamble end
-    sa = count + sps * (msg_len - 5.0);
-    if (sa > len) {
-      if (count > len) {
+    receiveByteLen = pre_from + sps * (msg_len - 5.0);
+    if (receiveByteLen > len) {
+      if (pre_from > len) {
         i = -1;
-        k = -1;
+        i1 = -1;
       } else {
-        i = static_cast<int>(count) - 2;
-        k = static_cast<int>(len) - 1;
+        i = static_cast<int>(pre_from) - 2;
+        i1 = static_cast<int>(len) - 1;
       }
 
-      nx = static_cast<int>(sa - len);
-      flag_amp = s2->size[0] * s2->size[1];
-      s2->size[0] = 1;
-      loop_ub = k - i;
-      s2->size[1] = loop_ub + nx;
-      emxEnsureCapacity_real_T(s2, flag_amp);
-      for (flag_amp = 0; flag_amp < loop_ub; flag_amp++) {
-        s2->data[flag_amp] = data->data[(i + flag_amp) + 1];
-      }
-
-      for (flag_amp = 0; flag_amp < nx; flag_amp++) {
-        s2->data[(flag_amp + k) - i] = 0.0;
-      }
-
-      sa = coder::internal::maximum(s2);
-      i = s2->size[0] * s2->size[1];
+      nx = static_cast<int>(receiveByteLen - len);
       k = s2->size[0] * s2->size[1];
       s2->size[0] = 1;
+      loop_ub = i1 - i;
+      s2->size[1] = loop_ub + nx;
       emxEnsureCapacity_real_T(s2, k);
-      loop_ub = i - 1;
-      for (i = 0; i <= loop_ub; i++) {
-        s2->data[i] /= sa;
+      for (k = 0; k < loop_ub; k++) {
+        s2->data[k] = data->data[(i + k) + 1];
       }
 
-      *index_data = count;
+      for (k = 0; k < nx; k++) {
+        s2->data[(k + i1) - i] = 0.0;
+      }
+
+      receiveByteLen = coder::internal::maximum(s2);
+      i = s2->size[0] * s2->size[1];
+      i1 = s2->size[0] * s2->size[1];
+      s2->size[0] = 1;
+      emxEnsureCapacity_real_T(s2, i1);
+      loop_ub = i - 1;
+      for (i = 0; i <= loop_ub; i++) {
+        s2->data[i] /= receiveByteLen;
+      }
+
+      *index_data = pre_from;
       *len_data = s2->size[1];
       *warningStatus = 3.0;
     } else {
-      if (count > sa) {
+      if (pre_from > receiveByteLen) {
         i = 0;
-        k = 0;
+        i1 = 0;
       } else {
-        i = static_cast<int>(count) - 1;
-        k = static_cast<int>(sa);
+        i = static_cast<int>(pre_from) - 1;
+        i1 = static_cast<int>(receiveByteLen);
       }
 
-      flag_amp = s2->size[0] * s2->size[1];
-      s2->size[0] = 1;
-      loop_ub = k - i;
-      s2->size[1] = loop_ub;
-      emxEnsureCapacity_real_T(s2, flag_amp);
-      for (k = 0; k < loop_ub; k++) {
-        s2->data[k] = data->data[i + k];
-      }
-
-      sa = coder::internal::maximum(s2);
       k = s2->size[0] * s2->size[1];
       s2->size[0] = 1;
+      loop_ub = i1 - i;
       s2->size[1] = loop_ub;
       emxEnsureCapacity_real_T(s2, k);
-      for (k = 0; k < loop_ub; k++) {
-        s2->data[k] = data->data[i + k] / sa;
+      for (i1 = 0; i1 < loop_ub; i1++) {
+        s2->data[i1] = data->data[i + i1];
       }
 
-      *index_data = count;
+      receiveByteLen = coder::internal::maximum(s2);
+      i1 = s2->size[0] * s2->size[1];
+      s2->size[0] = 1;
+      s2->size[1] = loop_ub;
+      emxEnsureCapacity_real_T(s2, i1);
+      for (i1 = 0; i1 < loop_ub; i1++) {
+        s2->data[i1] = data->data[i + i1] / receiveByteLen;
+      }
+
+      *index_data = pre_from;
       *len_data = s2->size[1];
-      *warningStatus = warningStatusLocal;
+
+      //      warningStatus = warningStatusLocal;
     }
 
     //  normalizing
@@ -1347,34 +1169,34 @@ void HS_EWL_FREQ_ACQ(const emxArray_real_T *data, double len, double Fs, double
         tt->data[i] = s2->data[i];
       }
 
-      sa = sps * (Pl - 2.0);
-      b_sps[0] = sa;
-      b_sps[1] = static_cast<double>(s2->size[1]) - sa;
+      receiveByteLen = sps * (Pl - 2.0);
+      b_sps[0] = receiveByteLen;
+      b_sps[1] = static_cast<double>(s2->size[1]) - receiveByteLen;
       f_opt = optimize_sin(testSignal, tt, b_sps, f_opt);
     }
 
     //  Recover modulation frequency (stage 2)
     Fd = f_opt * sps;
-    coder::rat(Fd / Fs, &sa, &count);
-    lagrange_resamp(s2, sa, count, testSignal);
-    sa = static_cast<double>(testSignal->size[0]) / sps;
-    if (sa < 0.0) {
-      sa = std::ceil(sa);
+    coder::rat(Fd / Fs, &receiveByteLen, &pre_from);
+    lagrange_resamp(s2, receiveByteLen, pre_from, testSignal);
+    receiveByteLen = static_cast<double>(testSignal->size[0]) / sps;
+    if (receiveByteLen < 0.0) {
+      receiveByteLen = std::ceil(receiveByteLen);
     } else {
-      sa = std::floor(sa);
+      receiveByteLen = std::floor(receiveByteLen);
     }
 
-    sa = sa * sps - 1.0;
-    if (rtIsNaN(sa)) {
+    receiveByteLen = receiveByteLen * sps - 1.0;
+    if (rtIsNaN(receiveByteLen)) {
       i = t0->size[0] * t0->size[1];
       t0->size[0] = 1;
       t0->size[1] = 1;
       emxEnsureCapacity_real_T(t0, i);
       t0->data[0] = rtNaN;
-    } else if (sa < 0.0) {
+    } else if (receiveByteLen < 0.0) {
       t0->size[0] = 1;
       t0->size[1] = 0;
-    } else if (rtIsInf(sa) && (0.0 == sa)) {
+    } else if (rtIsInf(receiveByteLen) && (0.0 == receiveByteLen)) {
       i = t0->size[0] * t0->size[1];
       t0->size[0] = 1;
       t0->size[1] = 1;
@@ -1383,7 +1205,7 @@ void HS_EWL_FREQ_ACQ(const emxArray_real_T *data, double len, double Fs, double
     } else {
       i = t0->size[0] * t0->size[1];
       t0->size[0] = 1;
-      loop_ub = static_cast<int>(std::floor(sa));
+      loop_ub = static_cast<int>(std::floor(receiveByteLen));
       t0->size[1] = loop_ub + 1;
       emxEnsureCapacity_real_T(t0, i);
       for (i = 0; i <= loop_ub; i++) {
@@ -1408,14 +1230,14 @@ void HS_EWL_FREQ_ACQ(const emxArray_real_T *data, double len, double Fs, double
     }
 
     del_re = f_opt * 0.0;
-    sa = f_opt * 6.2831853071795862;
+    receiveByteLen = f_opt * 6.2831853071795862;
     i = r->size[0];
     r->size[0] = tt->size[0];
     emxEnsureCapacity_creal_T(r, i);
     nx = tt->size[0];
     for (i = 0; i < nx; i++) {
       r->data[i].re = tt->data[i] * del_re;
-      r->data[i].im = tt->data[i] * sa;
+      r->data[i].im = tt->data[i] * receiveByteLen;
     }
 
     nx = r->size[0];
@@ -1428,23 +1250,25 @@ void HS_EWL_FREQ_ACQ(const emxArray_real_T *data, double len, double Fs, double
         r->data[k].re = 0.0;
         r->data[k].im = 0.0;
       } else {
-        sa = std::exp(r->data[k].re / 2.0);
-        r->data[k].re = sa * (sa * std::cos(r->data[k].im));
-        r->data[k].im = sa * (sa * std::sin(r->data[k].im));
+        receiveByteLen = std::exp(r->data[k].re / 2.0);
+        r->data[k].re = receiveByteLen * (receiveByteLen * std::cos(r->data[k].
+          im));
+        r->data[k].im = receiveByteLen * (receiveByteLen * std::sin(r->data[k].
+          im));
       }
     }
 
-    sa = sps * 10.0 / 2.0;
-    if (rtIsNaN(sa)) {
+    receiveByteLen = sps * 10.0 / 2.0;
+    if (rtIsNaN(receiveByteLen)) {
       i = t0->size[0] * t0->size[1];
       t0->size[0] = 1;
       t0->size[1] = 1;
       emxEnsureCapacity_real_T(t0, i);
       t0->data[0] = rtNaN;
-    } else if (sa < 1.0) {
+    } else if (receiveByteLen < 1.0) {
       t0->size[0] = 1;
       t0->size[1] = 0;
-    } else if (rtIsInf(sa) && (1.0 == sa)) {
+    } else if (rtIsInf(receiveByteLen) && (1.0 == receiveByteLen)) {
       i = t0->size[0] * t0->size[1];
       t0->size[0] = 1;
       t0->size[1] = 1;
@@ -1453,7 +1277,7 @@ void HS_EWL_FREQ_ACQ(const emxArray_real_T *data, double len, double Fs, double
     } else {
       i = t0->size[0] * t0->size[1];
       t0->size[0] = 1;
-      nx = static_cast<int>(std::floor(sa - 1.0));
+      nx = static_cast<int>(std::floor(receiveByteLen - 1.0));
       t0->size[1] = nx + 1;
       emxEnsureCapacity_real_T(t0, i);
       for (i = 0; i <= nx; i++) {
@@ -1472,12 +1296,12 @@ void HS_EWL_FREQ_ACQ(const emxArray_real_T *data, double len, double Fs, double
 
     nx = t0->size[1];
     for (i = 0; i < nx; i++) {
-      k = i + loop_ub;
-      b_testSignal->data[k].re = t0->data[i] * 0.0;
-      b_testSignal->data[k].im = 0.0;
+      i1 = i + loop_ub;
+      b_testSignal->data[i1].re = t0->data[i] * 0.0;
+      b_testSignal->data[i1].im = 0.0;
     }
 
-    rxFilter1.step(b_testSignal, z2_data, z2_size);
+    b_rxFilter1.step(b_testSignal, z2_data, z2_size);
 
     //  for i = 1:Pl*2-pre_win
     //      if sum(abs(real(z2(i:i+pre_win-1,1))))/pre_win ...
@@ -1490,32 +1314,33 @@ void HS_EWL_FREQ_ACQ(const emxArray_real_T *data, double len, double Fs, double
     //          startPreamPoint = z2(span/2 + pre_shift,1);
     //      end
     //  end
-    count = 0.0;
+    pre_from = 0.0;
     Fd = (Pl * 2.0 + 6.0) - 5.0;
-    b_i = 0;
+    nx = 0;
     exitg1 = false;
-    while ((!exitg1) && (b_i <= static_cast<int>(Fd + -5.0) - 1)) {
-      sa = std::abs(z2_data[b_i + 5].re) - std::abs(z2_data[b_i + 6].re);
-      if ((sa <= 0.15) && (sa >= -0.15)) {
-        count++;
-        if (count == 5.0) {
-          startPreamPoint_re = z2_data[static_cast<int>((static_cast<double>(b_i)
+    while ((!exitg1) && (nx <= static_cast<int>(Fd + -5.0) - 1)) {
+      receiveByteLen = std::abs(z2_data[nx + 5].re) - std::abs(z2_data[nx + 6].
+        re);
+      if ((receiveByteLen <= 0.15) && (receiveByteLen >= -0.15)) {
+        pre_from++;
+        if (pre_from == 5.0) {
+          startPreamPoint_re = z2_data[static_cast<int>((static_cast<double>(nx)
             + 6.0) - 2.0) - 1].re;
-          startPreamPoint_im = z2_data[static_cast<int>((static_cast<double>(b_i)
+          startPreamPoint_im = z2_data[static_cast<int>((static_cast<double>(nx)
             + 6.0) - 2.0) - 1].im;
           exitg1 = true;
         } else {
-          b_i++;
+          nx++;
         }
       } else {
-        count = 0.0;
+        pre_from = 0.0;
         startPreamPoint_re = z2_data[9].re;
         startPreamPoint_im = z2_data[9].im;
-        b_i++;
+        nx++;
       }
     }
 
-    count = 0.0;
+    pre_from = 0.0;
 
     //  for i = length(z2)-(Pl*2-1):length(z2)
     //      if abs(real(z2(i))) - abs(real(z2(i+1))) <= 0 + disp_pre && abs(real(z2(i))) - abs(real(z2(i+1))) >= 0 - disp_pre 
@@ -1532,11 +1357,11 @@ void HS_EWL_FREQ_ACQ(const emxArray_real_T *data, double len, double Fs, double
     //  end
     //  del = qammod(pre_qam,M,'gray')/startPreamPoint;
     if ((z2_size[0] == 0) || (z2_size[1] == 0)) {
-      loop_ub = 0;
+      k = 0;
     } else {
-      loop_ub = z2_size[0];
-      if (loop_ub <= 1) {
-        loop_ub = 1;
+      k = z2_size[0];
+      if (k <= 1) {
+        k = 1;
       }
     }
 
@@ -1550,35 +1375,37 @@ void HS_EWL_FREQ_ACQ(const emxArray_real_T *data, double len, double Fs, double
     }
 
     i = static_cast<int>(((static_cast<double>(nx) - (Pl * 2.0 - 1.0)) + (-1.0 -
-      (static_cast<double>(loop_ub) - 1.0))) / -1.0);
-    b_i = 0;
+      (static_cast<double>(k) - 1.0))) / -1.0);
+    nx = 0;
     exitg1 = false;
-    while ((!exitg1) && (b_i <= i - 1)) {
+    while ((!exitg1) && (nx <= i - 1)) {
       boolean_T guard1 = false;
-      sa = (static_cast<double>(loop_ub) - 1.0) + -static_cast<double>(b_i);
-      Fd = std::abs(z2_data[static_cast<int>(sa) - 1].re) - std::abs(z2_data[
-        static_cast<int>(sa)].re);
+      receiveByteLen = (static_cast<double>(k) - 1.0) + -static_cast<double>(nx);
+      Fd = std::abs(z2_data[static_cast<int>(receiveByteLen) - 1].re) - std::abs
+        (z2_data[static_cast<int>(receiveByteLen)].re);
       guard1 = false;
       if ((Fd <= 0.15) && (Fd >= -0.15)) {
-        for (k = 0; k < 5; k++) {
-          b_x[k] = z2_data[(k + static_cast<int>(sa)) - 4].re;
+        for (i1 = 0; i1 < 5; i1++) {
+          b_x[i1] = z2_data[(i1 + static_cast<int>(receiveByteLen)) - 4].re;
         }
 
         if (!(((((b_x[0] + b_x[1]) + b_x[2]) + b_x[3]) + b_x[4]) / 5.0 <= 0.15))
         {
-          for (k = 0; k < 5; k++) {
-            b_x[k] = z2_data[(k + static_cast<int>(sa)) - 4].re;
+          for (i1 = 0; i1 < 5; i1++) {
+            b_x[i1] = z2_data[(i1 + static_cast<int>(receiveByteLen)) - 4].re;
           }
 
           if (!(((((b_x[0] + b_x[1]) + b_x[2]) + b_x[3]) + b_x[4]) / 5.0 >=
                 -0.15)) {
-            count++;
-            if (count == 5.0) {
-              endPreamPoint_re = z2_data[static_cast<int>(sa) - 3].re;
-              endPreamPoint_im = z2_data[static_cast<int>(sa) - 3].im;
+            pre_from++;
+            if (pre_from == 5.0) {
+              endPreamPoint_re = z2_data[static_cast<int>(receiveByteLen) - 3].
+                re;
+              endPreamPoint_im = z2_data[static_cast<int>(receiveByteLen) - 3].
+                im;
               exitg1 = true;
             } else {
-              b_i++;
+              nx++;
             }
           } else {
             guard1 = true;
@@ -1591,10 +1418,10 @@ void HS_EWL_FREQ_ACQ(const emxArray_real_T *data, double len, double Fs, double
       }
 
       if (guard1) {
-        count = 0.0;
+        pre_from = 0.0;
         endPreamPoint_re = z2_data[239].re;
         endPreamPoint_im = z2_data[239].im;
-        b_i++;
+        nx++;
       }
     }
 
@@ -1602,53 +1429,53 @@ void HS_EWL_FREQ_ACQ(const emxArray_real_T *data, double len, double Fs, double
     if (startPreamPoint_im == 0.0) {
       if (x.im == 0.0) {
         del_re = x.re / startPreamPoint_re;
-        sa = 0.0;
+        receiveByteLen = 0.0;
       } else if (x.re == 0.0) {
         del_re = 0.0;
-        sa = x.im / startPreamPoint_re;
+        receiveByteLen = x.im / startPreamPoint_re;
       } else {
         del_re = x.re / startPreamPoint_re;
-        sa = x.im / startPreamPoint_re;
+        receiveByteLen = x.im / startPreamPoint_re;
       }
     } else if (startPreamPoint_re == 0.0) {
       if (x.re == 0.0) {
         del_re = x.im / startPreamPoint_im;
-        sa = 0.0;
+        receiveByteLen = 0.0;
       } else if (x.im == 0.0) {
         del_re = 0.0;
-        sa = -(x.re / startPreamPoint_im);
+        receiveByteLen = -(x.re / startPreamPoint_im);
       } else {
         del_re = x.im / startPreamPoint_im;
-        sa = -(x.re / startPreamPoint_im);
+        receiveByteLen = -(x.re / startPreamPoint_im);
       }
     } else {
       Fd = std::abs(startPreamPoint_re);
-      sa = std::abs(startPreamPoint_im);
-      if (Fd > sa) {
-        sa = startPreamPoint_im / startPreamPoint_re;
-        count = startPreamPoint_re + sa * startPreamPoint_im;
-        del_re = (x.re + sa * x.im) / count;
-        sa = (x.im - sa * x.re) / count;
-      } else if (sa == Fd) {
+      receiveByteLen = std::abs(startPreamPoint_im);
+      if (Fd > receiveByteLen) {
+        receiveByteLen = startPreamPoint_im / startPreamPoint_re;
+        pre_from = startPreamPoint_re + receiveByteLen * startPreamPoint_im;
+        del_re = (x.re + receiveByteLen * x.im) / pre_from;
+        receiveByteLen = (x.im - receiveByteLen * x.re) / pre_from;
+      } else if (receiveByteLen == Fd) {
         if (startPreamPoint_re > 0.0) {
-          sa = 0.5;
+          receiveByteLen = 0.5;
         } else {
-          sa = -0.5;
+          receiveByteLen = -0.5;
         }
 
         if (startPreamPoint_im > 0.0) {
-          count = 0.5;
+          pre_from = 0.5;
         } else {
-          count = -0.5;
+          pre_from = -0.5;
         }
 
-        del_re = (x.re * sa + x.im * count) / Fd;
-        sa = (x.im * sa - x.re * count) / Fd;
+        del_re = (x.re * receiveByteLen + x.im * pre_from) / Fd;
+        receiveByteLen = (x.im * receiveByteLen - x.re * pre_from) / Fd;
       } else {
-        sa = startPreamPoint_re / startPreamPoint_im;
-        count = startPreamPoint_im + sa * startPreamPoint_re;
-        del_re = (sa * x.re + x.im) / count;
-        sa = (sa * x.im - x.re) / count;
+        receiveByteLen = startPreamPoint_re / startPreamPoint_im;
+        pre_from = startPreamPoint_im + receiveByteLen * startPreamPoint_re;
+        del_re = (receiveByteLen * x.re + x.im) / pre_from;
+        receiveByteLen = (receiveByteLen * x.im - x.re) / pre_from;
       }
     }
 
@@ -1678,39 +1505,40 @@ void HS_EWL_FREQ_ACQ(const emxArray_real_T *data, double len, double Fs, double
     //      dist_preambules = -dist_preambules;
     //  end
     startPreamPoint_re_tmp = startPreamPoint_re * del_re - startPreamPoint_im *
-      sa;
-    endPreamPoint_re_tmp = endPreamPoint_re * del_re - endPreamPoint_im * sa;
+      receiveByteLen;
+    endPreamPoint_re_tmp = endPreamPoint_re * del_re - endPreamPoint_im *
+      receiveByteLen;
     a = startPreamPoint_re_tmp - endPreamPoint_re_tmp;
-    Fd = startPreamPoint_re * sa + startPreamPoint_im * del_re;
-    count = endPreamPoint_re * sa + endPreamPoint_im * del_re;
-    sa = Fd - count;
-    sa = std::sqrt(a * a + sa * sa);
-    if (rt_atan2d_snf(Fd, startPreamPoint_re_tmp) < rt_atan2d_snf(count,
+    Fd = startPreamPoint_re * receiveByteLen + startPreamPoint_im * del_re;
+    pre_from = endPreamPoint_re * receiveByteLen + endPreamPoint_im * del_re;
+    receiveByteLen = Fd - pre_from;
+    receiveByteLen = std::sqrt(a * a + receiveByteLen * receiveByteLen);
+    if (rt_atan2d_snf(Fd, startPreamPoint_re_tmp) < rt_atan2d_snf(pre_from,
          endPreamPoint_re_tmp)) {
-      sa = -sa;
+      receiveByteLen = -receiveByteLen;
     }
 
     nx = 0;
-    loop_ub = 1;
-    flag_amp = 0;
+    k = 1;
+    loop_ub = 0;
     exitg1 = false;
-    while ((!exitg1) && (flag_amp < 1001)) {
-      if (dv[flag_amp] <= sa) {
+    while ((!exitg1) && (loop_ub < 1001)) {
+      if (dv[loop_ub] <= receiveByteLen) {
         nx = 1;
-        i_data[0] = static_cast<short>(flag_amp + 1);
+        ii_data[0] = static_cast<short>(loop_ub + 1);
         exitg1 = true;
       } else {
-        flag_amp++;
+        loop_ub++;
       }
     }
 
     if (nx == 0) {
-      loop_ub = 0;
+      k = 0;
     }
 
-    f_est_size[0] = loop_ub;
-    if (0 <= loop_ub - 1) {
-      f_est_data[0] = f_opt - dv1[i_data[0] - 1];
+    f_est_size[0] = k;
+    if (0 <= k - 1) {
+      f_est_data[0] = f_opt - dv1[ii_data[0] - 1];
     }
   }
 
@@ -1727,13 +1555,14 @@ void HS_EWL_FREQ_ACQ(const emxArray_real_T *data, double len, double Fs, double
 //                % Length of a preambule in symbols
 //               % Length of whole message in symbols
 //               % QAM order
+//  Preamble QAM symbol
 // Arguments    : void
 // Return Type  : void
 //
 void HS_EWL_FREQ_ACQ_free()
 {
-  rxFilter1.matlabCodegenDestructor();
-  rxFilter1._pobj0.matlabCodegenDestructor();
+  b_rxFilter1.matlabCodegenDestructor();
+  b_rxFilter1._pobj0.matlabCodegenDestructor();
 }
 
 //
@@ -1741,112 +1570,192 @@ void HS_EWL_FREQ_ACQ_free()
 //                % Length of a preambule in symbols
 //               % Length of whole message in symbols
 //               % QAM order
+//  Preamble QAM symbol
 // Arguments    : void
 // Return Type  : void
 //
 void HS_EWL_FREQ_ACQ_init()
 {
-  emxInitStruct_RaisedCosineReceiveFilter(&rxFilter1);
-  rxFilter1_not_empty = false;
-  rxFilter1._pobj0.matlabCodegenIsDeleted = true;
-  rxFilter1.matlabCodegenIsDeleted = true;
+  emxInitStruct_RaisedCosineReceiveFilter(&b_rxFilter1);
+  b_rxFilter1_not_empty = false;
+  b_rxFilter1._pobj0.matlabCodegenIsDeleted = true;
+  b_rxFilter1.matlabCodegenIsDeleted = true;
 }
 
 //
-// Input parameters
-//   s   - input signal vector [N x 1];
-//   p   - p paramter of samplarate conversion
-//   q   - q paramter of samplarate conversion
-//   x0  - fractional delay
-// Arguments    : emxArray_real_T *s
-//                double p
-//                double q
-//                emxArray_real_T *resamp_data
-// Return Type  : void
+// Arguments    : double idx
+//                const double FF[50]
+// Return Type  : double
 //
-void lagrange_resamp(emxArray_real_T *s, double p, double q, emxArray_real_T
-                     *resamp_data)
+double absolute_min(double idx, const double FF[50])
 {
-  emxArray_real_T *r;
-  double a1;
-  int i;
-  int loop_ub;
+  static const short iv1[9] = { 2304, 2401, 2500, 48, 49, 50, 1, 1, 1 };
 
-  //  Ouptut parameters
-  //   y   - Resampled signal
-  if (p > 1.0) {
-    if (q == 1.0) {
-      a1 = std::floor(static_cast<double>(s->size[1]) * p);
-      i = resamp_data->size[0];
-      resamp_data->size[0] = static_cast<int>(a1 + 1.0);
-      emxEnsureCapacity_real_T(resamp_data, i);
-      loop_ub = static_cast<int>(a1 + 1.0);
-      for (i = 0; i < loop_ub; i++) {
-        resamp_data->data[i] = 0.0;
-      }
-    } else {
-      a1 = std::floor(static_cast<double>(s->size[1]) * p / q);
-      i = resamp_data->size[0];
-      resamp_data->size[0] = static_cast<int>(a1);
-      emxEnsureCapacity_real_T(resamp_data, i);
-      loop_ub = static_cast<int>(a1);
-      for (i = 0; i < loop_ub; i++) {
-        resamp_data->data[i] = 0.0;
-      }
+  static const signed char iv[9] = { 1, 4, 9, 1, 2, 3, 1, 1, 1 };
+
+  double X[9];
+  double Y[3];
+  double a21;
+  double maxval;
+  double mn_idx;
+  int r1;
+  int r2;
+  int r3;
+  switch (static_cast<int>(idx)) {
+   case 1:
+    for (r1 = 0; r1 < 9; r1++) {
+      X[r1] = iv[r1];
     }
+
+    Y[0] = FF[0];
+    Y[1] = FF[1];
+    Y[2] = FF[2];
+    break;
+
+   case 50:
+    for (r1 = 0; r1 < 9; r1++) {
+      X[r1] = iv1[r1];
+    }
+
+    Y[0] = FF[47];
+    Y[1] = FF[48];
+    Y[2] = FF[49];
+    break;
+
+   default:
+    X[0] = (idx - 1.0) * (idx - 1.0);
+    X[3] = idx - 1.0;
+    X[6] = 1.0;
+    X[1] = idx * idx;
+    X[4] = idx;
+    X[7] = 1.0;
+    X[2] = (idx + 1.0) * (idx + 1.0);
+    X[5] = idx + 1.0;
+    X[8] = 1.0;
+    Y[0] = FF[static_cast<int>(idx - 1.0) - 1];
+    Y[1] = FF[static_cast<int>(idx) - 1];
+    Y[2] = FF[static_cast<int>(idx + 1.0) - 1];
+    break;
+  }
+
+  r1 = 0;
+  r2 = 1;
+  r3 = 2;
+  maxval = std::abs(X[0]);
+  a21 = std::abs(X[1]);
+  if (a21 > maxval) {
+    maxval = a21;
+    r1 = 1;
+    r2 = 0;
+  }
+
+  if (std::abs(X[2]) > maxval) {
+    r1 = 2;
+    r2 = 1;
+    r3 = 0;
+  }
+
+  X[r2] /= X[r1];
+  X[r3] /= X[r1];
+  X[r2 + 3] -= X[r2] * X[r1 + 3];
+  X[r3 + 3] -= X[r3] * X[r1 + 3];
+  X[r2 + 6] -= X[r2] * X[r1 + 6];
+  X[r3 + 6] -= X[r3] * X[r1 + 6];
+  if (std::abs(X[r3 + 3]) > std::abs(X[r2 + 3])) {
+    int rtemp;
+    rtemp = r2;
+    r2 = r3;
+    r3 = rtemp;
+  }
+
+  X[r3 + 3] /= X[r2 + 3];
+  X[r3 + 6] -= X[r3 + 3] * X[r2 + 6];
+  a21 = Y[r2] - Y[r1] * X[r2];
+  maxval = ((Y[r3] - Y[r1] * X[r3]) - a21 * X[r3 + 3]) / X[r3 + 6];
+  a21 -= maxval * X[r2 + 6];
+  a21 /= X[r2 + 3];
+  maxval = ((Y[r1] - maxval * X[r1 + 6]) - a21 * X[r1 + 3]) / X[r1];
+  if (maxval > 0.0) {
+    mn_idx = -a21 / 2.0 / maxval;
   } else {
-    a1 = std::floor(static_cast<double>(s->size[1]) * p / q);
-    i = resamp_data->size[0];
-    resamp_data->size[0] = static_cast<int>(a1);
-    emxEnsureCapacity_real_T(resamp_data, i);
-    loop_ub = static_cast<int>(a1);
-    for (i = 0; i < loop_ub; i++) {
-      resamp_data->data[i] = 0.0;
+    mn_idx = idx;
+  }
+
+  return mn_idx;
+}
+
+//
+// Arguments    : const emxArray_real_T *s
+//                double len
+// Return Type  : double
+//
+double preambule_from(const emxArray_real_T *s, double len)
+{
+  double position[4];
+  double count;
+  double pre_from;
+  double sa;
+  int flag_amp;
+  int i;
+  int vlen_tmp;
+  boolean_T exitg1;
+  position[0] = 0.0;
+  position[1] = 0.0;
+  position[2] = 0.0;
+  position[3] = 0.0;
+  count = 0.0;
+  flag_amp = 1;
+
+  // win = s(i:i+win_len-1);
+  i = 0;
+  exitg1 = false;
+  while ((!exitg1) && (i <= static_cast<int>(len - 11.0) - 1)) {
+    int b_i;
+    if (static_cast<double>(i) + 1.0 > ((static_cast<double>(i) + 1.0) + 11.0) -
+        1.0) {
+      b_i = -1;
+      vlen_tmp = -1;
+    } else {
+      b_i = i - 1;
+      vlen_tmp = static_cast<int>(((static_cast<double>(i) + 1.0) + 11.0) - 1.0)
+        - 1;
+    }
+
+    vlen_tmp -= b_i;
+    if (vlen_tmp == 0) {
+      sa = 0.0;
+    } else {
+      sa = s->data[b_i + 1];
+      for (int k = 2; k <= vlen_tmp; k++) {
+        sa += s->data[b_i + k];
+      }
+    }
+
+    sa /= static_cast<double>(static_cast<unsigned int>(vlen_tmp));
+    if ((sa > 0.2) && (flag_amp == 1)) {
+      count++;
+      position[static_cast<int>(count) - 1] = static_cast<double>(i) + 1.0;
+      flag_amp = 0;
+    }
+
+    if (sa < -0.2) {
+      flag_amp = 1;
+    }
+
+    if (count == 4.0) {
+      exitg1 = true;
+    } else {
+      i++;
     }
   }
 
-  emxInit_real_T(&r, 2);
-  i = r->size[0] * r->size[1];
-  r->size[0] = 1;
-  r->size[1] = s->size[1] + 4;
-  emxEnsureCapacity_real_T(r, i);
-  r->data[0] = 0.0;
-  r->data[1] = 0.0;
-  loop_ub = s->size[1];
-  for (i = 0; i < loop_ub; i++) {
-    r->data[i + 2] = s->data[i];
+  if (count > 0.0) {
+    pre_from = position[static_cast<int>(count) - 1];
+  } else {
+    pre_from = -1.0;
   }
 
-  r->data[s->size[1] + 2] = 0.0;
-  r->data[s->size[1] + 3] = 0.0;
-  i = s->size[0] * s->size[1];
-  s->size[0] = 1;
-  s->size[1] = r->size[1];
-  emxEnsureCapacity_real_T(s, i);
-  loop_ub = r->size[0] * r->size[1];
-  for (i = 0; i < loop_ub; i++) {
-    s->data[i] = r->data[i];
-  }
-
-  emxFree_real_T(&r);
-  i = resamp_data->size[0];
-  for (loop_ub = 0; loop_ub < i; loop_ub++) {
-    double a3;
-    double a3_tmp;
-    double b_a3_tmp;
-    double d;
-    a1 = (static_cast<double>(loop_ub) + 1.0) * q / p;
-    a3 = std::floor(a1);
-    d = (a3 + 1.0) - a1;
-    a3_tmp = s->data[static_cast<int>(a3 + 4.0) - 1];
-    a1 = s->data[static_cast<int>((a3 + 4.0) - 2.0) - 1];
-    b_a3_tmp = s->data[static_cast<int>((a3 + 4.0) - 1.0) - 1];
-    a3 = 0.16666666666666666 * (a3_tmp - s->data[static_cast<int>((a3 + 4.0) -
-      3.0) - 1]) + 0.5 * (a1 - b_a3_tmp);
-    a1 = 0.5 * (a3_tmp - a1) - a3;
-    resamp_data->data[loop_ub] = ((b_a3_tmp - a1 * d) + (((a3_tmp - b_a3_tmp) -
-      a3) - a1) * (d * d)) - a3 * rt_powd_snf(d, 3.0);
-  }
+  return pre_from;
 }
 
 //

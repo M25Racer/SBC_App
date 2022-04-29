@@ -1,17 +1,18 @@
 //
-// File: HS_EWL_RECEIVE_emxutil.h
+// File: HS_EWL_DEMOD_QAM_emxutil.h
 //
 // MATLAB Coder version            : 5.1
-// C/C++ source code generated on  : 25-Apr-2022 13:09:26
+// C/C++ source code generated on  : 29-Apr-2022 10:21:15
 //
-#ifndef HS_EWL_RECEIVE_EMXUTIL_H
-#define HS_EWL_RECEIVE_EMXUTIL_H
+#ifndef HS_EWL_DEMOD_QAM_EMXUTIL_H
+#define HS_EWL_DEMOD_QAM_EMXUTIL_H
 
 // Include Files
 #include "FIRDecimator.h"
-#include "HS_EWL_RECEIVE_types.h"
+#include "HS_EWL_DEMOD_QAM_types.h"
 #include "RaisedCosineReceiveFilter.h"
 #include "rtwtypes.h"
+#include "omp.h"
 #include <cstddef>
 #include <cstdlib>
 
@@ -37,7 +38,7 @@ extern void emxInit_real_T(emxArray_real_T **pEmxArray, int numDimensions);
 #endif
 
 //
-// File trailer for HS_EWL_RECEIVE_emxutil.h
+// File trailer for HS_EWL_DEMOD_QAM_emxutil.h
 //
 // [EOF]
 //

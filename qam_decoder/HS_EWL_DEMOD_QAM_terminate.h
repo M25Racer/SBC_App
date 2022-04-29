@@ -1,11 +1,11 @@
 //
-// File: qammod.h
+// File: HS_EWL_DEMOD_QAM_terminate.h
 //
 // MATLAB Coder version            : 5.1
 // C/C++ source code generated on  : 29-Apr-2022 10:21:15
 //
-#ifndef QAMMOD_H
-#define QAMMOD_H
+#ifndef HS_EWL_DEMOD_QAM_TERMINATE_H
+#define HS_EWL_DEMOD_QAM_TERMINATE_H
 
 // Include Files
 #include "rtwtypes.h"
@@ -14,15 +14,12 @@
 #include <cstdlib>
 
 // Function Declarations
-namespace coder
-{
-  creal_T qammod(double x, double M);
-}
+extern void HS_EWL_DEMOD_QAM_terminate();
 
 #endif
 
 //
-// File trailer for qammod.h
+// File trailer for HS_EWL_DEMOD_QAM_terminate.h
 //
 // [EOF]
 //

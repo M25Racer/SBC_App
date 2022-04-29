@@ -1,11 +1,11 @@
 //
-// File: qammod.h
+// File: bsearch.h
 //
 // MATLAB Coder version            : 5.1
 // C/C++ source code generated on  : 29-Apr-2022 10:21:15
 //
-#ifndef QAMMOD_H
-#define QAMMOD_H
+#ifndef BSEARCH_H
+#define BSEARCH_H
 
 // Include Files
 #include "rtwtypes.h"
@@ -13,16 +13,22 @@
 #include <cstddef>
 #include <cstdlib>
 
+// Type Declarations
+struct emxArray_real_T;
+
 // Function Declarations
 namespace coder
 {
-  creal_T qammod(double x, double M);
+  namespace internal
+  {
+    int b_bsearch(const emxArray_real_T *x, double xi);
+  }
 }
 
 #endif
 
 //
-// File trailer for qammod.h
+// File trailer for bsearch.h
 //
 // [EOF]
 //
