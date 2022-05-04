@@ -6,6 +6,7 @@ TEMPLATE = app
 
 SOURCES += \
     crc16.cpp \
+    freq_sweep_thread.cpp \
     main.cpp \
     mainwindow.cpp \
     message_box.cpp \
@@ -104,8 +105,10 @@ HEADERS += \
     ../SRP_HS_USB_PROTOCOL/SRP_HS_USB_Protocol.h \
     agc_algorithm.h \
     crc16.h \
+    freq_sweep_thread.h \
     mainwindow.h \
     message_box.h \
+    qam_common.h \
     qam_decoder/FFTImplementationCallback.h \
     qam_decoder/FIRDecimator.h \
     qam_decoder/HS_EWL_DEMOD_QAM.h \

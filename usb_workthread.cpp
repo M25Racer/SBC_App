@@ -6,8 +6,15 @@
 /* Extern global variables */
 extern RingBuffer *m_ring;              // ring data buffer (ADC data) for QAM decoder
 extern QWaitCondition ringNotEmpty;
-extern QMutex m_mutex;
+extern QWaitCondition sinBufNotEmpty;
+extern QWaitCondition sweepBufNotEmpty;
 extern QElapsedTimer profiler_timer;
+extern uint8_t FreqSweepDataBuffer[USB_MAX_DATA_SIZE];
+extern uint8_t SweepDataBuffer[USB_MAX_DATA_SIZE];
+extern uint32_t FreqSweepDataLength;
+extern uint32_t SweepDataLength;
+extern bool special_cmd_transmitted;
+extern bool special_cmd_transmitted2;
 
 /* Global variables */
 uint8_t UserRxBuffer[USB_MAX_DATA_SIZE];
@@ -918,16 +925,38 @@ void UsbWorkThread::parseHsData()
         {
 //            emit consolePutData(QString("parseHsData(): USB_CMD_GET_DATA\n"), 0);
 
-            bool res = m_ring->Append(UserRxBuffer + sizeof(USBheader_t), header->packet_length - sizeof(USBheader_t));
-            if(res)
+            if(special_cmd_transmitted)
             {
+                special_cmd_transmitted = false;
+
+                FreqSweepDataLength = header->packet_length - sizeof(USBheader_t);
+                memcpy(FreqSweepDataBuffer, UserRxBuffer + pStartData + sizeof(USBheader_t), FreqSweepDataLength);
+
                 // Wake threads waiting for 'wait condiion'
-                ringNotEmpty.wakeAll();
+                sinBufNotEmpty.wakeAll();
+            }
+            else if(special_cmd_transmitted2)
+            {
+                special_cmd_transmitted2 = false;
+                SweepDataLength = header->packet_length - sizeof(USBheader_t);
+                memcpy(SweepDataBuffer, UserRxBuffer + pStartData + sizeof(USBheader_t), SweepDataLength);
+
+                // Wake threads waiting for 'wait condiion'
+                sweepBufNotEmpty.wakeAll();
             }
             else
             {
-                // Error: can't add new data to ring buffer
-                emit consolePutData("Error: unable to add new adc data to ring buffer\n", 1);
+                bool res = m_ring->Append(UserRxBuffer + sizeof(USBheader_t), header->packet_length - sizeof(USBheader_t));
+                if(res)
+                {
+                    // Wake threads waiting for 'wait condiion'
+                    ringNotEmpty.wakeAll();
+                }
+                else
+                {
+                    // Error: can't add new data to ring buffer
+                    emit consolePutData("Error: unable to add new adc data to ring buffer\n", 1);
+                }
             }
 
 #ifdef QT_DEBUG
@@ -943,7 +972,8 @@ void UsbWorkThread::parseHsData()
             emit consolePutData("parseHsData(): ADC status received\n", 0);
 #endif
             stm32_ready_data_size = 0;
-            uint8_t AdcStatus = *p_data;
+            uint8_t AdcStatus = (*p_data) & 0x01;
+            uint8_t AgcState = (*p_data) >> 1;
 
             if(UserRxBuffer_len >= (int)sizeof(USBheader_t) + 1 + 4)
             {
@@ -971,10 +1001,32 @@ void UsbWorkThread::parseHsData()
             {
                 emit consolePutData("parseHsData(): ADC status = busy\n", 0);
             }
-            else
+
+            switch(AgcState)
             {
-                emit consolePutData("parseHsData(): ADC status = unknown\n", 0);
+                case AGC_OK:          // Настройка аттенюатора/усилителя закончена
+                    //emit consolePutData("parseHsData(): AGC state = ok\n", 1);
+                    break;
+                case AGC_INIT:        // Выполнена инициализация АРУ
+                    emit consolePutData("parseHsData(): AGC state = init\n", 1);
+                    break;
+                case AGC_START:       // Запуск АРУ произведен
+                    emit consolePutData("parseHsData(): AGC state = start\n", 1);
+                    break;
+                case AGC_OVERVOLTAGE: // Уровень сигнала превышает максимально возможное значение АЦП
+                    emit consolePutData("parseHsData(): AGC state = overvoltage\n", 1);
+                    break;
+                case AGC_ADJUST_MIN:  // Уровень сигнала сильно ослаблен (лежит ниже порогового значения)
+                    emit consolePutData("parseHsData(): AGC state = adjust min\n", 1);
+                    break;
+                case AGC_ADJUST_MAX:  // Уровень сигнала превышает максимально допустимое значение АЦП (лежит выше порогового значения АЦП)
+                    emit consolePutData("parseHsData(): AGC state = adjust max\n", 1);
+                    break;
+                case AGC_ERROR:       // Обнаружена ошибка АРУ (не выполнена инициализация; процедура запуска; не удается выполнить настройку)
+                    emit consolePutData("parseHsData(): AGC state = error\n", 1);
+                    break;
             }
+
             break;
         }
     }

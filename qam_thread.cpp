@@ -11,7 +11,7 @@
 #include <QElapsedTimer>
 #include "qam_decoder/signal_sweep.h"
 #include "qam_decoder/signal.h"
-#include "qam_decoder/math_sweep.h"
+//#include "qam_decoder/math_sweep.h"
 #include "qam_decoder/rt_nonfinite.h"
 
 #include "crc16.h"
@@ -22,47 +22,71 @@ extern RingBuffer *m_ring;              // ring data buffer (ADC data) for QAM d
 extern QWaitCondition ringNotEmpty;
 extern QMutex m_mutex;
 extern QElapsedTimer profiler_timer;
-
 /* Private variables */
 static double Signal[USB_MAX_DATA_SIZE];
 
-double len = SIG_LEN;
-double Fs = 1832061;//280000;//ADC sample rate
+//double Fs = 1832061;//280000;//ADC sample rate
 double f0 = 35000;//carrier freq
 double sps = round(Fs/f0);//sample per symbol
 double mode = 1;//1-both stages enabled, 0-only sevond stage
-double preamble_len = 20;//preamble length
-double message_len = 255;
-double QAM_order = 256;
-double preamble_QAM_symbol = 128;//QAM symbol used in preamble
-//  input var for sweep
-double f_sine = 20000;
-double period_amount = 500;
-double sine_sps = Fs/f_sine;
-double f_pream = 2000;
-double Fs_math_sweep = 280000;
-double pream_sps = Fs_math_sweep/f_pream;
+//double preamble_len = 20;//preamble length
+//double message_len = 255;
+//double QAM_order = 256;
+//double preamble_QAM_symbol = 128;//QAM symbol used in preamble
+////  input var for sweep
+//double f_sine = 35000;
+//double period_amount = 500;
+//double sine_sps = Fs/f_sine;
+//double f_pream = 2000;
+//double Fs_math_sweep = 280000;
+//double pream_sps = Fs_math_sweep/f_pream;
+////  output var for HS_EWL_FREQ_ACQ
+//double warning_status;
+//double index_data;
+//double len_data;
+//double f_est_data;//estimated frequency
+//int f_est_size;
+////  output var for HS_EWL_DEMOD_QAM
+//creal_T qam_symbols_data[255];
+//int qam_symbols_size;
+//double byte_data[255];
+//int byte_data_size;
+////  output var HS_EWL_FREQ_EST_FOR_SWEEP
+//double f_opt;
+//double ph_opt;
+//double sweep_freq_warning_status;
+////  output var HS_EWL_TR_FUN_EST
+//double  gain_data[2048];
+//double  phase_data[2048];
+//int     gain_size[2];
+//int     phase_size[2];
+//double  sweep_warning_status;
+
 //  output var for HS_EWL_FREQ_ACQ
 double warning_status;
 double index_data;
 double len_data;
 double f_est_data;//estimated frequency
 int f_est_size;
+
 //  output var for HS_EWL_DEMOD_QAM
 creal_T qam_symbols_data[255];
 int qam_symbols_size;
 double byte_data[255];
 int byte_data_size;
-//  output var HS_EWL_FREQ_EST_FOR_SWEEP
-double f_opt;
-double ph_opt;
-double sweep_freq_warning_status;
-//  output var HS_EWL_TR_FUN_EST
-double  gain_data[2048];
-double  phase_data[2048];
-int     gain_size[2];
-int     phase_size[2];
-double  sweep_warning_status;
+
+////  output var HS_EWL_FREQ_EST_FOR_SWEEP
+//double f_opt;
+//double ph_opt;
+//double sweep_freq_warning_status;
+
+////  output var HS_EWL_TR_FUN_EST
+//double  gain_data[2048];
+//double  phase_data[2048];
+//int     gain_size[2];
+//int     phase_size[2];
+//double  sweep_warning_status;
+
 
 //static double Fs = 1832061;//280000;//ADC sample rate
 //static double f0 = 35000;//carrier freq
@@ -82,9 +106,9 @@ double  sweep_warning_status;
 //static double f_est_data;//estimated frequency
 //static int f_est_size;
 
-// QAM data related sizes & offsets
-static const uint32_t TxPacketDataSize = 212;
-static const uint32_t TxPacketDataOffset = 23;
+//// QAM data related sizes & offsets
+//static const uint32_t TxPacketDataSize = 212;
+//static const uint32_t TxPacketDataOffset = 23;
 
 //static uint8_t data_decoded[TxPacketDataSize];      // data decoded from single qam packet
 static uint8_t data_decoded[128*1024];      // data decoded from single qam packet
@@ -141,8 +165,8 @@ void QamThread::QAM_Decoder()
     double *signal = (double*)&Signal;
     double len = Length;
 
-    for(uint32_t i = 0; i < 50000; ++i)
-        Signal[i] = i;
+//    for(uint32_t i = 0; i < 50000; ++i)
+//        Signal[i] = i;
 
     peformance_timer.start();
     emxArray_real_T *data_qam256 = NULL;
@@ -204,10 +228,6 @@ void QamThread::QAM_Decoder()
             emit consolePutData(QString("HS data parsing error, packet length is too short %1\n").arg(packet_length), 1);
             packet_length = MOD_SRP_MIN_VALID_LENGTH;
         }
-
-//        // (Re)start receive timeout
-//        if(packet_length > TxPacketDataSize)
-//            data_timeout_tim.restart();
 
         data_offset += TxPacketDataSize;
 

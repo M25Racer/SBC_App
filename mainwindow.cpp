@@ -61,6 +61,8 @@
 #include "crc16.h"
 
 extern QElapsedTimer profiler_timer;
+extern bool special_cmd_transmitted;
+extern bool special_cmd_transmitted2;
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -99,6 +101,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(&m_usb_thread, &UsbWorkThread::consoleAdcFile, this, &MainWindow::consoleAdcData, Qt::ConnectionType::QueuedConnection);
     connect(&m_qam_thread, &QamThread::consolePutData, this, &MainWindow::consolePutData, Qt::ConnectionType::QueuedConnection);
     connect(&m_qam_thread, &QamThread::postTxDataToSerialPort, this, &MainWindow::transmitDataSerialPort, Qt::ConnectionType::QueuedConnection);
+    connect(&m_freq_sweep_thread, &FreqSweepThread::consolePutData, this, &MainWindow::consolePutData, Qt::ConnectionType::QueuedConnection);
 
     m_console->putData("SBC Application\n", 1);
     m_console->putData("Opening serial port...\n", 1);
@@ -137,6 +140,9 @@ MainWindow::MainWindow(QWidget *parent) :
 
     // Start QAM decoder thread
     m_qam_thread.start();
+
+    // Start QAM frequency estimate for sweep thread
+    m_freq_sweep_thread.start();
 }
 
 MainWindow::~MainWindow()
@@ -422,6 +428,8 @@ void MainWindow::initActionsConnections()
     connect(m_ui->actionGET_DATA_SIZE, &QAction::triggered, this, &MainWindow::sendHsCommandGetDataSize);
     connect(m_ui->actionADC_START, &QAction::triggered, this, &MainWindow::sendHsCommandAdcStart);
     connect(m_ui->actionSend_AGC_Start, &QAction::triggered, this, &MainWindow::sendHsCommandAgcStart);
+    connect(m_ui->actionADC_START_for_SIN_600, &QAction::triggered, this, &MainWindow::sendHsCommandAdcStart2);
+    connect(m_ui->actionADC_START_for_Sweep, &QAction::triggered, this, &MainWindow::sendHsCommandAdcStart3);
 }
 
 void MainWindow::showStatusMessage(const QString &message)
@@ -533,6 +541,23 @@ void MainWindow::sendHsCommandAdcStart()
     uint32_t adc_data_length = 440000;
     m_usb_thread.sendHsCommand(USB_CMD_ADC_START, 4, (uint8_t*)&adc_data_length);
 }
+
+void MainWindow::sendHsCommandAdcStart2()
+{
+    special_cmd_transmitted = true;
+
+    uint32_t adc_data_length = 31400;
+    m_usb_thread.sendHsCommand(USB_CMD_ADC_START, 4, (uint8_t*)&adc_data_length);
+}
+
+void MainWindow::sendHsCommandAdcStart3()
+{
+    special_cmd_transmitted2 = true;
+
+    uint32_t adc_data_length = 440000;
+    m_usb_thread.sendHsCommand(USB_CMD_ADC_START, 4, (uint8_t*)&adc_data_length);
+}
+
 
 void MainWindow::sendHsCommandAgcStart()
 {

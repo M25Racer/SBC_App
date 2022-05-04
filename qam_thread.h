@@ -7,6 +7,9 @@
 #include <QElapsedTimer>
 #include <ringbuffer.h>
 #include <message_box.h>
+#include "qam_common.h"
+
+using namespace QAM_Common;
 
 class MessageBox;
 
@@ -48,6 +51,10 @@ private:
         WARNING_3 = 3,  // warning_satus = 3 start array sample equal 0 less than 0.2
         WARNING_4 = 4,  // warning_satus = 4 kostyl check failed
     } HsEwlReceive_WarningStatus;
+
+    // QAM data related sizes & offsets
+    static const uint32_t TxPacketDataSize = 212;
+    static const uint32_t TxPacketDataOffset = 23;
 };
 
 #endif // QAM_WORKTHREAD_H

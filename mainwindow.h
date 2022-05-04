@@ -57,6 +57,7 @@
 #include <message_box.h>
 #include <usb_workthread.h>
 #include <qam_thread.h>
+#include <freq_sweep_thread.h>
 
 QT_BEGIN_NAMESPACE
 
@@ -90,6 +91,8 @@ private slots:
     void sendHsCommandGetData();
     void sendHsCommandGetDataSize();
     void sendHsCommandAdcStart();
+    void sendHsCommandAdcStart2();
+    void sendHsCommandAdcStart3();
     void sendHsCommandAgcStart();
     void readDataSerialPort();
     void transmitDataSerialPort(const uint8_t *p_data, int length);
@@ -118,6 +121,7 @@ private:
     MessageBox *m_message_box = nullptr;
     UsbWorkThread m_usb_thread;
     QamThread m_qam_thread;
+    FreqSweepThread m_freq_sweep_thread;
 
     QByteArray TtyUserRxBuffer;
 

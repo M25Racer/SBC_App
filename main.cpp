@@ -60,6 +60,16 @@
 RingBuffer *m_ring = nullptr;       // ring data buffer (ADC data) for QAM decoder
 QWaitCondition ringNotEmpty;
 QMutex m_mutex;
+
+QWaitCondition sinBufNotEmpty;
+QMutex m_mutex2;
+
+QWaitCondition sweepBufNotEmpty;
+QMutex m_mutex3;
+
+bool special_cmd_transmitted = false;   // todo make a state with enum
+bool special_cmd_transmitted2 = false;   // todo make a state with enum
+
 QElapsedTimer profiler_timer;       // debug timer for time measurements
 
 /* Exported variables */

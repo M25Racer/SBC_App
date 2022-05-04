@@ -87,6 +87,8 @@
     <addaction name="actionGET_DATA_SIZE"/>
     <addaction name="actionADC_START"/>
     <addaction name="actionSend_AGC_Start"/>
+    <addaction name="actionADC_START_for_SIN_600"/>
+    <addaction name="actionADC_START_for_Sweep"/>
    </widget>
    <addaction name="menuHelp"/>
    <addaction name="menuLogs"/>
@@ -223,6 +225,16 @@
   <action name="actionSend_AGC_Start">
    <property name="text">
     <string>Send AGC Start</string>
+   </property>
+  </action>
+  <action name="actionADC_START_for_SIN_600">
+   <property name="text">
+    <string>ADC_START for 'SIN 600'</string>
+   </property>
+  </action>
+  <action name="actionADC_START_for_Sweep">
+   <property name="text">
+    <string>ADC_START for 'Sweep'</string>
    </property>
   </action>
  </widget>
