@@ -24,11 +24,11 @@ private:
     void FreqEstimateForSweep();
     void Sweep();
     bool ConvertToDouble(uint8_t *p_data_in, uint32_t length_in, double *p_data_out, double *p_length);
-    //bool ConvertToDouble(double *p_data_out, double *p_length);
 
-    double LengthSin;
-    double LengthSweep;
     bool m_quit = false;
+
+    double LengthSin = 0.f;
+    double LengthSweep = 0.f;
 
     QElapsedTimer peformance_timer;     // timer for QAM decoder performance measurements
 };

@@ -8,6 +8,8 @@ extern RingBuffer *m_ring;              // ring data buffer (ADC data) for QAM d
 extern QWaitCondition ringNotEmpty;
 extern QWaitCondition sinBufNotEmpty;
 extern QWaitCondition sweepBufNotEmpty;
+extern QMutex m_mutex2;
+extern QMutex m_mutex3;
 extern QElapsedTimer profiler_timer;
 extern uint8_t FreqSweepDataBuffer[USB_MAX_DATA_SIZE];
 extern uint8_t SweepDataBuffer[USB_MAX_DATA_SIZE];
@@ -929,8 +931,10 @@ void UsbWorkThread::parseHsData()
             {
                 special_cmd_transmitted = false;
 
+                m_mutex2.lock();
                 FreqSweepDataLength = header->packet_length - sizeof(USBheader_t);
                 memcpy(FreqSweepDataBuffer, UserRxBuffer + pStartData + sizeof(USBheader_t), FreqSweepDataLength);
+                m_mutex2.unlock();
 
                 // Wake threads waiting for 'wait condiion'
                 sinBufNotEmpty.wakeAll();
@@ -938,8 +942,11 @@ void UsbWorkThread::parseHsData()
             else if(special_cmd_transmitted2)
             {
                 special_cmd_transmitted2 = false;
+
+                m_mutex3.lock();
                 SweepDataLength = header->packet_length - sizeof(USBheader_t);
                 memcpy(SweepDataBuffer, UserRxBuffer + pStartData + sizeof(USBheader_t), SweepDataLength);
+                m_mutex3.unlock();
 
                 // Wake threads waiting for 'wait condiion'
                 sweepBufNotEmpty.wakeAll();

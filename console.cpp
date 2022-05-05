@@ -151,4 +151,7 @@ void Console::Close()
 {
     out.flush();    // Clear the buffered data
     m_logFile->close();
+
+    outAdc.flush();
+    m_adcFile->close();
 }

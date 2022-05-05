@@ -171,13 +171,6 @@ void QamThread::QAM_Decoder()
     peformance_timer.start();
     emxArray_real_T *data_qam256 = NULL;
     data_qam256 = emxCreateWrapper_real_T(signal, 1, len);
-//    HS_EWL_RECEIVE(in_data, len, Fs,
-//                    f0, sps, mode, preamble_len,
-//                    message_len, QAM_order, preamble_QAM_symbol,
-//                    qam_symbols_data, *(int(*)[1]) & qam_symbols_size, byte_data, *(int(*)[1]) & byte_data_size,
-//                    (double *)&f_est_data,
-//                    *(int(*)[1]) & f_est_size,
-//                    &warning_status);
 
     HS_EWL_FREQ_ACQ(data_qam256, len, Fs, f0, sps, mode, preamble_len,
                       message_len, QAM_order, preamble_QAM_symbol, &index_data, &len_data, (double *)&f_est_data,
@@ -202,6 +195,8 @@ void QamThread::QAM_Decoder()
     // If receive timeout elapsed
     if(data_timeout_tim.hasExpired(qam_rx_timeout_ms))
     {
+        if(data_offset != 0)
+            emit consolePutData(QString("Error: HS multiframe rx timeout expired\n"), 1);
         data_offset = 0;
     }
 

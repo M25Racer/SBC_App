@@ -27,6 +27,8 @@ public:
     explicit QamThread(QObject *parent = nullptr);
     ~QamThread();
 
+    bool m_quit = false;
+
 private:
     void run() override;
     void QAM_Decoder();
@@ -36,8 +38,6 @@ private:
 //    uint8_t AdcDataBuffer[DATA_SIZE];
 //    uint32_t Length = 0;
     double Length;
-
-    bool m_quit = false;
 
     QElapsedTimer peformance_timer;     // timer for QAM decoder performance measurements
     QElapsedTimer data_timeout_tim;     // data receive timeout timer fro multi frame\packet QAM transfers

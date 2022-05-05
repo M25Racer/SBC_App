@@ -56,41 +56,44 @@ FreqSweepThread::FreqSweepThread(QObject *parent) :
 FreqSweepThread::~FreqSweepThread()
 {
     m_mutex2.lock();
-    m_mutex3.lock();
     m_quit = true;
+    FreqSweepDataLength = 0;
     sinBufNotEmpty.wakeOne();
+    m_mutex2.unlock();
+
+    wait(100);  // 100 ms wait
+
+    m_mutex3.lock();
+    SweepDataLength = 0;
     sweepBufNotEmpty.wakeOne();
     m_mutex3.unlock();
-    m_mutex2.unlock();
+
     wait();
 }
 
 void FreqSweepThread::run()
 {
+    bool res = false;
+
     while(!m_quit)
     {
         m_mutex2.lock();
         sinBufNotEmpty.wait(&m_mutex2); // Wait condition unlocks mutex before 'wait', and will lock it again just after 'wait' is complete
+        res = ConvertToDouble(FreqSweepDataBuffer, FreqSweepDataLength, SignalSin, &LengthSin);
+        FreqSweepDataLength = 0;
         m_mutex2.unlock();
 
-        if(ConvertToDouble(FreqSweepDataBuffer, FreqSweepDataLength, SignalSin, &LengthSin))
+        if(res)
             FreqEstimateForSweep();
-        else
-        {
-            //error todo
-        }
 
         m_mutex3.lock();
         sweepBufNotEmpty.wait(&m_mutex3); // Wait condition unlocks mutex before 'wait', and will lock it again just after 'wait' is complete
+        res = ConvertToDouble(SweepDataBuffer, SweepDataLength, SignalSweep, &LengthSweep);
+        SweepDataLength = 0;
         m_mutex3.unlock();
 
-        if(ConvertToDouble(SweepDataBuffer, SweepDataLength, SignalSweep, &LengthSweep))
-            Sweep();
-        else
-        {
-            //error todo
-        }
-
+        if(res)
+            Sweep();       
     }
 }
 
@@ -102,6 +105,9 @@ bool FreqSweepThread::ConvertToDouble(uint8_t *p_data_in, uint32_t length_in, do
         emit consolePutData("Error ring buffer get: data pointer or length pointer = null", 1);
         return false;
     }
+
+    if(!length_in)
+        return false;
 
     uint16_t value;
     uint64_t j = 0;
