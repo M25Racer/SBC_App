@@ -26,6 +26,7 @@
 // Variable Definitions
 static coder::comm::RaisedCosineReceiveFilter rxFilter1;
 static boolean_T rxFilter1_not_empty;
+extern bool kostyl_check_error;
 
 // Function Definitions
 //
@@ -208,6 +209,13 @@ void HS_EWL_DEMOD_QAM(const emxArray_real_T *data, double index_data, double
     c->size[0] = nx;
     emxEnsureCapacity_real_T(c, i);
     for (i = 0; i < nx; i++) {
+
+        // Kostyl check, TODO
+        if(b_time->allocatedSize < nx || c->allocatedSize < nx)
+        {
+            kostyl_check_error = true;
+            return;
+        }
       c->data[i] = b_r * b_time->data[i];
     }
 
