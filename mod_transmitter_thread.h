@@ -54,8 +54,9 @@ private:
     typedef enum
     {
         IDLE = 0,
-        TRANSMIT_PHASE = 1,
-        TRANSMIT_GAIN = 2
+        TX_PHASE_TABLE_1 = 1,
+        TX_GAIN_TABLE_2 = 2,
+        TX_SHIFT_3 = 3
     } TState;
 
     TState State = IDLE;

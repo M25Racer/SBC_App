@@ -2,7 +2,7 @@
 // File: FFTImplementationCallback.h
 //
 // MATLAB Coder version            : 5.1
-// C/C++ source code generated on  : 29-Apr-2022 10:21:15
+// C/C++ source code generated on  : 06-May-2022 14:49:51
 //
 #ifndef FFTIMPLEMENTATIONCALLBACK_H
 #define FFTIMPLEMENTATIONCALLBACK_H
@@ -40,6 +40,12 @@ namespace coder
       static void r2br_r2dit_trig_impl(const emxArray_creal_T *x, int
         unsigned_nRows, const emxArray_real_T *costab, const emxArray_real_T
         *sintab, emxArray_creal_T *y);
+      static void c_generate_twiddle_tables(int nRows, boolean_T useRadix2,
+        emxArray_real_T *costab, emxArray_real_T *sintab, emxArray_real_T
+        *sintabinv);
+      static void dobluesteinfft(const emxArray_creal_T *x, int n2blue, int nfft,
+        const emxArray_real_T *costab, const emxArray_real_T *sintab, const
+        emxArray_real_T *sintabinv, emxArray_creal_T *y);
       static void doHalfLengthRadix2(const double x[1820], emxArray_creal_T *y,
         int unsigned_nRows, const emxArray_real_T *costab, const emxArray_real_T
         *sintab);

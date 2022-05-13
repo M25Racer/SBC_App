@@ -1,11 +1,11 @@
 //
-// File: HS_EWL_DEMOD_QAM_initialize.h
+// File: exp.h
 //
 // MATLAB Coder version            : 5.1
 // C/C++ source code generated on  : 06-May-2022 14:49:51
 //
-#ifndef HS_EWL_DEMOD_QAM_INITIALIZE_H
-#define HS_EWL_DEMOD_QAM_INITIALIZE_H
+#ifndef EXP_H
+#define EXP_H
 
 // Include Files
 #include "rtwtypes.h"
@@ -13,13 +13,19 @@
 #include <cstddef>
 #include <cstdlib>
 
+// Type Declarations
+struct emxArray_creal_T;
+
 // Function Declarations
-extern void HS_EWL_DEMOD_QAM_initialize();
+namespace coder
+{
+  void b_exp(emxArray_creal_T *x);
+}
 
 #endif
 
 //
-// File trailer for HS_EWL_DEMOD_QAM_initialize.h
+// File trailer for exp.h
 //
 // [EOF]
 //

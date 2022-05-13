@@ -12,6 +12,7 @@ extern QMutex m_mutex_mod;
 
 extern float gain_data_float[2048];
 extern float phase_data_float[2048];
+extern uint16_t shift_for_qam_data_int;
 
 /* Private variables */
 
@@ -45,30 +46,7 @@ void ModTransmitterThread::run()
             continue;
         }
 
-        // State == TRANSMIT_GAIN || State == TRANSMIT_PHASE
-
-        if(!retry)
-        {
-            n_attempts = 0;
-
-            if(++n_channel == n_elements/64)
-            {
-                if(State == TRANSMIT_GAIN)
-                {
-                    emit consolePutData("Mod predistortion tables transmission completed\n", 1);
-                    State = IDLE;
-                    m_mutex_mod.unlock();
-                    continue;
-                }
-                else if(State == TRANSMIT_PHASE)
-                {
-                    State = TRANSMIT_GAIN;
-                    n_channel = 0;
-                    message.command = MessageBox::SET_GAIN_TABLE;
-                }
-            }
-        }
-        else
+        if(retry)
         {
             retry = false;
             if(++n_attempts == n_MaxAttempts)
@@ -80,28 +58,79 @@ void ModTransmitterThread::run()
                 continue;
             }
         }
-
-
-        message.packet_adr = n_channel;
-
-        uint32_t j = 0;
-        for(uint32_t i = 0; i < 64; ++i)
+        else
         {
-            uint8_t *p_f;
+            n_attempts = 0;
 
-            if(State == TRANSMIT_PHASE)
-                p_f = reinterpret_cast<uint8_t*>(&phase_data_float[n_channel*64 + i]);
-            else //if(State == TRANSMIT_GAIN)
-                p_f = reinterpret_cast<uint8_t*>(&gain_data_float[n_channel*64 + i]);
+            switch(State)
+            {
+                case TX_PHASE_TABLE_1:
+                    if(++n_channel == n_elements/64)
+                    {
+                        State = TX_GAIN_TABLE_2;
+                        n_channel = 0;
+                    }
+                    break;
 
-            message_box_buffer_mod[11 + j++] = p_f[0];
-            message_box_buffer_mod[11 + j++] = p_f[1];
-            message_box_buffer_mod[11 + j++] = p_f[2];
-            message_box_buffer_mod[11 + j++] = p_f[3];
+                case TX_GAIN_TABLE_2:
+                    if(++n_channel == n_elements/64)
+                        State = TX_SHIFT_3;
+                    break;
+
+                case TX_SHIFT_3:
+                    emit consolePutData("Mod predistortion tables and 'QAM shift' transmission completed\n", 1);
+                    State = IDLE;
+                    m_mutex_mod.unlock();
+                    continue;
+                    break;
+
+                 default:
+                    emit consolePutData("ModTransmitterThread error wrong state\n", 1);
+                    break;
+            }
+        }
+
+        // Send next command
+        switch(State)
+        {
+            case TX_PHASE_TABLE_1:
+            case TX_GAIN_TABLE_2:
+            {
+                message.command = (State == TX_PHASE_TABLE_1) ? MessageBox::SET_PHASE_TABLE : MessageBox::SET_GAIN_TABLE;
+                message.packet_adr = n_channel;
+
+                uint32_t j = 0;
+                for(uint32_t i = 0; i < 64; ++i)
+                {
+                    uint8_t *p_f;
+
+                    if(State == TX_PHASE_TABLE_1)
+                        p_f = reinterpret_cast<uint8_t*>(&phase_data_float[n_channel*64 + i]);
+                    else //if(State == TRANSMIT_GAIN)
+                        p_f = reinterpret_cast<uint8_t*>(&gain_data_float[n_channel*64 + i]);
+
+                    message_box_buffer_mod[11 + j++] = p_f[0];
+                    message_box_buffer_mod[11 + j++] = p_f[1];
+                    message_box_buffer_mod[11 + j++] = p_f[2];
+                    message_box_buffer_mod[11 + j++] = p_f[3];
+                }
+                break;
+            }
+
+            case TX_SHIFT_3:
+                message.command = MessageBox::SET_SHIFT_QAM_DATA;
+                message.packet_adr = 0;
+
+                message_box_buffer_mod[11] = uint8_t((shift_for_qam_data_int >> 8) & 0xFF);
+                message_box_buffer_mod[12] = uint8_t(shift_for_qam_data_int & 0xFF);
+                break;
+
+            default:
+                emit consolePutData("ModTransmitterThread error wrong state\n", 1);
+                break;
         }
 
         uint16_t tx_len = MessageBox::message_header_to_array(&message, message_box_buffer_mod);
-
         postDataToStm32H7(message_box_buffer_mod, tx_len);
 
         // Start answer timeout
@@ -126,7 +155,7 @@ void ModTransmitterThread::ModStartTransmitPhaseGain()
     message.own_address = MessageBox::MASTER_ADDR;
     message.data_len = 256;
 
-    State = TRANSMIT_PHASE;
+    State = TX_PHASE_TABLE_1;
 
     retry = false;
     n_attempts = 0;
@@ -183,7 +212,21 @@ bool ModTransmitterThread::ModAnswerReceived(const uint8_t *p_data, int length)
             return false;
             break;
 
-        case TRANSMIT_GAIN:
+        case TX_PHASE_TABLE_1:
+            if(p_data[1] == MessageBox::SET_PHASE_TABLE)
+            {
+                emit stopAnswerTimeoutTimer();
+                modTransmitWakeUp.wakeOne();
+            }
+            else
+            {
+                emit consolePutData("ModAnswerReceived answer wrong command\n", 1);
+                retry = true;
+                return false;
+            }
+            break;
+
+        case TX_GAIN_TABLE_2:
             if(p_data[1] == MessageBox::SET_GAIN_TABLE)
             {
                 emit stopAnswerTimeoutTimer();
@@ -197,8 +240,8 @@ bool ModTransmitterThread::ModAnswerReceived(const uint8_t *p_data, int length)
             }
             break;
 
-        case TRANSMIT_PHASE:
-            if(p_data[1] == MessageBox::SET_PHASE_TABLE)
+        case TX_SHIFT_3:
+            if(p_data[1] == MessageBox::SET_SHIFT_QAM_DATA)
             {
                 emit stopAnswerTimeoutTimer();
                 modTransmitWakeUp.wakeOne();

@@ -458,7 +458,7 @@ void MainWindow::initActionsConnections()
     connect(m_ui->actionSend_AGC_Start, &QAction::triggered, this, &MainWindow::sendHsCommandAgcStart);
     connect(m_ui->actionADC_START_for_SIN_600, &QAction::triggered, this, &MainWindow::sendHsCommandAdcStart2);
     connect(m_ui->actionADC_START_for_Sweep, &QAction::triggered, this, &MainWindow::sendHsCommandAdcStart3);
-    connect(m_ui->actionTx_phase_gain_tables_to_MOD, &QAction::triggered, this, &MainWindow::sendPhaseGainTables);
+    connect(m_ui->actionTx_phase_gain_tables_to_MOD, &QAction::triggered, this, &MainWindow::sendPredistortionTables);
 }
 
 void MainWindow::showStatusMessage(const QString &message)
@@ -592,59 +592,8 @@ void MainWindow::sendHsCommandAgcStart()
     m_usb_thread.sendHsCommand(USB_CMD_AGC_START, 0, nullptr);
 }
 
-void MainWindow::sendPhaseGainTables()
+void MainWindow::sendPredistortionTables()
 {
-    //todo test
-//    uint8_t phase_table[2048];
-//    uint8_t gain_table[2048];
-//    uint8_t message_box_buffer_mod[1024];
-//    uint8_t n_channel = 0;
-
-//    for(uint32_t i = 0; i < sizeof(phase_table); ++i)
-//    {
-//        phase_table[i] = uint8_t(i);
-//        gain_table[i] = 255 - uint8_t(i);
-//    }
-
-//    message_header message;
-//    message.command = MessageBox::SET_PHASE_TABLE;
-//    message.message_id = 0;
-//    message.master_address = MessageBox::MOD_ADDR;
-//    message.own_address = MessageBox::MASTER_ADDR;
-//    message.data_len = 256;
-
-//    for(n_channel = 0; n_channel < sizeof(phase_table)/256; ++n_channel)
-//    {
-//        message.packet_adr = n_channel;
-
-//        memcpy(message_box_buffer_mod + 11, phase_table, 256);
-
-//        uint16_t tx_len = m_message_box->message_header_to_array(&message, message_box_buffer_mod);
-
-//        postTxDataSTM(message_box_buffer_mod, tx_len);
-
-//        //todo delay? wait for an answer?
-//        QThread::msleep(200);
-//    }
-
-//    message.command = MessageBox::SET_GAIN_TABLE;
-
-//    for(n_channel = 0; n_channel < sizeof(gain_table)/256; ++n_channel)
-//    {
-//        message.packet_adr = n_channel;
-
-//        memcpy(message_box_buffer_mod + 11, gain_table, 256);
-
-//        uint16_t tx_len = m_message_box->message_header_to_array(&message, message_box_buffer_mod);
-
-//        postTxDataSTM(message_box_buffer_mod, tx_len);
-
-//        //todo delay? wait for an answer?
-//        QThread::msleep(200);
-//    }
-
-//    m_console->putData("Gain & phase has been transmitted\n", 1);
-
     m_console->putData("Starting of transmit phase & gain tables to MOD\n", 1);
 
     m_mod_tx_thread.ModStartTransmitPhaseGain();

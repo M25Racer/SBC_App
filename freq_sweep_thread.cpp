@@ -30,16 +30,18 @@ extern QMutex m_mutex3;
 static double SignalSin[USB_MAX_DATA_SIZE];
 static double SignalSweep[USB_MAX_DATA_SIZE];
 
-//  output var HS_EWL_TR_FUN_EST
-double  gain_data[2048];
-double  phase_data[2048];
-float   gain_data_float[2048];
-float   phase_data_float[2048];
-static int     gain_size[2];
-static int     phase_size[2];
-static double  sweep_warning_status;
+// output var HS_EWL_TR_FUN_EST
+double gain_data[2048];
+double phase_data[2048];
+float gain_data_float[2048];
+float phase_data_float[2048];
+static int gain_size[2];
+static int phase_size[2];
+static double sweep_warning_status;
+static double shift_for_qam_data;
+uint16_t shift_for_qam_data_int;
 
-//  output var HS_EWL_FREQ_EST_FOR_SWEEP
+// output var HS_EWL_FREQ_EST_FOR_SWEEP
 static double f_opt;
 static double ph_opt;
 static double sweep_freq_warning_status;
@@ -181,7 +183,7 @@ void FreqSweepThread::Sweep()
     sweep_data = emxCreateWrapper_real_T(sweep, 1, len_sweep);
 
     HS_EWL_TR_FUN_EST(sweep_data, sweep_math, Fs, f_opt, f_sine, pream_sps,
-                     gain_data, gain_size, phase_data, phase_size,
+                     gain_data, gain_size, phase_data, phase_size, &shift_for_qam_data,
                      &sweep_warning_status);
 
     // Convert to float
@@ -190,6 +192,9 @@ void FreqSweepThread::Sweep()
         gain_data_float[i] = float(gain_data[i]);
         phase_data_float[i] = float(phase_data[i]);
     }
+
+    // Convert 'shift' to uint16_t
+    shift_for_qam_data_int = uint16_t(shift_for_qam_data);
 
     int sweep_warning_status_int = int(sweep_warning_status);
 
@@ -219,4 +224,5 @@ void FreqSweepThread::Sweep()
     }
 
     emit consolePutData(QString("Sweep elapsed time = %1 ms\n").arg(peformance_timer.elapsed()), 1);
+    emit consolePutData(QString("Sweep shift_for_qam_data = %1\n").arg(shift_for_qam_data), 1);
 }

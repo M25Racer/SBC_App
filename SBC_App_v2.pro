@@ -26,12 +26,17 @@ SOURCES += \
     qam_decoder/RaisedCosineReceiveFilter.cpp \
     qam_decoder/bsearch.cpp \
     qam_decoder/colon.cpp \
+    qam_decoder/diff.cpp \
+    qam_decoder/eml_fftshift.cpp \
+    qam_decoder/exp.cpp \
     qam_decoder/fft.cpp \
     qam_decoder/fftshift.cpp \
     qam_decoder/getSquareConstellation.cpp \
     qam_decoder/ifft.cpp \
+    qam_decoder/ifftshift.cpp \
     qam_decoder/interp1.cpp \
     qam_decoder/log2.cpp \
+    qam_decoder/mean.cpp \
     qam_decoder/minOrMax.cpp \
     qam_decoder/movSumProdOrMean.cpp \
     qam_decoder/qamdemod.cpp \
@@ -41,6 +46,7 @@ SOURCES += \
     qam_decoder/rtGetNaN.cpp \
     qam_decoder/rt_nonfinite.cpp \
     qam_decoder/setup.cpp \
+    qam_decoder/sign.cpp \
     qam_decoder/xcorr.cpp \
     qam_thread.cpp \
     ringbuffer.cpp \
@@ -127,13 +133,18 @@ HEADERS += \
     qam_decoder/RaisedCosineReceiveFilter.h \
     qam_decoder/bsearch.h \
     qam_decoder/colon.h \
+    qam_decoder/diff.h \
+    qam_decoder/eml_fftshift.h \
+    qam_decoder/exp.h \
     qam_decoder/fft.h \
     qam_decoder/fftshift.h \
     qam_decoder/getSquareConstellation.h \
     qam_decoder/ifft.h \
+    qam_decoder/ifftshift.h \
     qam_decoder/interp1.h \
     qam_decoder/log2.h \
     qam_decoder/math_sweep.h \
+    qam_decoder/mean.h \
     qam_decoder/minOrMax.h \
     qam_decoder/movSumProdOrMean.h \
     qam_decoder/qam_decoder.h \
@@ -147,6 +158,7 @@ HEADERS += \
     qam_decoder/rt_nonfinite.h \
     qam_decoder/rtwtypes.h \
     qam_decoder/setup.h \
+    qam_decoder/sign.h \
     qam_decoder/signal.h \
     qam_decoder/signal_sweep.h \
     qam_decoder/tmwtypes.h \

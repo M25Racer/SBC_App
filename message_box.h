@@ -76,6 +76,7 @@ public:
     static const uint8_t SEND_SIN_35KHZ_600 = 0xDE; // Отправить 600 периодов синуса 35 кГц макс. амплитуды, 54 4dde0301040000000000 4fad
     static const uint8_t SET_GAIN_TABLE     = 0xE0;
     static const uint8_t SET_PHASE_TABLE    = 0xE1;
+    static const uint8_t SET_SHIFT_QAM_DATA = 0xE2;
 
 protected:
 

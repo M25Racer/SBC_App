@@ -2,7 +2,7 @@
 // File: fft.cpp
 //
 // MATLAB Coder version            : 5.1
-// C/C++ source code generated on  : 29-Apr-2022 10:21:15
+// C/C++ source code generated on  : 06-May-2022 14:49:51
 //
 
 // Include Files
@@ -22,6 +22,79 @@
 //
 namespace coder
 {
+  void b_fft(const emxArray_real_T *x, double varargin_1, emxArray_creal_T *y)
+  {
+    emxArray_creal_T *yCol;
+    emxArray_real_T b_x;
+    emxArray_real_T *costab;
+    emxArray_real_T *sintab;
+    emxArray_real_T *sintabinv;
+    int c_x[1];
+    int d_x[1];
+    int N2blue;
+    int nRows;
+    emxInit_creal_T(&yCol, 1);
+    emxInit_real_T(&costab, 2);
+    emxInit_real_T(&sintab, 2);
+    emxInit_real_T(&sintabinv, 2);
+    if ((x->size[1] == 0) || (0 == static_cast<int>(varargin_1))) {
+      N2blue = y->size[0] * y->size[1];
+      y->size[0] = 1;
+      y->size[1] = static_cast<int>(varargin_1);
+      emxEnsureCapacity_creal_T(y, N2blue);
+      nRows = static_cast<int>(varargin_1);
+      for (N2blue = 0; N2blue < nRows; N2blue++) {
+        y->data[N2blue].re = 0.0;
+        y->data[N2blue].im = 0.0;
+      }
+    } else {
+      boolean_T useRadix2;
+      useRadix2 = ((static_cast<int>(varargin_1) > 0) && ((static_cast<int>
+        (varargin_1) & (static_cast<int>(varargin_1) - 1)) == 0));
+      internal::FFTImplementationCallback::get_algo_sizes((static_cast<int>
+        (varargin_1)), (useRadix2), (&N2blue), (&nRows));
+      internal::FFTImplementationCallback::generate_twiddle_tables((nRows),
+        (useRadix2), (costab), (sintab), (sintabinv));
+      if (useRadix2) {
+        nRows = x->size[1];
+        b_x = *x;
+        d_x[0] = nRows;
+        b_x.size = &d_x[0];
+        b_x.numDimensions = 1;
+        internal::FFTImplementationCallback::r2br_r2dit_trig((&b_x), (
+          static_cast<int>(varargin_1)), (costab), (sintab), (yCol));
+      } else {
+        nRows = x->size[1];
+        b_x = *x;
+        c_x[0] = nRows;
+        b_x.size = &c_x[0];
+        b_x.numDimensions = 1;
+        internal::FFTImplementationCallback::dobluesteinfft((&b_x), (N2blue), (
+          static_cast<int>(varargin_1)), (costab), (sintab), (sintabinv), (yCol));
+      }
+
+      N2blue = y->size[0] * y->size[1];
+      y->size[0] = 1;
+      y->size[1] = static_cast<int>(varargin_1);
+      emxEnsureCapacity_creal_T(y, N2blue);
+      nRows = static_cast<int>(varargin_1);
+      for (N2blue = 0; N2blue < nRows; N2blue++) {
+        y->data[N2blue] = yCol->data[N2blue];
+      }
+    }
+
+    emxFree_real_T(&sintabinv);
+    emxFree_real_T(&sintab);
+    emxFree_real_T(&costab);
+    emxFree_creal_T(&yCol);
+  }
+
+  //
+  // Arguments    : const emxArray_real_T *x
+  //                double varargin_1
+  //                emxArray_creal_T *y
+  // Return Type  : void
+  //
   void fft(const emxArray_real_T *x, double varargin_1, emxArray_creal_T *y)
   {
     emxArray_real_T *costab;

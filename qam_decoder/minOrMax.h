@@ -2,7 +2,7 @@
 // File: minOrMax.h
 //
 // MATLAB Coder version            : 5.1
-// C/C++ source code generated on  : 29-Apr-2022 10:21:15
+// C/C++ source code generated on  : 06-May-2022 14:49:51
 //
 #ifndef MINORMAX_H
 #define MINORMAX_H
@@ -22,8 +22,9 @@ namespace coder
   namespace internal
   {
     double b_maximum(const emxArray_real_T *x);
-    double maximum(const emxArray_real_T *x);
+    void b_maximum(const emxArray_real_T *x, double *ex, int *idx);
     void maximum(const emxArray_real_T *x, double *ex, int *idx);
+    double maximum(const emxArray_real_T *x);
     void minimum(const double x[50], double *ex, int *idx);
   }
 }

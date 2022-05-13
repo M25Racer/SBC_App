@@ -2,7 +2,7 @@
 // File: xcorr.cpp
 //
 // MATLAB Coder version            : 5.1
-// C/C++ source code generated on  : 29-Apr-2022 10:21:15
+// C/C++ source code generated on  : 06-May-2022 14:49:51
 //
 
 // Include Files
@@ -27,7 +27,7 @@
 namespace coder
 {
   void xcorr(const emxArray_real_T *x, const emxArray_real_T *varargin_1,
-             emxArray_real_T *c, emxArray_real_T *lags)
+             emxArray_real_T *c)//, emxArray_real_T *lags)
   {
     emxArray_creal_T *X;
     emxArray_creal_T *Y;
@@ -229,15 +229,15 @@ namespace coder
       c->data[i] = c1->data[i];
     }
 
-    emxFree_real_T(&c1);
-    i = lags->size[0] * lags->size[1];
-    lags->size[0] = 1;
-    lags->size[1] = (maxval + maxval) + 1;
-    emxEnsureCapacity_real_T(lags, i);
-    ceilLog2 = maxval + maxval;
-    for (i = 0; i <= ceilLog2; i++) {
-      lags->data[i] = i - maxval;
-    }
+//    emxFree_real_T(&c1);
+//    i = lags->size[0] * lags->size[1];
+//    lags->size[0] = 1;
+//    lags->size[1] = (maxval + maxval) + 1;
+//    emxEnsureCapacity_real_T(lags, i);
+//    ceilLog2 = maxval + maxval;
+//    for (i = 0; i <= ceilLog2; i++) {
+//      lags->data[i] = i - maxval;
+//    }
   }
 
   //
@@ -248,7 +248,7 @@ namespace coder
   // Return Type  : void
   //
   void xcorr(const emxArray_real_T *x, const double varargin_1[1820],
-             emxArray_real_T *c, emxArray_real_T *lags)
+             emxArray_real_T *c)//, emxArray_real_T *lags)
   {
     emxArray_creal_T *X;
     emxArray_creal_T *Y;
@@ -445,15 +445,15 @@ namespace coder
       c->data[c0] = c1->data[c0];
     }
 
-    emxFree_real_T(&c1);
-    c0 = lags->size[0] * lags->size[1];
-    lags->size[0] = 1;
-    lags->size[1] = (maxval + maxval) + 1;
-    emxEnsureCapacity_real_T(lags, c0);
-    ceilLog2 = maxval + maxval;
-    for (c0 = 0; c0 <= ceilLog2; c0++) {
-      lags->data[c0] = c0 - maxval;
-    }
+//    emxFree_real_T(&c1);
+//    c0 = lags->size[0] * lags->size[1];
+//    lags->size[0] = 1;
+//    lags->size[1] = (maxval + maxval) + 1;
+//    emxEnsureCapacity_real_T(lags, c0);
+//    ceilLog2 = maxval + maxval;
+//    for (c0 = 0; c0 <= ceilLog2; c0++) {
+//      lags->data[c0] = c0 - maxval;
+//    }
   }
 }
 

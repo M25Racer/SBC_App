@@ -2,7 +2,7 @@
 // File: interp1.h
 //
 // MATLAB Coder version            : 5.1
-// C/C++ source code generated on  : 29-Apr-2022 10:21:15
+// C/C++ source code generated on  : 06-May-2022 14:49:51
 //
 #ifndef INTERP1_H
 #define INTERP1_H
@@ -23,6 +23,8 @@ namespace coder
                *varargin_2, double Vq[513]);
   void interp1(const double varargin_1_data[], const double varargin_2[1024],
                const double varargin_3_data[], double Vq_data[], int Vq_size[2]);
+  void interp1(const double varargin_1_data[], const double varargin_2_data[],
+               const emxArray_real_T *varargin_3, emxArray_real_T *Vq);
 }
 
 #endif

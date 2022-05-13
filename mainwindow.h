@@ -95,7 +95,7 @@ private slots:
     void sendHsCommandAdcStart2();      // command to STM32
     void sendHsCommandAdcStart3();      // command to STM32
     void sendHsCommandAgcStart();       // command to STM32
-    void sendPhaseGainTables();         // commands to MOD
+    void sendPredistortionTables();         // commands to MOD
     void readDataSerialPort();
     void transmitDataSerialPort(const uint8_t *p_data, int length);
     void postTxDataSTM(const uint8_t *p_data, const int length);

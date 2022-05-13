@@ -2,11 +2,12 @@
 // File: FFTImplementationCallback.cpp
 //
 // MATLAB Coder version            : 5.1
-// C/C++ source code generated on  : 29-Apr-2022 10:21:15
+// C/C++ source code generated on  : 06-May-2022 14:49:51
 //
 
 // Include Files
 #include "FFTImplementationCallback.h"
+#include "HS_EWL_DEMOD_QAM_data.h"
 #include "HS_EWL_DEMOD_QAM_emxutil.h"
 #include "HS_EWL_DEMOD_QAM_types.h"
 #include "rt_nonfinite.h"
@@ -680,6 +681,111 @@ namespace coder
     }
 
     //
+    // Arguments    : int nRows
+    //                boolean_T useRadix2
+    //                emxArray_real_T *costab
+    //                emxArray_real_T *sintab
+    //                emxArray_real_T *sintabinv
+    // Return Type  : void
+    //
+    void FFTImplementationCallback::c_generate_twiddle_tables(int nRows,
+      boolean_T useRadix2, emxArray_real_T *costab, emxArray_real_T *sintab,
+      emxArray_real_T *sintabinv)
+    {
+      emxArray_real_T *costab1q;
+      double e;
+      int i;
+      int k;
+      int n;
+      int nd2;
+      emxInit_real_T(&costab1q, 2);
+      e = 6.2831853071795862 / static_cast<double>(nRows);
+      n = nRows / 2 / 2;
+      i = costab1q->size[0] * costab1q->size[1];
+      costab1q->size[0] = 1;
+      costab1q->size[1] = n + 1;
+      emxEnsureCapacity_real_T(costab1q, i);
+      costab1q->data[0] = 1.0;
+      nd2 = n / 2 - 1;
+      for (k = 0; k <= nd2; k++) {
+        costab1q->data[k + 1] = std::cos(e * (static_cast<double>(k) + 1.0));
+      }
+
+      i = nd2 + 2;
+      nd2 = n - 1;
+      for (k = i; k <= nd2; k++) {
+        costab1q->data[k] = std::sin(e * static_cast<double>(n - k));
+      }
+
+      costab1q->data[n] = 0.0;
+      if (!useRadix2) {
+        n = costab1q->size[1] - 1;
+        nd2 = (costab1q->size[1] - 1) << 1;
+        i = costab->size[0] * costab->size[1];
+        costab->size[0] = 1;
+        costab->size[1] = nd2 + 1;
+        emxEnsureCapacity_real_T(costab, i);
+        i = sintab->size[0] * sintab->size[1];
+        sintab->size[0] = 1;
+        sintab->size[1] = nd2 + 1;
+        emxEnsureCapacity_real_T(sintab, i);
+        costab->data[0] = 1.0;
+        sintab->data[0] = 0.0;
+        i = sintabinv->size[0] * sintabinv->size[1];
+        sintabinv->size[0] = 1;
+        sintabinv->size[1] = nd2 + 1;
+        emxEnsureCapacity_real_T(sintabinv, i);
+        for (k = 0; k < n; k++) {
+          sintabinv->data[k + 1] = costab1q->data[(n - k) - 1];
+        }
+
+        i = costab1q->size[1];
+        for (k = i; k <= nd2; k++) {
+          sintabinv->data[k] = costab1q->data[k - n];
+        }
+
+        for (k = 0; k < n; k++) {
+          costab->data[k + 1] = costab1q->data[k + 1];
+          sintab->data[k + 1] = -costab1q->data[(n - k) - 1];
+        }
+
+        i = costab1q->size[1];
+        for (k = i; k <= nd2; k++) {
+          costab->data[k] = -costab1q->data[nd2 - k];
+          sintab->data[k] = -costab1q->data[k - n];
+        }
+      } else {
+        n = costab1q->size[1] - 1;
+        nd2 = (costab1q->size[1] - 1) << 1;
+        i = costab->size[0] * costab->size[1];
+        costab->size[0] = 1;
+        costab->size[1] = nd2 + 1;
+        emxEnsureCapacity_real_T(costab, i);
+        i = sintab->size[0] * sintab->size[1];
+        sintab->size[0] = 1;
+        sintab->size[1] = nd2 + 1;
+        emxEnsureCapacity_real_T(sintab, i);
+        costab->data[0] = 1.0;
+        sintab->data[0] = 0.0;
+        for (k = 0; k < n; k++) {
+          costab->data[k + 1] = costab1q->data[k + 1];
+          sintab->data[k + 1] = costab1q->data[(n - k) - 1];
+        }
+
+        i = costab1q->size[1];
+        for (k = i; k <= nd2; k++) {
+          costab->data[k] = -costab1q->data[nd2 - k];
+          sintab->data[k] = costab1q->data[k - n];
+        }
+
+        sintabinv->size[0] = 1;
+        sintabinv->size[1] = 0;
+      }
+
+      emxFree_real_T(&costab1q);
+    }
+
+    //
     // Arguments    : const double x[1820]
     //                emxArray_creal_T *y
     //                int nRows
@@ -1035,6 +1141,165 @@ namespace coder
       emxFree_creal_T(&reconVar2);
       emxFree_creal_T(&reconVar1);
       emxFree_int32_T(&wrapIndex);
+    }
+
+    //
+    // Arguments    : const emxArray_creal_T *x
+    //                int n2blue
+    //                int nfft
+    //                const emxArray_real_T *costab
+    //                const emxArray_real_T *sintab
+    //                const emxArray_real_T *sintabinv
+    //                emxArray_creal_T *y
+    // Return Type  : void
+    //
+    void FFTImplementationCallback::dobluesteinfft(const emxArray_creal_T *x,
+      int n2blue, int nfft, const emxArray_real_T *costab, const emxArray_real_T
+      *sintab, const emxArray_real_T *sintabinv, emxArray_creal_T *y)
+    {
+      emxArray_creal_T *b_fv;
+      emxArray_creal_T *fv;
+      emxArray_creal_T *wwc;
+      double nt_im;
+      double nt_re;
+      int b_y;
+      int idx;
+      int k;
+      int nInt2;
+      int nInt2m1;
+      int rt;
+      emxInit_creal_T(&wwc, 1);
+      nInt2m1 = (nfft + nfft) - 1;
+      nInt2 = wwc->size[0];
+      wwc->size[0] = nInt2m1;
+      emxEnsureCapacity_creal_T(wwc, nInt2);
+      idx = nfft;
+      rt = 0;
+      wwc->data[nfft - 1].re = 1.0;
+      wwc->data[nfft - 1].im = 0.0;
+      nInt2 = nfft << 1;
+      for (k = 0; k <= nfft - 2; k++) {
+        b_y = ((k + 1) << 1) - 1;
+        if (nInt2 - rt <= b_y) {
+          rt += b_y - nInt2;
+        } else {
+          rt += b_y;
+        }
+
+        nt_im = 3.1415926535897931 * static_cast<double>(rt) / static_cast<
+          double>(nfft);
+        if (nt_im == 0.0) {
+          nt_re = 1.0;
+          nt_im = 0.0;
+        } else {
+          nt_re = std::cos(nt_im);
+          nt_im = std::sin(nt_im);
+        }
+
+        wwc->data[idx - 2].re = nt_re;
+        wwc->data[idx - 2].im = -nt_im;
+        idx--;
+      }
+
+      idx = 0;
+      nInt2 = nInt2m1 - 1;
+      for (k = nInt2; k >= nfft; k--) {
+        wwc->data[k] = wwc->data[idx];
+        idx++;
+      }
+
+      nInt2 = y->size[0];
+      y->size[0] = nfft;
+      emxEnsureCapacity_creal_T(y, nInt2);
+      if (nfft > x->size[0]) {
+        nInt2 = y->size[0];
+        y->size[0] = nfft;
+        emxEnsureCapacity_creal_T(y, nInt2);
+        for (nInt2 = 0; nInt2 < nfft; nInt2++) {
+          y->data[nInt2].re = 0.0;
+          y->data[nInt2].im = 0.0;
+        }
+      }
+
+      rt = x->size[0];
+      if (nfft < rt) {
+        rt = nfft;
+      }
+
+      nInt2 = 0;
+      for (k = 0; k < rt; k++) {
+        b_y = (nfft + k) - 1;
+        nt_re = wwc->data[b_y].re;
+        nt_im = wwc->data[b_y].im;
+        y->data[k].re = nt_re * x->data[nInt2].re + nt_im * x->data[nInt2].im;
+        y->data[k].im = nt_re * x->data[nInt2].im - nt_im * x->data[nInt2].re;
+        nInt2++;
+      }
+
+      nInt2 = rt + 1;
+      for (k = nInt2; k <= nfft; k++) {
+        y->data[k - 1].re = 0.0;
+        y->data[k - 1].im = 0.0;
+      }
+
+      emxInit_creal_T(&fv, 1);
+      emxInit_creal_T(&b_fv, 1);
+      FFTImplementationCallback::r2br_r2dit_trig_impl((y), (n2blue), (costab),
+        (sintab), (fv));
+      FFTImplementationCallback::r2br_r2dit_trig_impl((wwc), (n2blue), (costab),
+        (sintab), (b_fv));
+      nInt2 = b_fv->size[0];
+      b_fv->size[0] = fv->size[0];
+      emxEnsureCapacity_creal_T(b_fv, nInt2);
+      rt = fv->size[0];
+      for (nInt2 = 0; nInt2 < rt; nInt2++) {
+        nt_re = fv->data[nInt2].re * b_fv->data[nInt2].im + fv->data[nInt2].im *
+          b_fv->data[nInt2].re;
+        b_fv->data[nInt2].re = fv->data[nInt2].re * b_fv->data[nInt2].re -
+          fv->data[nInt2].im * b_fv->data[nInt2].im;
+        b_fv->data[nInt2].im = nt_re;
+      }
+
+      FFTImplementationCallback::r2br_r2dit_trig_impl((b_fv), (n2blue), (costab),
+        (sintabinv), (fv));
+      emxFree_creal_T(&b_fv);
+      if (fv->size[0] > 1) {
+        nt_re = 1.0 / static_cast<double>(fv->size[0]);
+        rt = fv->size[0];
+        for (nInt2 = 0; nInt2 < rt; nInt2++) {
+          fv->data[nInt2].re *= nt_re;
+          fv->data[nInt2].im *= nt_re;
+        }
+      }
+
+      idx = 0;
+      nInt2 = wwc->size[0];
+      for (k = nfft; k <= nInt2; k++) {
+        double ai;
+        y->data[idx].re = wwc->data[k - 1].re * fv->data[k - 1].re + wwc->data[k
+          - 1].im * fv->data[k - 1].im;
+        y->data[idx].im = wwc->data[k - 1].re * fv->data[k - 1].im - wwc->data[k
+          - 1].im * fv->data[k - 1].re;
+        nt_re = y->data[idx].re;
+        ai = y->data[idx].im;
+        if (ai == 0.0) {
+          nt_im = nt_re / static_cast<double>(nfft);
+          nt_re = 0.0;
+        } else if (nt_re == 0.0) {
+          nt_im = 0.0;
+          nt_re = ai / static_cast<double>(nfft);
+        } else {
+          nt_im = nt_re / static_cast<double>(nfft);
+          nt_re = ai / static_cast<double>(nfft);
+        }
+
+        y->data[idx].re = nt_im;
+        y->data[idx].im = nt_re;
+        idx++;
+      }
+
+      emxFree_creal_T(&fv);
+      emxFree_creal_T(&wwc);
     }
 
     //
