@@ -64,6 +64,9 @@ extern QElapsedTimer profiler_timer;
 extern bool special_cmd_transmitted;
 extern bool special_cmd_transmitted2;
 
+extern QWaitCondition modTransmitWakeUp;
+extern QMutex m_mutex_mod;
+
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     m_ui(new Ui::MainWindow),
@@ -99,9 +102,13 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(&m_usb_thread, &UsbWorkThread::consolePutData, this, &MainWindow::consolePutData, Qt::ConnectionType::QueuedConnection);
     connect(&m_usb_thread, &UsbWorkThread::usbInitTimeoutStart, this, &MainWindow::usbInitTimeoutStart, Qt::ConnectionType::QueuedConnection);
     connect(&m_usb_thread, &UsbWorkThread::consoleAdcFile, this, &MainWindow::consoleAdcData, Qt::ConnectionType::QueuedConnection);
+    //connect(&m_usb_thread, &UsbWorkThread::postDataToStm32H7, this, &MainWindow::postTxDataSTM);
     connect(&m_qam_thread, &QamThread::consolePutData, this, &MainWindow::consolePutData, Qt::ConnectionType::QueuedConnection);
     connect(&m_qam_thread, &QamThread::postTxDataToSerialPort, this, &MainWindow::transmitDataSerialPort, Qt::ConnectionType::QueuedConnection);
     connect(&m_freq_sweep_thread, &FreqSweepThread::consolePutData, this, &MainWindow::consolePutData, Qt::ConnectionType::QueuedConnection);
+    connect(&m_mod_tx_thread, &ModTransmitterThread::consolePutData, this, &MainWindow::consolePutData, Qt::ConnectionType::QueuedConnection);
+    connect(&m_mod_tx_thread, &ModTransmitterThread::postDataToStm32H7, this, &MainWindow::postTxDataSTM, Qt::ConnectionType::QueuedConnection);
+//    connect(&m_mod_tx_thread, &ModTransmitterThread::startAnswerTimeoutTimer, this, &MainWindow::modAnswerTimeoutStart, Qt::ConnectionType::QueuedConnection);
 
     m_console->putData("SBC Application\n", 1);
     m_console->putData("Opening serial port...\n", 1);
@@ -143,6 +150,17 @@ MainWindow::MainWindow(QWidget *parent) :
 
     // Start QAM frequency estimate for sweep thread
     m_freq_sweep_thread.start();
+
+    // Start MOD commands transmitter thread
+    m_mod_tx_thread.start();
+
+    // Timeout timer for MOD answers
+    timerModAnswerTimeout = new QTimer(this);
+    timerModAnswerTimeout->setSingleShot(true);
+    timerModAnswerTimeout->connect(&m_mod_tx_thread, SIGNAL(startAnswerTimeoutTimer(int)), SLOT(start(int)), Qt::ConnectionType::QueuedConnection);
+    timerModAnswerTimeout->connect(&m_mod_tx_thread, SIGNAL(stopAnswerTimeoutTimer()), SLOT(stop()), Qt::ConnectionType::QueuedConnection);
+
+    m_mod_tx_thread.connect(timerModAnswerTimeout, SIGNAL(timeout()), SLOT(timeoutAnswer()));
 }
 
 MainWindow::~MainWindow()
@@ -257,10 +275,20 @@ void MainWindow::timeoutUsbInitCallback()
     m_usb_thread.USB_Init();
 }
 
+void MainWindow::timeoutAnswerTest()
+{
+    m_console->putData("Test\n", 1);
+}
+
 void MainWindow::usbInitTimeoutStart(int timeout_ms)
 {
     timerUsbInit->start(timeout_ms);
 }
+
+//void MainWindow::modAnswerTimeoutStart(int timeout_ms)
+//{
+//    timerModAnswerTimeout->start(timeout_ms);
+//}
 
 void MainWindow::timeoutSerialPortReconnect()
 {
@@ -430,6 +458,7 @@ void MainWindow::initActionsConnections()
     connect(m_ui->actionSend_AGC_Start, &QAction::triggered, this, &MainWindow::sendHsCommandAgcStart);
     connect(m_ui->actionADC_START_for_SIN_600, &QAction::triggered, this, &MainWindow::sendHsCommandAdcStart2);
     connect(m_ui->actionADC_START_for_Sweep, &QAction::triggered, this, &MainWindow::sendHsCommandAdcStart3);
+    connect(m_ui->actionTx_phase_gain_tables_to_MOD, &QAction::triggered, this, &MainWindow::sendPhaseGainTables);
 }
 
 void MainWindow::showStatusMessage(const QString &message)
@@ -441,18 +470,18 @@ void MainWindow::showStatusMessage(const QString &message)
 // Asynchronous transmit
 void MainWindow::transmitDataSerialPort(const uint8_t *p_data, int length)
 {
-//    m_console->putData(QString("Profiler timer elapsed %1 # transmit to sp begin\n").arg(profiler_timer.elapsed()), 1);
-//    if(p_data == nullptr)
-//    {
-//        m_console->putData("SP Error post_data_tx reported p_data = NULL", 0);
-//        return;
-//    }
-
     m_serial->write((const char*)p_data, length);
     m_serial->flush();  // Sending the buffered data immediately to the serial port
-//    m_console->putData("SP Transmit " + QString::number(length) + " bytes\n", 0);
 
+    // Logs
+#ifdef QT_DEBUG
+    m_console->putData("SP Transmit " + QString::number(length) + " bytes\n", 0);
+#endif
     m_console->putData(QString("Profiler timer elapsed %1 # transmit to sp end\n").arg(profiler_timer.elapsed()), 1);
+
+    // todo - change slot from 'transmitDataSerialPort' to 'ModAnswerReceived' ?
+    // Transmit data to 'm_mod_tx_thread' (MOD transmit & receive commands sequence)
+    m_mod_tx_thread.ModAnswerReceived(p_data, length);
 }
 
 // USB to STM32H7 board
@@ -558,8 +587,65 @@ void MainWindow::sendHsCommandAdcStart3()
     m_usb_thread.sendHsCommand(USB_CMD_ADC_START, 4, (uint8_t*)&adc_data_length);
 }
 
-
 void MainWindow::sendHsCommandAgcStart()
 {
     m_usb_thread.sendHsCommand(USB_CMD_AGC_START, 0, nullptr);
+}
+
+void MainWindow::sendPhaseGainTables()
+{
+    //todo test
+//    uint8_t phase_table[2048];
+//    uint8_t gain_table[2048];
+//    uint8_t message_box_buffer_mod[1024];
+//    uint8_t n_channel = 0;
+
+//    for(uint32_t i = 0; i < sizeof(phase_table); ++i)
+//    {
+//        phase_table[i] = uint8_t(i);
+//        gain_table[i] = 255 - uint8_t(i);
+//    }
+
+//    message_header message;
+//    message.command = MessageBox::SET_PHASE_TABLE;
+//    message.message_id = 0;
+//    message.master_address = MessageBox::MOD_ADDR;
+//    message.own_address = MessageBox::MASTER_ADDR;
+//    message.data_len = 256;
+
+//    for(n_channel = 0; n_channel < sizeof(phase_table)/256; ++n_channel)
+//    {
+//        message.packet_adr = n_channel;
+
+//        memcpy(message_box_buffer_mod + 11, phase_table, 256);
+
+//        uint16_t tx_len = m_message_box->message_header_to_array(&message, message_box_buffer_mod);
+
+//        postTxDataSTM(message_box_buffer_mod, tx_len);
+
+//        //todo delay? wait for an answer?
+//        QThread::msleep(200);
+//    }
+
+//    message.command = MessageBox::SET_GAIN_TABLE;
+
+//    for(n_channel = 0; n_channel < sizeof(gain_table)/256; ++n_channel)
+//    {
+//        message.packet_adr = n_channel;
+
+//        memcpy(message_box_buffer_mod + 11, gain_table, 256);
+
+//        uint16_t tx_len = m_message_box->message_header_to_array(&message, message_box_buffer_mod);
+
+//        postTxDataSTM(message_box_buffer_mod, tx_len);
+
+//        //todo delay? wait for an answer?
+//        QThread::msleep(200);
+//    }
+
+//    m_console->putData("Gain & phase has been transmitted\n", 1);
+
+    m_console->putData("Starting of transmit phase & gain tables to MOD\n", 1);
+
+    m_mod_tx_thread.ModStartTransmitPhaseGain();
 }

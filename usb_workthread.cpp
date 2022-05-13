@@ -124,8 +124,6 @@ void UsbWorkThread::run()
                 receive_in_progress = false;
             }
         }
-
-        //QThread::usleep(1);
     }
 }
 
@@ -969,6 +967,19 @@ void UsbWorkThread::parseHsData()
 #ifdef QT_DEBUG
             memcpy(AdcDataBuffer, UserRxBuffer + pStartData + sizeof(USBheader_t), header->packet_length - sizeof(USBheader_t));
             emit consoleAdcFile(AdcDataBuffer, header->packet_length - sizeof(USBheader_t));
+//            static uint32_t off = 0;
+//            if(!off)
+//            {
+//                memcpy(AdcDataBuffer, UserRxBuffer + pStartData + sizeof(USBheader_t), header->packet_length - sizeof(USBheader_t));
+//                memset(AdcDataBuffer + header->packet_length - sizeof(USBheader_t), 0, 100);
+//                off = header->packet_length - sizeof(USBheader_t) + 100;
+//            }
+//            else
+//            {
+//                memcpy(AdcDataBuffer + off, UserRxBuffer + pStartData + sizeof(USBheader_t), header->packet_length - sizeof(USBheader_t));
+//                emit consoleAdcFile(AdcDataBuffer, off + header->packet_length - sizeof(USBheader_t));
+//                off = 0;
+//            }
 #endif
             break;
         }

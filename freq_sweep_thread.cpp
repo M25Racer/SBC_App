@@ -31,8 +31,10 @@ static double SignalSin[USB_MAX_DATA_SIZE];
 static double SignalSweep[USB_MAX_DATA_SIZE];
 
 //  output var HS_EWL_TR_FUN_EST
-static double  gain_data[2048];
-static double  phase_data[2048];
+double  gain_data[2048];
+double  phase_data[2048];
+float   gain_data_float[2048];
+float   phase_data_float[2048];
 static int     gain_size[2];
 static int     phase_size[2];
 static double  sweep_warning_status;
@@ -181,6 +183,13 @@ void FreqSweepThread::Sweep()
     HS_EWL_TR_FUN_EST(sweep_data, sweep_math, Fs, f_opt, f_sine, pream_sps,
                      gain_data, gain_size, phase_data, phase_size,
                      &sweep_warning_status);
+
+    // Convert to float
+    for(uint16_t i = 0; i < 2048; ++i)
+    {
+        gain_data_float[i] = float(gain_data[i]);
+        phase_data_float[i] = float(phase_data[i]);
+    }
 
     int sweep_warning_status_int = int(sweep_warning_status);
 

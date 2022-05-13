@@ -58,6 +58,7 @@
 #include <usb_workthread.h>
 #include <qam_thread.h>
 #include <freq_sweep_thread.h>
+#include <mod_transmitter_thread.h>
 
 QT_BEGIN_NAMESPACE
 
@@ -87,13 +88,14 @@ private slots:
     void about();
     void logFileFlush();
     void logFileOpen();
-    void sendHsCommandGetStatus();
-    void sendHsCommandGetData();
-    void sendHsCommandGetDataSize();
-    void sendHsCommandAdcStart();
-    void sendHsCommandAdcStart2();
-    void sendHsCommandAdcStart3();
-    void sendHsCommandAgcStart();
+    void sendHsCommandGetStatus();      // command to STM32
+    void sendHsCommandGetData();        // command to STM32
+    void sendHsCommandGetDataSize();    // command to STM32
+    void sendHsCommandAdcStart();       // command to STM32
+    void sendHsCommandAdcStart2();      // command to STM32
+    void sendHsCommandAdcStart3();      // command to STM32
+    void sendHsCommandAgcStart();       // command to STM32
+    void sendPhaseGainTables();         // commands to MOD
     void readDataSerialPort();
     void transmitDataSerialPort(const uint8_t *p_data, int length);
     void postTxDataSTM(const uint8_t *p_data, const int length);
@@ -103,7 +105,10 @@ private slots:
     void timeoutSerialPortRx();
     void timeoutSerialPortReconnect();
     void timeoutUsbInitCallback();
+    void timeoutAnswerTest();
+
     void usbInitTimeoutStart(int timeout_ms);
+    //void modAnswerTimeoutStart(int timeout_ms);
 
 private:
     void initActionsConnections();
@@ -122,6 +127,7 @@ private:
     UsbWorkThread m_usb_thread;
     QamThread m_qam_thread;
     FreqSweepThread m_freq_sweep_thread;
+    ModTransmitterThread m_mod_tx_thread;
 
     QByteArray TtyUserRxBuffer;
 
@@ -132,6 +138,8 @@ private:
     QTimer *timerSpReconnect;
     QTimer *timerUsbPoll;
     QTimer *timerUsbInit;
+    QTimer *timerModAnswerTimeout;
+
     bool timeoutSerialPort = false;
 
     const int timeoutSerialPortRx_ms = 0;               // timeout for serial port receiver (max time between rx packets)

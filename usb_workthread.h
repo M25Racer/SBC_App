@@ -17,6 +17,7 @@ signals:
     void consolePutData(const QString &data, quint8 priority);
     void consoleAdcFile(const quint8 *adc_data, quint32 size);
     void postTxDataToSerialPort(const uint8_t *p_data, int len);
+    void postDataToStm32H7(const uint8_t *p_data, const int length);
     void usbInitTimeoutStart(int timeout_ms);
 
 public slots:
@@ -52,6 +53,8 @@ public:
     const int timeoutUsbInit_ms = 1000;
 
     uint32_t stm32_ready_data_size = 0;
+
+    bool mod_tx_rx_sequence = false;
 
 private:
     void run() override;

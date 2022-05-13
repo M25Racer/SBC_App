@@ -89,6 +89,7 @@
     <addaction name="actionSend_AGC_Start"/>
     <addaction name="actionADC_START_for_SIN_600"/>
     <addaction name="actionADC_START_for_Sweep"/>
+    <addaction name="actionTx_phase_gain_tables_to_MOD"/>
    </widget>
    <addaction name="menuHelp"/>
    <addaction name="menuLogs"/>
@@ -235,6 +236,11 @@
   <action name="actionADC_START_for_Sweep">
    <property name="text">
     <string>ADC_START for 'Sweep'</string>
+   </property>
+  </action>
+  <action name="actionTx_phase_gain_tables_to_MOD">
+   <property name="text">
+    <string>Tx phase gain to MOD</string>
    </property>
   </action>
  </widget>

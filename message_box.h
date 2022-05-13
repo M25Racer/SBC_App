@@ -36,7 +36,7 @@ signals:
 
 public:
     bool message_box_srp(uint8_t* Buf, uint16_t len, uint8_t master_address, uint8_t own_address);
-    uint16_t message_header_to_array(const message_header* message, uint8_t* Buf);
+    static uint16_t message_header_to_array(const message_header* message, uint8_t* Buf);
 
     static const uint8_t SRP_ADDR  = 0x53;
     static const uint8_t MOD_ADDR 	= 0x54;
@@ -58,7 +58,24 @@ public:
     static const uint32_t DATA_LENGTH = 256;
     static const uint32_t FRAME_LENGTH = (TX_HEADER_LENGTH + DATA_ADDRESS_LENGTH + DATA_LENGTH + CRC_LENGTH);
 
-//    const uint8_t INFO_ADDRESS          = 0x00;
+    // /////////////// mod commands
+    static const uint8_t SET_BAUDRATE = 0xD0;
+    static const uint8_t GET_BAUDRATE = 0xD1;
+    static const uint8_t GET_LINE_ERRORS = 0xD2;
+    static const uint8_t SET_RX_PARAMETERS = 0xD3;
+    static const uint8_t GET_RX_PARAMETERS = 0xD4;
+    static const uint8_t GET_TEMPRATURE = 0xD5;
+    static const uint8_t GET_MEASURE_BUFFER = 0xD6;
+    static const uint8_t SET_LINE_ERRORS = 0xD7;
+    static const uint8_t PING = 0xD8;
+    static const uint8_t SET_CUSTOM_PARAM = 0xD9;
+    static const uint8_t GET_CUSTOM_PARAM = 0xDA;
+    static const uint8_t SEND_SWEEP_SIGNAL  = 0xDB;
+    static const uint8_t SEND_SIN_35KHZ     = 0xDC; // Отправить несколько периодов синуса 35 кГц макс. амплитуды, используется для режима автоподстройки 'AGC' SRP, 54 4ddc0301040000000000 286b
+    static const uint8_t SEND_SIN_2KHZ      = 0xDD; // Отправить несколько периодов синуса 2 кГц макс. амплитуды, 54 4ddd0301040000000000 0b80
+    static const uint8_t SEND_SIN_35KHZ_600 = 0xDE; // Отправить 600 периодов синуса 35 кГц макс. амплитуды, 54 4dde0301040000000000 4fad
+    static const uint8_t SET_GAIN_TABLE     = 0xE0;
+    static const uint8_t SET_PHASE_TABLE    = 0xE1;
 
 protected:
 
@@ -103,18 +120,6 @@ private:
     static const uint8_t CABLE_GET_DATA    	= 0xC5;
     static const uint8_t CABLE_ERASE       	= 0xCB;
     static const uint8_t CABLE_STATUS          = 0xC8;
-    // /////////////// mod commands
-    static const uint8_t SET_BAUDRATE      	= 0xD0;
-    static const uint8_t GET_BAUDRATE          = 0xD1;
-    static const uint8_t GET_LINE_ERRORS       = 0xD2;
-    static const uint8_t SET_RX_PARAMETERS     = 0xD3;
-    static const uint8_t GET_RX_PARAMETERS     = 0xD4;
-    static const uint8_t GET_TEMPRATURE    	= 0xD5;
-    static const uint8_t GET_MEASURE_BUFFER	= 0xD6;
-    static const uint8_t SET_LINE_ERRORS		= 0xD7;
-    static const uint8_t PING                  = 0xD8;
-    static const uint8_t SET_CUSTOM_PARAM      = 0xD9;
-    static const uint8_t GET_CUSTOM_PARAM      = 0xDA;
 };
 
 

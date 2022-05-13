@@ -10,6 +10,7 @@ SOURCES += \
     main.cpp \
     mainwindow.cpp \
     message_box.cpp \
+    mod_transmitter_thread.cpp \
     qam_decoder/FFTImplementationCallback.cpp \
     qam_decoder/FIRDecimator.cpp \
     qam_decoder/HS_EWL_DEMOD_QAM.cpp \
@@ -108,6 +109,7 @@ HEADERS += \
     freq_sweep_thread.h \
     mainwindow.h \
     message_box.h \
+    mod_transmitter_thread.h \
     qam_common.h \
     qam_decoder/FFTImplementationCallback.h \
     qam_decoder/FIRDecimator.h \

@@ -67,6 +67,9 @@ QMutex m_mutex2;
 QWaitCondition sweepBufNotEmpty;
 QMutex m_mutex3;
 
+QWaitCondition modTransmitWakeUp;
+QMutex m_mutex_mod;
+
 bool special_cmd_transmitted = false;   // todo make a state with enum
 bool special_cmd_transmitted2 = false;   // todo make a state with enum
 
