@@ -20,9 +20,9 @@ struct emxArray_real_T;
 namespace coder
 {
   void xcorr(const emxArray_real_T *x, const emxArray_real_T *varargin_1,
-             emxArray_real_T *c);//, emxArray_real_T *lags);
+             emxArray_real_T *c, emxArray_real_T *lags);
   void xcorr(const emxArray_real_T *x, const double varargin_1[1820],
-             emxArray_real_T *c);//, emxArray_real_T *lags);
+             emxArray_real_T *c, emxArray_real_T *lags);
 }
 
 #endif

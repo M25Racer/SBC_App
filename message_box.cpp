@@ -1,8 +1,8 @@
 #include <QCoreApplication>
-#include <QDebug>
-#include "statistics.h"
 #include <message_box.h>
 //#include <main.h>
+#include <QDebug>
+#include "statistics.h"
 #include <crc16.h>
 //#include "mainwindow.h"
 

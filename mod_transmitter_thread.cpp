@@ -121,8 +121,8 @@ void ModTransmitterThread::run()
                 message.command = MessageBox::SET_SHIFT_QAM_DATA;
                 message.packet_adr = 0;
 
-                message_box_buffer_mod[11] = uint8_t((shift_for_qam_data_int >> 8) & 0xFF);
-                message_box_buffer_mod[12] = uint8_t(shift_for_qam_data_int & 0xFF);
+                message_box_buffer_mod[11] = uint8_t(shift_for_qam_data_int & 0xFF);
+                message_box_buffer_mod[12] = uint8_t((shift_for_qam_data_int >> 8) & 0xFF);
                 break;
 
             default:

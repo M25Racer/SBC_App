@@ -151,43 +151,40 @@ static double optimize_sin(const emxArray_real_T *t, const emxArray_real_T *s2,
       emxEnsureCapacity_real_T(y2, i2);
       for (i2 = 0; i2 < loop_ub; i2++) {
         y2->data[i2] = nu * t->data[i2] + ph_opt;
-        y2->data[i2] = std::sin(y2->data[i2]);
-        y2->data[i2] *= 0.8;
       }
 
-//      nx = y2->size[0];
-//      for (k = 0; k < nx; k++) {
-//        y2->data[k] = std::sin(y2->data[k]);
-//      }
+      nx = y2->size[0];
+      for (k = 0; k < nx; k++) {
+        y2->data[k] = std::sin(y2->data[k]);
+      }
 
-//      nx = y2->size[0];
-//      for (i2 = 0; i2 < nx; i2++) {
-//        y2->data[i2] *= 0.8;
-//      }
+      nx = y2->size[0];
+      for (i2 = 0; i2 < nx; i2++) {
+        y2->data[i2] *= 0.8;
+      }
 
       i2 = a->size[0];
       a->size[0] = b_loop_ub;
       emxEnsureCapacity_real_T(a, i2);
       for (i2 = 0; i2 < b_loop_ub; i2++) {
         a->data[i2] = s2->data[i2] - y2->data[i2];
-        a->data[i2] = rt_powd_snf(a->data[i2], 2.0);
       }
 
-//      i2 = y->size[0];
-//      y->size[0] = a->size[0];
-//      emxEnsureCapacity_real_T(y, i2);
-//      nx = a->size[0];
-//      for (k = 0; k < nx; k++) {
-//        y->data[k] = rt_powd_snf(a->data[k], 2.0);
-//      }
-
+      i2 = y->size[0];
+      y->size[0] = a->size[0];
+      emxEnsureCapacity_real_T(y, i2);
       nx = a->size[0];
-      if (a->size[0] == 0) {
+      for (k = 0; k < nx; k++) {
+        y->data[k] = rt_powd_snf(a->data[k], 2.0);
+      }
+
+      nx = y->size[0];
+      if (y->size[0] == 0) {
         nu = 0.0;
       } else {
-        nu = a->data[0];
+        nu = y->data[0];
         for (k = 2; k <= nx; k++) {
-          nu += a->data[k - 1];
+          nu += y->data[k - 1];
         }
       }
 
@@ -203,24 +200,23 @@ static double optimize_sin(const emxArray_real_T *t, const emxArray_real_T *s2,
       emxEnsureCapacity_real_T(a, nx);
       for (nx = 0; nx < loop_ub_tmp; nx++) {
         a->data[nx] = s2->data[i + nx] - y2->data[(i2 + nx) - 1];
-        a->data[nx] = rt_powd_snf(a->data[nx], 2.0);
       }
 
-//      i2 = y->size[0];
-//      y->size[0] = a->size[0];
-//      emxEnsureCapacity_real_T(y, i2);
-//      nx = a->size[0];
-//      for (k = 0; k < nx; k++) {
-//        y->data[k] = rt_powd_snf(a->data[k], 2.0);
-//      }
-
+      i2 = y->size[0];
+      y->size[0] = a->size[0];
+      emxEnsureCapacity_real_T(y, i2);
       nx = a->size[0];
-      if (a->size[0] == 0) {
+      for (k = 0; k < nx; k++) {
+        y->data[k] = rt_powd_snf(a->data[k], 2.0);
+      }
+
+      nx = y->size[0];
+      if (y->size[0] == 0) {
         nu = 0.0;
       } else {
-        nu = a->data[0];
+        nu = y->data[0];
         for (k = 2; k <= nx; k++) {
-          nu += a->data[k - 1];
+          nu += y->data[k - 1];
         }
       }
 
@@ -241,43 +237,40 @@ static double optimize_sin(const emxArray_real_T *t, const emxArray_real_T *s2,
       emxEnsureCapacity_real_T(y2, i2);
       for (i2 = 0; i2 < c_loop_ub; i2++) {
         y2->data[i2] = dnu * t->data[i2] + nu;
-        y2->data[i2] = std::sin(y2->data[i2]);
-        y2->data[i2] *= 0.8;
       }
 
-//      nx = y2->size[0];
-//      for (k = 0; k < nx; k++) {
-//        y2->data[k] = std::sin(y2->data[k]);
-//      }
+      nx = y2->size[0];
+      for (k = 0; k < nx; k++) {
+        y2->data[k] = std::sin(y2->data[k]);
+      }
 
-//      nx = y2->size[0];
-//      for (i2 = 0; i2 < nx; i2++) {
-//        y2->data[i2] *= 0.8;
-//      }
+      nx = y2->size[0];
+      for (i2 = 0; i2 < nx; i2++) {
+        y2->data[i2] *= 0.8;
+      }
 
       i2 = a->size[0];
       a->size[0] = d_loop_ub;
       emxEnsureCapacity_real_T(a, i2);
       for (i2 = 0; i2 < d_loop_ub; i2++) {
         a->data[i2] = s2->data[i2] - y2->data[i2];
-        a->data[i2] = rt_powd_snf(a->data[i2], 2.0);
       }
 
-//      i2 = y->size[0];
-//      y->size[0] = a->size[0];
-//      emxEnsureCapacity_real_T(y, i2);
-//      nx = a->size[0];
-//      for (k = 0; k < nx; k++) {
-//        y->data[k] = rt_powd_snf(a->data[k], 2.0);
-//      }
-
+      i2 = y->size[0];
+      y->size[0] = a->size[0];
+      emxEnsureCapacity_real_T(y, i2);
       nx = a->size[0];
-      if (a->size[0] == 0) {
+      for (k = 0; k < nx; k++) {
+        y->data[k] = rt_powd_snf(a->data[k], 2.0);
+      }
+
+      nx = y->size[0];
+      if (y->size[0] == 0) {
         nu = 0.0;
       } else {
-        nu = a->data[0];
+        nu = y->data[0];
         for (k = 2; k <= nx; k++) {
-          nu += a->data[k - 1];
+          nu += y->data[k - 1];
         }
       }
 
@@ -293,24 +286,23 @@ static double optimize_sin(const emxArray_real_T *t, const emxArray_real_T *s2,
       emxEnsureCapacity_real_T(a, nx);
       for (nx = 0; nx < b_loop_ub_tmp; nx++) {
         a->data[nx] = s2->data[i1 + nx] - y2->data[(i2 + nx) - 1];
-        a->data[nx] = rt_powd_snf(a->data[nx], 2.0);
       }
 
-//      i2 = y->size[0];
-//      y->size[0] = a->size[0];
-//      emxEnsureCapacity_real_T(y, i2);
-//      nx = a->size[0];
-//      for (k = 0; k < nx; k++) {
-//        y->data[k] = rt_powd_snf(a->data[k], 2.0);
-//      }
-
+      i2 = y->size[0];
+      y->size[0] = a->size[0];
+      emxEnsureCapacity_real_T(y, i2);
       nx = a->size[0];
-      if (a->size[0] == 0) {
+      for (k = 0; k < nx; k++) {
+        y->data[k] = rt_powd_snf(a->data[k], 2.0);
+      }
+
+      nx = y->size[0];
+      if (y->size[0] == 0) {
         nu = 0.0;
       } else {
-        nu = a->data[0];
+        nu = y->data[0];
         for (k = 2; k <= nx; k++) {
-          nu += a->data[k - 1];
+          nu += y->data[k - 1];
         }
       }
 
@@ -325,19 +317,17 @@ static double optimize_sin(const emxArray_real_T *t, const emxArray_real_T *s2,
     emxEnsureCapacity_real_T(y, i2);
     for (i2 = 0; i2 < e_loop_ub; i2++) {
       y->data[i2] = dnu * t->data[i2] + ph_opt;
-      y->data[i2] = std::sin(y->data[i2]);
-      y->data[i2] *= 0.8;
     }
 
-//    nx = y->size[0];
-//    for (k = 0; k < nx; k++) {
-//      y->data[k] = std::sin(y->data[k]);
-//    }
+    nx = y->size[0];
+    for (k = 0; k < nx; k++) {
+      y->data[k] = std::sin(y->data[k]);
+    }
 
-//    nx = y->size[0];
-//    for (i2 = 0; i2 < nx; i2++) {
-//      y->data[i2] *= 0.8;
-//    }
+    nx = y->size[0];
+    for (i2 = 0; i2 < nx; i2++) {
+      y->data[i2] *= 0.8;
+    }
 
     dnu = err2;
     i2 = r->size[0] * r->size[1];
@@ -346,11 +336,6 @@ static double optimize_sin(const emxArray_real_T *t, const emxArray_real_T *s2,
     emxEnsureCapacity_boolean_T(r, i2);
     for (i2 = 0; i2 < f_loop_ub; i2++) {
       r->data[i2] = (idx->data[i2] <= bounds[0]);
-    }
-
-    int two_preamble_size = bounds[0] + (s2->size[0]-(bounds[1]-1));
-    for(int i = 0; i <= two_preamble_size; i++){
-
     }
 
     i2 = r1->size[0] * r1->size[1];
@@ -969,10 +954,6 @@ void HS_EWL_FREQ_ACQ(emxArray_real_T *data, double len, double Fs, double f_opt,
   int loop_ub;
   int nx;
   short ii_data[1];
-
-  extern double ref_cos[];
-  extern double ref_sin[];
-
   if (!isInitialized_HS_EWL_DEMOD_QAM) {
     HS_EWL_DEMOD_QAM_initialize();
   }
@@ -1206,89 +1187,76 @@ void HS_EWL_FREQ_ACQ(emxArray_real_T *data, double len, double Fs, double f_opt,
     }
 
     receiveByteLen = receiveByteLen * sps - 1.0;
-//    if (rtIsNaN(receiveByteLen)) {
-//      i = t0->size[0] * t0->size[1];
-//      t0->size[0] = 1;
-//      t0->size[1] = 1;
-//      emxEnsureCapacity_real_T(t0, i);
-//      t0->data[0] = rtNaN;
-//    } else if (receiveByteLen < 0.0) {
-//      t0->size[0] = 1;
-//      t0->size[1] = 0;
-//    } else if (rtIsInf(receiveByteLen) && (0.0 == receiveByteLen)) {
-//      i = t0->size[0] * t0->size[1];
-//      t0->size[0] = 1;
-//      t0->size[1] = 1;
-//      emxEnsureCapacity_real_T(t0, i);
-//      t0->data[0] = rtNaN;
-//    } else {
-//      i = t0->size[0] * t0->size[1];
-//      t0->size[0] = 1;
-//      loop_ub = static_cast<int>(std::floor(receiveByteLen));
-//      t0->size[1] = loop_ub + 1;
-//      emxEnsureCapacity_real_T(t0, i);
-//      for (i = 0; i <= loop_ub; i++) {
-//        t0->data[i] = i;
-//      }
-//    }
-
-    // time
-//    i = tt->size[0];
-//    tt->size[0] = t0->size[1];
-//    emxEnsureCapacity_real_T(tt, i);
-//    loop_ub = t0->size[1];
-//    for (i = 0; i < loop_ub; i++) {
-//      tt->data[i] = t0->data[i] / Fd;
-//    }
-
-    //  coder.varsize('y', [16384000, 1]);
-//    if (1 > tt->size[0]) {
-//      loop_ub = 0;
-//    } else {
-//      loop_ub = static_cast<int>(std::floor(receiveByteLen));
-//      loop_ub = loop_ub + 1;
-//    }
-    loop_ub = static_cast<int>(std::floor(receiveByteLen));
-    loop_ub = loop_ub + 1;
-
-//    del_re = f_opt * 0.0;
-//    receiveByteLen = f_opt * 6.2831853071795862;
-    i = r->size[0];
-    r->size[0] = loop_ub;
-    emxEnsureCapacity_creal_T(r, i);
-//    nx = tt->size[0];
-//    for (i = 0; i < nx; i++) {
-//      r->data[i].re = tt->data[i] * del_re;
-//      r->data[i].im = tt->data[i] * receiveByteLen;
-//    }
-
-    k = 0;
-    nx = static_cast<double>(sps);
-    for (int j = 0; j < loop_ub; j++) {
-        r->data[j].re = ref_cos[k];//b_r * (b_r * std::cos(r->data[k].im));
-        r->data[j].im = ref_sin[k];//b_r * (b_r * std::sin(r->data[k].im));
-        k += 1;
-        if (k == nx)
-            k = 0;
+    if (rtIsNaN(receiveByteLen)) {
+      i = t0->size[0] * t0->size[1];
+      t0->size[0] = 1;
+      t0->size[1] = 1;
+      emxEnsureCapacity_real_T(t0, i);
+      t0->data[0] = rtNaN;
+    } else if (receiveByteLen < 0.0) {
+      t0->size[0] = 1;
+      t0->size[1] = 0;
+    } else if (rtIsInf(receiveByteLen) && (0.0 == receiveByteLen)) {
+      i = t0->size[0] * t0->size[1];
+      t0->size[0] = 1;
+      t0->size[1] = 1;
+      emxEnsureCapacity_real_T(t0, i);
+      t0->data[0] = rtNaN;
+    } else {
+      i = t0->size[0] * t0->size[1];
+      t0->size[0] = 1;
+      loop_ub = static_cast<int>(std::floor(receiveByteLen));
+      t0->size[1] = loop_ub + 1;
+      emxEnsureCapacity_real_T(t0, i);
+      for (i = 0; i <= loop_ub; i++) {
+        t0->data[i] = i;
+      }
     }
 
-//    nx = r->size[0];
-//    for (k = 0; k < nx; k++) {
-//      if (r->data[k].im == 0.0) {
-//        r->data[k].re = std::exp(r->data[k].re);
-//        r->data[k].im = 0.0;
-//      } else if (rtIsInf(r->data[k].im) && rtIsInf(r->data[k].re) && (r->data[k]
-//                  .re < 0.0)) {
-//        r->data[k].re = 0.0;
-//        r->data[k].im = 0.0;
-//      } else {
-//        receiveByteLen = std::exp(r->data[k].re / 2.0);
-//        r->data[k].re = receiveByteLen * (receiveByteLen * std::cos(r->data[k].
-//          im));
-//        r->data[k].im = receiveByteLen * (receiveByteLen * std::sin(r->data[k].
-//          im));
-//      }
-//    }
+    // time
+    i = tt->size[0];
+    tt->size[0] = t0->size[1];
+    emxEnsureCapacity_real_T(tt, i);
+    loop_ub = t0->size[1];
+    for (i = 0; i < loop_ub; i++) {
+      tt->data[i] = t0->data[i] / Fd;
+    }
+
+    //  coder.varsize('y', [16384000, 1]);
+    if (1 > tt->size[0]) {
+      loop_ub = 0;
+    } else {
+      loop_ub = tt->size[0];
+    }
+
+    del_re = f_opt * 0.0;
+    receiveByteLen = f_opt * 6.2831853071795862;
+    i = r->size[0];
+    r->size[0] = tt->size[0];
+    emxEnsureCapacity_creal_T(r, i);
+    nx = tt->size[0];
+    for (i = 0; i < nx; i++) {
+      r->data[i].re = tt->data[i] * del_re;
+      r->data[i].im = tt->data[i] * receiveByteLen;
+    }
+
+    nx = r->size[0];
+    for (k = 0; k < nx; k++) {
+      if (r->data[k].im == 0.0) {
+        r->data[k].re = std::exp(r->data[k].re);
+        r->data[k].im = 0.0;
+      } else if (rtIsInf(r->data[k].im) && rtIsInf(r->data[k].re) && (r->data[k]
+                  .re < 0.0)) {
+        r->data[k].re = 0.0;
+        r->data[k].im = 0.0;
+      } else {
+        receiveByteLen = std::exp(r->data[k].re / 2.0);
+        r->data[k].re = receiveByteLen * (receiveByteLen * std::cos(r->data[k].
+          im));
+        r->data[k].im = receiveByteLen * (receiveByteLen * std::sin(r->data[k].
+          im));
+      }
+    }
 
     receiveByteLen = sps * 10.0 / 2.0;
     if (rtIsNaN(receiveByteLen)) {
@@ -1313,7 +1281,7 @@ void HS_EWL_FREQ_ACQ(emxArray_real_T *data, double len, double Fs, double f_opt,
       t0->size[1] = nx + 1;
       emxEnsureCapacity_real_T(t0, i);
       for (i = 0; i <= nx; i++) {
-        t0->data[i] = 0.0;
+        t0->data[i] = static_cast<double>(i) + 1.0;
       }
     }
 
@@ -1329,7 +1297,7 @@ void HS_EWL_FREQ_ACQ(emxArray_real_T *data, double len, double Fs, double f_opt,
     nx = t0->size[1];
     for (i = 0; i < nx; i++) {
       i1 = i + loop_ub;
-      b_testSignal->data[i1].re = t0->data[i];
+      b_testSignal->data[i1].re = t0->data[i] * 0.0;
       b_testSignal->data[i1].im = 0.0;
     }
 
