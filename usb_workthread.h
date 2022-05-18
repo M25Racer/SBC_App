@@ -19,6 +19,7 @@ signals:
     void postTxDataToSerialPort(const uint8_t *p_data, int len);
     void postDataToStm32H7(const uint8_t *p_data, const int length);
     void usbInitTimeoutStart(int timeout_ms);
+    void hsDataReceived();
 
 public slots:
     void sendHsCommand(uint8_t Command, uint32_t Length, uint8_t *p_Data);

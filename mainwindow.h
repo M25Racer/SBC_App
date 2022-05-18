@@ -105,7 +105,7 @@ private slots:
     void timeoutSerialPortRx();
     void timeoutSerialPortReconnect();
     void timeoutUsbInitCallback();
-    void timeoutAnswerTest();
+    void usbHsDataReceived();
 
     void usbInitTimeoutStart(int timeout_ms);
     //void modAnswerTimeoutStart(int timeout_ms);

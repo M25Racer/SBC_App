@@ -5,7 +5,6 @@
 #include "crc16.h"
 #include "srp_mod_protocol.h"
 
-
 /* Extern global variables */
 extern QWaitCondition modTransmitWakeUp;
 extern QMutex m_mutex_mod;
@@ -67,6 +66,7 @@ void ModTransmitterThread::run()
                 case TX_PHASE_TABLE_1:
                     if(++n_channel == n_elements/64)
                     {
+                        emit consolePutData("Finished transmitting phase table, transmit gain table next\n", 1);
                         State = TX_GAIN_TABLE_2;
                         n_channel = 0;
                     }
@@ -74,7 +74,10 @@ void ModTransmitterThread::run()
 
                 case TX_GAIN_TABLE_2:
                     if(++n_channel == n_elements/64)
+                    {
+                        emit consolePutData("Finished transmitting gain table, transmit shift next\n", 1);
                         State = TX_SHIFT_3;
+                    }
                     break;
 
                 case TX_SHIFT_3:
@@ -121,6 +124,9 @@ void ModTransmitterThread::run()
                 message.command = MessageBox::SET_SHIFT_QAM_DATA;
                 message.packet_adr = 0;
 
+//                //todo test
+//                shift_for_qam_data_int = 4321;
+
                 message_box_buffer_mod[11] = uint8_t(shift_for_qam_data_int & 0xFF);
                 message_box_buffer_mod[12] = uint8_t((shift_for_qam_data_int >> 8) & 0xFF);
                 break;
@@ -129,6 +135,8 @@ void ModTransmitterThread::run()
                 emit consolePutData("ModTransmitterThread error wrong state\n", 1);
                 break;
         }
+
+        hs_data_received = false;
 
         uint16_t tx_len = MessageBox::message_header_to_array(&message, message_box_buffer_mod);
         postDataToStm32H7(message_box_buffer_mod, tx_len);
@@ -146,8 +154,12 @@ void ModTransmitterThread::ModStartTransmitPhaseGain()
 
 //    //todo test float values
 //    phase_data_float[0] = 0.1;
+//    gain_data_float[0] = 0.1;
 //    for(uint32_t i = 1; i < 2048; ++i)
+//    {
 //        phase_data_float[i] = phase_data_float[i - 1] + 0.1;
+//        gain_data_float[i] = gain_data_float[i - 1] + 0.2;
+//    }
 
     message.command = MessageBox::SET_PHASE_TABLE;
     message.message_id = 0;
@@ -172,7 +184,6 @@ bool ModTransmitterThread::ModAnswerReceived(const uint8_t *p_data, int length)
     if(length < 12)
     {
         emit consolePutData(QString("ModAnswerReceived error length is too short %1\n").arg(length), 1);
-        retry = true;
         return false;
     }
 
@@ -186,11 +197,8 @@ bool ModTransmitterThread::ModAnswerReceived(const uint8_t *p_data, int length)
     if(p_data[0] != MessageBox::MOD_ADDR)
     {
         emit consolePutData(QString("ModAnswerReceived warning, answer addr != MOD_ADDR\n"), 1);
-        retry = true;
         return false;
     }
-
-    //uint16_t packet_length = (uint16_t)p_data[3] | ((uint16_t)p_data[4] << 8);
 
     // Check crc
     uint16_t crc = ((uint16_t)p_data[length - 1] << 8)
@@ -201,7 +209,6 @@ bool ModTransmitterThread::ModAnswerReceived(const uint8_t *p_data, int length)
     if(!res)
     {
         emit consolePutData("ModAnswerReceived crc error\n", 1);
-        retry = true;
         return false;
     }
 
@@ -209,7 +216,6 @@ bool ModTransmitterThread::ModAnswerReceived(const uint8_t *p_data, int length)
     {
         default:
             emit consolePutData("ModAnswerReceived warning wrong state\n", 1);
-            return false;
             break;
 
         case TX_PHASE_TABLE_1:
@@ -221,7 +227,6 @@ bool ModTransmitterThread::ModAnswerReceived(const uint8_t *p_data, int length)
             else
             {
                 emit consolePutData("ModAnswerReceived answer wrong command\n", 1);
-                retry = true;
                 return false;
             }
             break;
@@ -235,7 +240,6 @@ bool ModTransmitterThread::ModAnswerReceived(const uint8_t *p_data, int length)
             else
             {
                 emit consolePutData("ModAnswerReceived answer wrong command\n", 1);
-                retry = true;
                 return false;
             }
             break;
@@ -249,7 +253,6 @@ bool ModTransmitterThread::ModAnswerReceived(const uint8_t *p_data, int length)
             else
             {
                 emit consolePutData("ModAnswerReceived answer wrong command\n", 1);
-                retry = true;
                 return false;
             }
             break;
@@ -258,14 +261,34 @@ bool ModTransmitterThread::ModAnswerReceived(const uint8_t *p_data, int length)
     return true;
 }
 
+void ModTransmitterThread::ModAnswerDataReceived()
+{
+    m_mutex_mod.lock();
+    if(State != IDLE)
+        hs_data_received = true;
+    m_mutex_mod.unlock();
+}
+
 void ModTransmitterThread::timeoutAnswer()
 {
-    emit consolePutData("Mod answer timeout, retry previous transfer\n", 1);
+    emit consolePutData("Mod answer timeout\n", 1);
 
     m_mutex_mod.lock();
     if(State != IDLE)
     {
-        retry = true;
+        if(!hs_data_received)
+        {
+            emit consolePutData("Retry previous transfer\n", 1);
+            retry = true;
+            m_mutex_mod.unlock();
+            modTransmitWakeUp.wakeOne();
+            return;
+        }
+
+        // Some HS data (probably broken) received
+        // Assume it is an answer from MOD
+        emit consolePutData("Some HS data was received, assume it was a good answer from MOD\n", 1);
+        hs_data_received = false;
         m_mutex_mod.unlock();
         modTransmitWakeUp.wakeOne();
         return;

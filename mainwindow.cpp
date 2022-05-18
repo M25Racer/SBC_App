@@ -102,13 +102,13 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(&m_usb_thread, &UsbWorkThread::consolePutData, this, &MainWindow::consolePutData, Qt::ConnectionType::QueuedConnection);
     connect(&m_usb_thread, &UsbWorkThread::usbInitTimeoutStart, this, &MainWindow::usbInitTimeoutStart, Qt::ConnectionType::QueuedConnection);
     connect(&m_usb_thread, &UsbWorkThread::consoleAdcFile, this, &MainWindow::consoleAdcData, Qt::ConnectionType::QueuedConnection);
+    connect(&m_usb_thread, &UsbWorkThread::hsDataReceived, this, &MainWindow::usbHsDataReceived, Qt::ConnectionType::QueuedConnection);
     //connect(&m_usb_thread, &UsbWorkThread::postDataToStm32H7, this, &MainWindow::postTxDataSTM);
     connect(&m_qam_thread, &QamThread::consolePutData, this, &MainWindow::consolePutData, Qt::ConnectionType::QueuedConnection);
     connect(&m_qam_thread, &QamThread::postTxDataToSerialPort, this, &MainWindow::transmitDataSerialPort, Qt::ConnectionType::QueuedConnection);
     connect(&m_freq_sweep_thread, &FreqSweepThread::consolePutData, this, &MainWindow::consolePutData, Qt::ConnectionType::QueuedConnection);
     connect(&m_mod_tx_thread, &ModTransmitterThread::consolePutData, this, &MainWindow::consolePutData, Qt::ConnectionType::QueuedConnection);
     connect(&m_mod_tx_thread, &ModTransmitterThread::postDataToStm32H7, this, &MainWindow::postTxDataSTM, Qt::ConnectionType::QueuedConnection);
-//    connect(&m_mod_tx_thread, &ModTransmitterThread::startAnswerTimeoutTimer, this, &MainWindow::modAnswerTimeoutStart, Qt::ConnectionType::QueuedConnection);
 
     m_console->putData("SBC Application\n", 1);
     m_console->putData("Opening serial port...\n", 1);
@@ -275,20 +275,10 @@ void MainWindow::timeoutUsbInitCallback()
     m_usb_thread.USB_Init();
 }
 
-void MainWindow::timeoutAnswerTest()
-{
-    m_console->putData("Test\n", 1);
-}
-
 void MainWindow::usbInitTimeoutStart(int timeout_ms)
 {
     timerUsbInit->start(timeout_ms);
 }
-
-//void MainWindow::modAnswerTimeoutStart(int timeout_ms)
-//{
-//    timerModAnswerTimeout->start(timeout_ms);
-//}
 
 void MainWindow::timeoutSerialPortReconnect()
 {
@@ -597,4 +587,9 @@ void MainWindow::sendPredistortionTables()
     m_console->putData("Starting of transmit phase & gain tables to MOD\n", 1);
 
     m_mod_tx_thread.ModStartTransmitPhaseGain();
+}
+
+void MainWindow::usbHsDataReceived()
+{
+    m_mod_tx_thread.ModAnswerDataReceived();
 }

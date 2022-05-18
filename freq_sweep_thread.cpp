@@ -224,5 +224,5 @@ void FreqSweepThread::Sweep()
     }
 
     emit consolePutData(QString("Sweep elapsed time = %1 ms\n").arg(peformance_timer.elapsed()), 1);
-    emit consolePutData(QString("Sweep shift_for_qam_data = %1\n").arg(shift_for_qam_data), 1);
+    emit consolePutData(QString("Sweep shift_for_qam_data = %1\n").arg(shift_for_qam_data_int), 1);
 }

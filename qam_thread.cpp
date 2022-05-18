@@ -189,13 +189,6 @@ void QamThread::QAM_Decoder()
     if(kostyl_check_error)
         warning_status = 4;
 
-    if(first_pass)
-    {
-        first_pass = false;
-        f0 = f_est_data;
-        mode = 0;
-    }
-
     // Data parsing
     // If receive timeout elapsed
     if(data_timeout_tim.hasExpired(qam_rx_timeout_ms))
@@ -248,6 +241,13 @@ void QamThread::QAM_Decoder()
                 packet_length -= MOD_SRP_PROTOCOL_HEADER_SIZE + MOD_SRP_PROTOCOL_CRC_SIZE + MASTER_ADDR_SIZE;
                 emit postTxDataToSerialPort((uint8_t*)&data_decoded[MOD_SRP_PROTOCOL_HEADER_SIZE + MASTER_ADDR_SIZE], packet_length);
                 //emit consolePutData(QString("Profiler timer elapsed %1 # data to serial port\n").arg(profiler_timer.elapsed()), 1);
+
+                if(first_pass)
+                {
+                    first_pass = false;
+                    f0 = f_est_data;
+                    mode = 0;
+                }
             }
             else
             {

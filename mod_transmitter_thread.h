@@ -28,22 +28,15 @@ public:
     bool ModAnswerReceived(const uint8_t *p_data, int length);
     void ModStartTransmitPhaseGain();
 
+    void ModAnswerDataReceived();
+
 private slots:
     //void timeoutAnswer();
 
 private:
     void run() override;
-    //void FreqEstimateForSweep();
-    //void Sweep();
-    //bool ConvertToDouble(uint8_t *p_data_in, uint32_t length_in, double *p_data_out, double *p_length);
 
     bool m_quit = false;
-
-    //double LengthSin = 0.f;
-    //double LengthSweep = 0.f;
-
-    //QElapsedTimer peformance_timer;     // timer for QAM decoder performance measurements
-    //QElapsedTimer response_timeout_timer;
 
     message_header message;
     uint8_t message_box_buffer_mod[1024];
@@ -65,8 +58,9 @@ private:
     uint32_t n_attempts = 0;
 
     const uint32_t n_MaxAttempts = 10;
+    const uint32_t timeoutAnswer_ms = 500;
 
-    const uint32_t timeoutAnswer_ms = 200;
+    bool hs_data_received = false;      // If true, indicates that at least some 'HS' data was received from usb STM32 H7
 };
 
 #endif // MOD_TRANSMITTER_THREAD_H
