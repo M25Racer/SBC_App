@@ -10,8 +10,6 @@
 #include "qam_decoder/HS_EWL_FREQ_EST_FOR_SWEEP.h"
 #include "qam_decoder/HS_EWL_TR_FUN_EST.h"
 #include <QElapsedTimer>
-//#include "qam_decoder/signal_sweep.h"
-//#include "qam_decoder/signal.h"
 #include "qam_decoder/math_sweep.h"
 #include "qam_decoder/rt_nonfinite.h"
 
@@ -137,8 +135,6 @@ void FreqSweepThread::FreqEstimateForSweep()
 
     peformance_timer.start();
 
-    // test data for test transmit function (SWEEP)
-    //double sine_len = SINE_LEN;
     emxArray_real_T *sine_data = NULL;
     sine_data = emxCreateWrapper_real_T(sine, 1, sine_len);
 

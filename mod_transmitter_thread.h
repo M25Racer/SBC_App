@@ -47,18 +47,21 @@ private:
     typedef enum
     {
         IDLE = 0,
-        TX_PHASE_TABLE_1 = 1,
-        TX_GAIN_TABLE_2 = 2,
-        TX_SHIFT_3 = 3
+        TX_START = 1,
+        TX_PHASE_TABLE = 2,
+        TX_GAIN_TABLE = 3,
+        TX_SHIFT_CRC = 4
     } TState;
 
     TState State = IDLE;
 
     bool retry = false;
     uint32_t n_attempts = 0;
+    uint32_t n_attempts_high_level = 0;
 
-    const uint32_t n_MaxAttempts = 10;
-    const uint32_t timeoutAnswer_ms = 500;
+    const uint32_t n_MaxAttempts = 5;
+    const uint32_t n_MaxAttemptsHighLevel = 3;
+    const uint32_t timeoutAnswer_ms = 600;
 
     bool hs_data_received = false;      // If true, indicates that at least some 'HS' data was received from usb STM32 H7
 };

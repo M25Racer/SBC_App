@@ -48,27 +48,36 @@ uint16_t const crc16_table[256] = {
     0x2e93, 0x3eb2, 0x0ed1, 0x1ef0
 };
 
+static uint16_t crc = 0xFFFF;;
 
-uint16_t calc_crc16( const uint8_t *array, uint16_t len )
+uint16_t calc_crc16(const uint8_t *array, uint16_t len, bool crc_continue)
 {
-    uint16_t crc = 0xFFFF;
+    if(!crc_continue)
+        crc = 0xFFFF;
+
     uint8_t temp;
 
     while(len--)
     {
-        temp = ((crc>>8)^ *array++) & 0xFF;
+        temp = ((crc>>8) ^ *array++) & 0xFF;
         crc = uint16_t(crc16_table[temp] ^ (crc<<8));
     }
 
     return crc;
 }
 
-bool check_crc16(const uint8_t *array, uint16_t len, uint16_t crc)
+uint16_t calc_crc16_continue(const uint8_t *array, uint16_t len)
 {
-   return (calc_crc16(array, len) == crc);
+    return calc_crc16(array, len, true);
 }
 
-uint16_t add_crc16(uint8_t *array, uint16_t len){
+bool check_crc16(const uint8_t *array, uint16_t len, uint16_t crc)
+{
+    return (calc_crc16(array, len) == crc);
+}
+
+uint16_t add_crc16(uint8_t *array, uint16_t len)
+{
     uint16_t lengh = len;
 
     uint16_t crc = calc_crc16(array, len);
@@ -79,7 +88,7 @@ uint16_t add_crc16(uint8_t *array, uint16_t len){
     return lengh;
 }
 
-uint16_t calc_crc16_xmodem( const uint8_t *array, uint16_t len )
+uint16_t calc_crc16_xmodem(const uint8_t *array, uint16_t len)
 {
     uint16_t crc = 0x0000;
     uint8_t temp;
@@ -95,7 +104,7 @@ uint16_t calc_crc16_xmodem( const uint8_t *array, uint16_t len )
 
 bool check_crc16_xmodem(const uint8_t *array, uint16_t len, uint16_t crc)
 {
-   return (calc_crc16_xmodem(array, len) == crc);
+    return (calc_crc16_xmodem(array, len) == crc);
 }
 
 uint16_t add_crc16_xmodem(uint8_t *array, uint16_t len)

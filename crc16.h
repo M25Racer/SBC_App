@@ -3,7 +3,9 @@
 
 #include <QCoreApplication>
 
-uint16_t calc_crc16( const uint8_t *array, uint16_t len);
+uint16_t calc_crc16(const uint8_t *array, uint16_t len, bool crc_continue = false);
+
+uint16_t calc_crc16_continue(const uint8_t *array, uint16_t len);
 
 bool check_crc16( const uint8_t *array, uint16_t len, uint16_t crc);
 

@@ -50,11 +50,21 @@ void ModTransmitterThread::run()
             retry = false;
             if(++n_attempts == n_MaxAttempts)
             {
-                emit consolePutData(QString("ModTransmitterThread: error attempts exceed %1\n").arg(n_MaxAttempts), 1);
                 n_attempts = 0;
-                State = IDLE;
-                m_mutex_mod.unlock();
-                continue;
+
+                if(++n_attempts_high_level > n_MaxAttemptsHighLevel)
+                {
+                    emit consolePutData("ModTransmitterThread: failed to transmit predistorion tables to MOD\n", 1);
+                    n_attempts_high_level = 0;
+                    State = IDLE;
+                    m_mutex_mod.unlock();
+                    continue;
+                }
+
+                emit consolePutData(QString("ModTransmitterThread: error attempts exceeded %1, start again from first command\n").arg(n_MaxAttempts), 1);
+                emit consolePutData("Starting transmit 'phase table' \n", 1);
+                State = TX_PHASE_TABLE;
+                n_channel = 0;
             }
         }
         else
@@ -63,25 +73,33 @@ void ModTransmitterThread::run()
 
             switch(State)
             {
-                case TX_PHASE_TABLE_1:
+                case TX_START:
+                    emit consolePutData(QString("Starting transmit predistortion tables, attempt %1\n").arg(n_attempts_high_level), 1);
+                    emit consolePutData("Starting transmit 'phase table' \n", 1);
+
+                    State = TX_PHASE_TABLE;
+                    n_channel = 0;
+                    break;
+
+                case TX_PHASE_TABLE:
                     if(++n_channel == n_elements/64)
                     {
-                        emit consolePutData("Finished transmitting phase table, transmit gain table next\n", 1);
-                        State = TX_GAIN_TABLE_2;
+                        emit consolePutData("Finished transmitting 'phase table', transmit 'gain table' next\n", 1);
+                        State = TX_GAIN_TABLE;
                         n_channel = 0;
                     }
                     break;
 
-                case TX_GAIN_TABLE_2:
+                case TX_GAIN_TABLE:
                     if(++n_channel == n_elements/64)
                     {
-                        emit consolePutData("Finished transmitting gain table, transmit shift next\n", 1);
-                        State = TX_SHIFT_3;
+                        emit consolePutData("Finished transmitting 'gain table', transmit 'shift + crc' next\n", 1);
+                        State = TX_SHIFT_CRC;
                     }
                     break;
 
-                case TX_SHIFT_3:
-                    emit consolePutData("Mod predistortion tables and 'QAM shift' transmission completed\n", 1);
+                case TX_SHIFT_CRC:
+                    emit consolePutData("Mod predistortion tables and 'shift + crc' transmission completed\n", 1);
                     State = IDLE;
                     m_mutex_mod.unlock();
                     continue;
@@ -96,18 +114,18 @@ void ModTransmitterThread::run()
         // Send next command
         switch(State)
         {
-            case TX_PHASE_TABLE_1:
-            case TX_GAIN_TABLE_2:
+            case TX_PHASE_TABLE:
+            case TX_GAIN_TABLE:
             {
-                message.command = (State == TX_PHASE_TABLE_1) ? MessageBox::SET_PHASE_TABLE : MessageBox::SET_GAIN_TABLE;
+                message.command = (State == TX_PHASE_TABLE) ? MessageBox::SET_PHASE_TABLE : MessageBox::SET_GAIN_TABLE;
                 message.packet_adr = n_channel;
 
+                uint8_t *p_f;
                 uint32_t j = 0;
+
                 for(uint32_t i = 0; i < 64; ++i)
                 {
-                    uint8_t *p_f;
-
-                    if(State == TX_PHASE_TABLE_1)
+                    if(State == TX_PHASE_TABLE)
                         p_f = reinterpret_cast<uint8_t*>(&phase_data_float[n_channel*64 + i]);
                     else //if(State == TRANSMIT_GAIN)
                         p_f = reinterpret_cast<uint8_t*>(&gain_data_float[n_channel*64 + i]);
@@ -120,15 +138,22 @@ void ModTransmitterThread::run()
                 break;
             }
 
-            case TX_SHIFT_3:
+            case TX_SHIFT_CRC:
+            {
                 message.command = MessageBox::SET_SHIFT_QAM_DATA;
                 message.packet_adr = 0;
 
-//                //todo test
-//                shift_for_qam_data_int = 4321;
-
                 message_box_buffer_mod[11] = uint8_t(shift_for_qam_data_int & 0xFF);
                 message_box_buffer_mod[12] = uint8_t((shift_for_qam_data_int >> 8) & 0xFF);
+
+                // Calculate crc16 for phase & gain tables and shift
+                calc_crc16((uint8_t*)&phase_data_float, sizeof(phase_data_float));
+                calc_crc16_continue((uint8_t*)&gain_data_float, sizeof(phase_data_float));
+                uint16_t crc16 = calc_crc16_continue((uint8_t*)&shift_for_qam_data_int, sizeof(shift_for_qam_data_int));
+
+                message_box_buffer_mod[13] = uint8_t(crc16 & 0xFF);
+                message_box_buffer_mod[14] = uint8_t((crc16 >> 8) & 0xFF);
+            }
                 break;
 
             default:
@@ -150,16 +175,6 @@ void ModTransmitterThread::run()
 void ModTransmitterThread::ModStartTransmitPhaseGain()
 {
     m_mutex_mod.lock();
-    n_channel = 255;    //todo hack
-
-//    //todo test float values
-//    phase_data_float[0] = 0.1;
-//    gain_data_float[0] = 0.1;
-//    for(uint32_t i = 1; i < 2048; ++i)
-//    {
-//        phase_data_float[i] = phase_data_float[i - 1] + 0.1;
-//        gain_data_float[i] = gain_data_float[i - 1] + 0.2;
-//    }
 
     message.command = MessageBox::SET_PHASE_TABLE;
     message.message_id = 0;
@@ -167,10 +182,12 @@ void ModTransmitterThread::ModStartTransmitPhaseGain()
     message.own_address = MessageBox::MASTER_ADDR;
     message.data_len = 256;
 
-    State = TX_PHASE_TABLE_1;
+    State = TX_START;
 
     retry = false;
     n_attempts = 0;
+    n_attempts_high_level = 0;
+
     m_mutex_mod.unlock();
 
     modTransmitWakeUp.wakeOne();
@@ -178,85 +195,88 @@ void ModTransmitterThread::ModStartTransmitPhaseGain()
 
 bool ModTransmitterThread::ModAnswerReceived(const uint8_t *p_data, int length)
 {
-    if(State == IDLE)
-        return false;
+    Q_UNUSED(p_data);
+    Q_UNUSED(length);
 
-    if(length < 12)
-    {
-        emit consolePutData(QString("ModAnswerReceived error length is too short %1\n").arg(length), 1);
-        return false;
-    }
+//    if(State == IDLE)
+//        return false;
 
-    // p_data[0] : addr
-    // p_data[1] : command
-    // p_data[2] : message_id
-    // p_data[3] : 0x01
-    // p_data[4] [5] : data_len
-    // p_data[6] [7] [8] [9] - channel/packet_addr
+//    if(length < 12)
+//    {
+//        emit consolePutData(QString("ModAnswerReceived error length is too short %1\n").arg(length), 1);
+//        return false;
+//    }
 
-    if(p_data[0] != MessageBox::MOD_ADDR)
-    {
-        emit consolePutData(QString("ModAnswerReceived warning, answer addr != MOD_ADDR\n"), 1);
-        return false;
-    }
+//    // p_data[0] : addr
+//    // p_data[1] : command
+//    // p_data[2] : message_id
+//    // p_data[3] : 0x01
+//    // p_data[4] [5] : data_len
+//    // p_data[6] [7] [8] [9] - channel/packet_addr
 
-    // Check crc
-    uint16_t crc = ((uint16_t)p_data[length - 1] << 8)
-                   | (uint16_t)p_data[length - 2];
+//    if(p_data[0] != MessageBox::MOD_ADDR)
+//    {
+//        emit consolePutData(QString("ModAnswerReceived warning, answer addr != MOD_ADDR\n"), 1);
+//        return false;
+//    }
 
-    bool res = check_crc16(p_data, length - 2, crc);
+//    // Check crc
+//    uint16_t crc = ((uint16_t)p_data[length - 1] << 8)
+//                   | (uint16_t)p_data[length - 2];
 
-    if(!res)
-    {
-        emit consolePutData("ModAnswerReceived crc error\n", 1);
-        return false;
-    }
+//    bool res = check_crc16(p_data, length - 2, crc);
 
-    switch(State)
-    {
-        default:
-            emit consolePutData("ModAnswerReceived warning wrong state\n", 1);
-            break;
+//    if(!res)
+//    {
+//        emit consolePutData("ModAnswerReceived crc error\n", 1);
+//        return false;
+//    }
 
-        case TX_PHASE_TABLE_1:
-            if(p_data[1] == MessageBox::SET_PHASE_TABLE)
-            {
-                emit stopAnswerTimeoutTimer();
-                modTransmitWakeUp.wakeOne();
-            }
-            else
-            {
-                emit consolePutData("ModAnswerReceived answer wrong command\n", 1);
-                return false;
-            }
-            break;
+//    switch(State)
+//    {
+//        default:
+//            emit consolePutData("ModAnswerReceived warning wrong state\n", 1);
+//            break;
 
-        case TX_GAIN_TABLE_2:
-            if(p_data[1] == MessageBox::SET_GAIN_TABLE)
-            {
-                emit stopAnswerTimeoutTimer();
-                modTransmitWakeUp.wakeOne();
-            }
-            else
-            {
-                emit consolePutData("ModAnswerReceived answer wrong command\n", 1);
-                return false;
-            }
-            break;
+//        case TX_PHASE_TABLE_1:
+//            if(p_data[1] == MessageBox::SET_PHASE_TABLE)
+//            {
+//                emit stopAnswerTimeoutTimer();
+//                modTransmitWakeUp.wakeOne();
+//            }
+//            else
+//            {
+//                emit consolePutData("ModAnswerReceived answer wrong command\n", 1);
+//                return false;
+//            }
+//            break;
 
-        case TX_SHIFT_3:
-            if(p_data[1] == MessageBox::SET_SHIFT_QAM_DATA)
-            {
-                emit stopAnswerTimeoutTimer();
-                modTransmitWakeUp.wakeOne();
-            }
-            else
-            {
-                emit consolePutData("ModAnswerReceived answer wrong command\n", 1);
-                return false;
-            }
-            break;
-    }
+//        case TX_GAIN_TABLE_2:
+//            if(p_data[1] == MessageBox::SET_GAIN_TABLE)
+//            {
+//                emit stopAnswerTimeoutTimer();
+//                modTransmitWakeUp.wakeOne();
+//            }
+//            else
+//            {
+//                emit consolePutData("ModAnswerReceived answer wrong command\n", 1);
+//                return false;
+//            }
+//            break;
+
+//        case TX_SHIFT_3:
+//            if(p_data[1] == MessageBox::SET_SHIFT_QAM_DATA)
+//            {
+//                emit stopAnswerTimeoutTimer();
+//                modTransmitWakeUp.wakeOne();
+//            }
+//            else
+//            {
+//                emit consolePutData("ModAnswerReceived answer wrong command\n", 1);
+//                return false;
+//            }
+//            break;
+//    }
 
     return true;
 }
