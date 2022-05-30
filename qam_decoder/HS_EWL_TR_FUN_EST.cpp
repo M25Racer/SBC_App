@@ -357,7 +357,7 @@ void HS_EWL_TR_FUN_EST(const emxArray_real_T *sweep_data, const emxArray_real_T 
 
           nx_tmp = i2 - i1;
           int exitg2;
-          do {
+//          do {
             exitg2 = 0;
             br = (PreSPP * 2.0 - static_cast<double>(iindx)) + corr_var;
             pi_jump_count = static_cast<double>(resamp_sweep->size[0]) - br;
@@ -508,7 +508,7 @@ void HS_EWL_TR_FUN_EST(const emxArray_real_T *sweep_data, const emxArray_real_T 
             } else {
               corr_var *= 2.0;
             }
-          } while (exitg2 == 0);
+//          } while (exitg2 == 0);
 
           pi_count = 2.0;
           b_i = newPhase->size[1];

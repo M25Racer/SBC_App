@@ -579,6 +579,7 @@ void MainWindow::sendHsCommandAdcStart3()
 
 void MainWindow::sendHsCommandAgcStart()
 {
+    m_usb_thread.agc_is_active = true;
     m_usb_thread.sendHsCommand(USB_CMD_AGC_START, 0, nullptr);
 }
 

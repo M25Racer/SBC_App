@@ -25,6 +25,7 @@ uint8_t AdcDataBuffer[USB_MAX_DATA_SIZE];
 UsbWorkThread::UsbWorkThread(QObject *parent) :
     QThread(parent)
 {
+//    m_callback = Default_HsDataParser;  //todo
 }
 
 UsbWorkThread::~UsbWorkThread()
@@ -1012,7 +1013,11 @@ void UsbWorkThread::parseHsData()
             switch(AgcState)
             {
                 case AGC_OK:          // Настройка аттенюатора/усилителя закончена
-                    //emit consolePutData("parseHsData(): AGC state = ok\n", 1);
+                    if(agc_is_active)
+                    {
+                        emit consolePutData("parseHsData(): AGC state = ok\n", 1);
+                        agc_is_active = false;
+                    }
                     break;
                 case AGC_INIT:        // Выполнена инициализация АРУ
                     emit consolePutData("parseHsData(): AGC state = init\n", 1);
@@ -1038,3 +1043,9 @@ void UsbWorkThread::parseHsData()
         }
     }
 }
+
+void UsbWorkThread::Default_HsDataParser(uint8_t *p_data)
+{
+    Q_UNUSED(p_data);
+}
+

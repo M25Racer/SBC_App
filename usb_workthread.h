@@ -56,6 +56,7 @@ public:
     uint32_t stm32_ready_data_size = 0;
 
     bool mod_tx_rx_sequence = false;
+    bool agc_is_active = false;
 
 private:
     void run() override;
@@ -67,6 +68,7 @@ private:
     void USB_StartTransmit();
     void USB_StopReceive();
     void parseHsData();
+    void Default_HsDataParser(uint8_t *p_data);
 
     // Hack to use libusb's 'C'-callback functions in 'C++' project
     // Use 'user_data' to pass pointer to 'this'
@@ -107,6 +109,10 @@ private:
     const qint64 rx_timeout_ms = 50;//10;            // usb rx timeout between transfers of one big packet, ms
 
     libusb_hotplug_callback_handle h_hotplug;   // libusb callback handle for hotplug event
+
+    typedef void(*DataParserCallbackType)(uint8_t *p_data);
+
+    DataParserCallbackType m_callback = NULL;
 };
 
 #endif // USB_WORKTHREAD_H
