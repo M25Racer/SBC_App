@@ -75,12 +75,15 @@ Console::Console(QWidget *parent) :
 
 
     // Set the adc data file
-    m_adcFile.reset(new QFile("SBC_adc_data_"+ QDateTime::currentDateTime().toString("yyyy-MM-dd_hh.mm.ss.zzz") + ".txt"));
+    m_adcFile1.reset(new QFile("SBC_adc_data1_"+ QDateTime::currentDateTime().toString("yyyy-MM-dd_hh.mm.ss.zzz") + ".txt"));
+    m_adcFile2.reset(new QFile("SBC_adc_data2_"+ QDateTime::currentDateTime().toString("yyyy-MM-dd_hh.mm.ss.zzz") + ".txt"));
     // Open the file logging
-    m_adcFile.data()->open(QFile::Append | QFile::Text);
+    m_adcFile1.data()->open(QFile::Append | QFile::Text);
+    m_adcFile2.data()->open(QFile::Append | QFile::Text);
 
     // Open stream file writes
-    outAdc.setDevice(m_adcFile.data());
+    outAdc1.setDevice(m_adcFile1.data());
+    outAdc2.setDevice(m_adcFile2.data());
 }
 
 void Console::putData(const QString &data, uint8_t priority)
@@ -120,9 +123,21 @@ void Console::putDataAdc(const quint8 *p_data, quint32 size)
         data.append(QString("%1\n").arg((int16_t)value));
     }
 
-    m_adcFile->resize(0);   // Clear file
-    outAdc << data;
-    outAdc.flush();    // Clear the buffered data
+    // Choose adc data file to write to
+    if(n_file)
+    {
+        n_file = false;
+        m_adcFile2->resize(0);   // Clear file
+        outAdc2 << data;
+        outAdc2.flush();    // Clear the buffered data
+    }
+    else
+    {
+        n_file = true;
+        m_adcFile1->resize(0);   // Clear file
+        outAdc1 << data;
+        outAdc1.flush();    // Clear the buffered data
+    }
 }
 
 void Console::fileFlush()
@@ -152,6 +167,8 @@ void Console::Close()
     out.flush();    // Clear the buffered data
     m_logFile->close();
 
-    outAdc.flush();
-    m_adcFile->close();
+    outAdc1.flush();
+    outAdc2.flush();
+    m_adcFile1->close();
+    m_adcFile2->close();
 }

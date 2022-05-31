@@ -285,7 +285,7 @@ void HS_EWL_TR_FUN_EST(const emxArray_real_T *sweep_data, const emxArray_real_T 
           b_resamp_sweep->data[b_i] = resamp_sweep->data[b_i] / pi_count;
         }
 
-        coder::xcorr(b_resamp_sweep, sweepPreamble, c, resampSweepAfter23);
+        coder::xcorr(b_resamp_sweep, sweepPreamble, c);
         br = static_cast<double>(resamp_sweep->size[0]) - PreSPP * 2.0;
         if (br > c->size[0]) {
           b_i = 0;
@@ -833,8 +833,7 @@ void HS_EWL_TR_FUN_EST(const emxArray_real_T *sweep_data, const emxArray_real_T 
           c_resampSweepAfter23[0] = flag_array_zero;
           b_resampSweepAfter23.size = &c_resampSweepAfter23[0];
           b_resampSweepAfter23.numDimensions = 1;
-          coder::xcorr(&b_resampSweepAfter23, sweepPreamble, resamp_sweep,
-                       newPhase);
+          coder::xcorr(&b_resampSweepAfter23, sweepPreamble, resamp_sweep);
           br = static_cast<double>(b_i) - PreSPP * 2.0;
           if (br > resamp_sweep->size[0]) {
             i1 = 0;
