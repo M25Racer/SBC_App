@@ -14,6 +14,7 @@
 //#include "qam_decoder/math_sweep.h"
 #include "qam_decoder/rt_nonfinite.h"
 
+#include "crc8.h"
 #include "crc16.h"
 #include "srp_mod_protocol.h"
 
@@ -29,38 +30,6 @@ static double Signal[USB_MAX_DATA_SIZE];
 double f0 = 35000;//carrier freq
 double sps = round(Fs/f0);//sample per symbol
 double mode = 1;//1-both stages enabled, 0-only sevond stage
-//double preamble_len = 20;//preamble length
-//double message_len = 255;
-//double QAM_order = 256;
-//double preamble_QAM_symbol = 128;//QAM symbol used in preamble
-////  input var for sweep
-//double f_sine = 35000;
-//double period_amount = 500;
-//double sine_sps = Fs/f_sine;
-//double f_pream = 2000;
-//double Fs_math_sweep = 280000;
-//double pream_sps = Fs_math_sweep/f_pream;
-////  output var for HS_EWL_FREQ_ACQ
-//double warning_status;
-//double index_data;
-//double len_data;
-//double f_est_data;//estimated frequency
-//int f_est_size;
-////  output var for HS_EWL_DEMOD_QAM
-//creal_T qam_symbols_data[255];
-//int qam_symbols_size;
-//double byte_data[255];
-//int byte_data_size;
-////  output var HS_EWL_FREQ_EST_FOR_SWEEP
-//double f_opt;
-//double ph_opt;
-//double sweep_freq_warning_status;
-////  output var HS_EWL_TR_FUN_EST
-//double  gain_data[2048];
-//double  phase_data[2048];
-//int     gain_size[2];
-//int     phase_size[2];
-//double  sweep_warning_status;
 
 //  output var for HS_EWL_FREQ_ACQ
 double warning_status;
@@ -75,48 +44,11 @@ int qam_symbols_size;
 double byte_data[255];
 int byte_data_size;
 
-////  output var HS_EWL_FREQ_EST_FOR_SWEEP
-//double f_opt;
-//double ph_opt;
-//double sweep_freq_warning_status;
-
-////  output var HS_EWL_TR_FUN_EST
-//double  gain_data[2048];
-//double  phase_data[2048];
-//int     gain_size[2];
-//int     phase_size[2];
-//double  sweep_warning_status;
-
-
-//static double Fs = 1832061;//280000;//ADC sample rate
-//static double f0 = 35000;//carrier freq
-//static double sps = qRound(Fs/f0);//sample per symbol
-//static double mode = 1;//1-both stages enabled, 0-only second stage
-//static double preamble_len = 20;//preamble length
-//static double message_len = 255;
-//static double QAM_order = 256;
-//static double preamble_QAM_symbol = 128;//QAM symbol used in preamble
-//static double warning_status;
-
-//static creal_T qam_symbols_data[255];
-//static int qam_symbols_size;
-//static double byte_data[255];
-//static int byte_data_size;
-
-//static double f_est_data;//estimated frequency
-//static int f_est_size;
-
-//// QAM data related sizes & offsets
-//static const uint32_t TxPacketDataSize = 212;
-//static const uint32_t TxPacketDataOffset = 23;
-
 //static uint8_t data_decoded[TxPacketDataSize];      // data decoded from single qam packet
 static uint8_t data_decoded[128*1024];      // data decoded from single qam packet
 //static uint8_t data_accum_buffer[128*1024];         // data buffer for storing decoded data from multiple packets
 //static uint32_t data_accum_length = 0;              // data length in data_accum_buffer (for multiple packets)
 static uint32_t data_offset = 0;
-
-bool kostyl_check_error = false;    // TODO
 
 double ref_cos[] = {1, 9.927089e-01, 9.709418e-01, 9.350162e-01, 8.854560e-01, 8.229839e-01, 7.485107e-01, 6.631227e-01, 5.680647e-01, 4.647232e-01, 3.546049e-01, 2.393157e-01, 1.205367e-01, 6.123234e-17, -1.205367e-01, -2.393157e-01, -3.546049e-01, -4.647232e-01, -5.680647e-01, -6.631227e-01, -7.485107e-01, -8.229839e-01, -8.854560e-01, -9.350162e-01, -9.709418e-01, -9.927089e-01, -1, -9.927089e-01, -9.709418e-01, -9.350162e-01, -8.854560e-01, -8.229839e-01, -7.485107e-01, -6.631227e-01, -5.680647e-01, -4.647232e-01, -3.546049e-01, -2.393157e-01, -1.205367e-01, -1.836970e-16, 1.205367e-01, 2.393157e-01, 3.546049e-01, 4.647232e-01, 5.680647e-01, 6.631227e-01, 7.485107e-01, 8.229839e-01, 8.854560e-01, 9.350162e-01, 9.709418e-01, 9.927089e-01};
 double ref_sin[] = {0, 1.205367e-01, 2.393157e-01, 3.546049e-01, 4.647232e-01, 5.680647e-01, 6.631227e-01, 7.485107e-01, 8.229839e-01, 8.854560e-01, 9.350162e-01, 9.709418e-01, 9.927089e-01, 1, 9.927089e-01, 9.709418e-01, 9.350162e-01, 8.854560e-01, 8.229839e-01, 7.485107e-01, 6.631227e-01, 5.680647e-01, 4.647232e-01, 3.546049e-01, 2.393157e-01, 1.205367e-01, 1.224647e-16, -1.205367e-01, -2.393157e-01, -3.546049e-01, -4.647232e-01, -5.680647e-01, -6.631227e-01, -7.485107e-01, -8.229839e-01, -8.854560e-01, -9.350162e-01, -9.709418e-01, -9.927089e-01, -1, -9.927089e-01, -9.709418e-01, -9.350162e-01, -8.854560e-01, -8.229839e-01, -7.485107e-01, -6.631227e-01, -5.680647e-01, -4.647232e-01, -3.546049e-01, -2.393157e-01, -1.205367e-01};
@@ -184,9 +116,6 @@ void QamThread::QAM_Decoder()
                      QAM_order, qam_symbols_data, &qam_symbols_size,
                      byte_data, &byte_data_size);
 
-    if(kostyl_check_error)
-        warning_status = 4;
-
     // Data parsing
     // If receive timeout elapsed
     if(data_timeout_tim.hasExpired(qam_rx_timeout_ms))
@@ -209,55 +138,95 @@ void QamThread::QAM_Decoder()
     for(uint8_t i = 0; i < TxPacketDataSize; ++i)
         data_decoded[data_offset + i] = (uint8_t)byte_data[i];
 
-    // Parse decoded data
-    if(data_decoded[0] == MessageBox::SRP_ADDR)
+    // Parse decoded data /////////////////////////////////////////////////////////
+    // Parse 'frame' tail
+    frame_tail_nlast_t *tail = (frame_tail_nlast_t*)&data_decoded[data_offset + TxPacketDataSize - sizeof(frame_tail_nlast_t)];
+
+    // Check 'frame' CRC
+    uint8_t crc8 = calc_crc8((uint8_t*)&data_decoded[data_offset], TxPacketDataSize - 1);
+
+    if(crc8 != tail->crc8)
     {
-        uint16_t packet_length = (uint16_t)data_decoded[1] | ((uint16_t)data_decoded[2] << 8);
-
-        if(packet_length < MOD_SRP_MIN_VALID_LENGTH)
-        {
-            emit consolePutData(QString("HS data parsing error, packet length is too short %1\n").arg(packet_length), 1);
-            packet_length = MOD_SRP_MIN_VALID_LENGTH;
-        }
-
-        data_offset += TxPacketDataSize;
-
-        // Whole data received?
-        if(data_offset >= packet_length)
-        {
-            data_offset = 0;
-
-            // Check crc
-            uint16_t crc = ((uint16_t)data_decoded[packet_length - 1] << 8)
-                           | (uint16_t)data_decoded[packet_length - 2];
-
-            bool res = check_crc16(data_decoded, packet_length - 2, crc);
-
-            if(res)
-            {
-                // Transmit decoded data to PC
-                packet_length -= MOD_SRP_PROTOCOL_HEADER_SIZE + MOD_SRP_PROTOCOL_CRC_SIZE + MASTER_ADDR_SIZE;
-                emit postTxDataToSerialPort((uint8_t*)&data_decoded[MOD_SRP_PROTOCOL_HEADER_SIZE + MASTER_ADDR_SIZE], packet_length);
-                //emit consolePutData(QString("Profiler timer elapsed %1 # data to serial port\n").arg(profiler_timer.elapsed()), 1);
-
-                if(first_pass)
-                {
-                    first_pass = false;
-                    f0 = f_est_data;
-                    mode = 0;
-                }
-            }
-            else
-            {
-                emit consolePutData(QString("HS data parsing crc error, packet length %1\n").arg(packet_length), 1);
-            }
-        }
+        emit consolePutData(QString("HS data parsing crc error\n"), 1);
+        data_offset = 0;
     }
     else
     {
-        emit consolePutData(QString("HS data parsing error, addr != SRP\n"), 1);
-        data_offset = 0;
+        if(first_pass)
+        {
+            first_pass = false;
+            f0 = f_est_data;
+            mode = 0;
+        }
+
+        if(tail->frame_flag == ENUM_FRAME_NOT_LAST)
+        {
+            data_offset += TxPacketDataSize - sizeof(frame_tail_nlast_t);
+            emit consolePutData(QString("Not last frame #%1, continue receive\n").arg(tail->frame_id), 1);
+        }
+        else // tail->frame_flag == ENUM_FRAME_LAST
+        {
+            frame_tail_last_t *tail_last = (frame_tail_last_t*)&data_decoded[data_offset + TxPacketDataSize - sizeof(frame_tail_last_t)];
+            emit consolePutData(QString("Last frame #%1, data length %2\n").arg(tail_last->tail.frame_id).arg(tail_last->len), 1);
+
+            // Transmit decoded data to PC
+            //emit postTxDataToSerialPort((uint8_t*)&data_decoded[MOD_SRP_PROTOCOL_HEADER_SIZE + MASTER_ADDR_SIZE], packet_length);//todo master size????
+            emit postTxDataToSerialPort((uint8_t*)&data_decoded[MASTER_ADDR_SIZE], tail_last->len - MASTER_ADDR_SIZE);
+
+            // Reset offset
+            data_offset = 0;
+        }
     }
+
+
+//    if(data_decoded[0] == MessageBox::SRP_ADDR)
+//    {
+//        uint16_t packet_length = (uint16_t)data_decoded[1] | ((uint16_t)data_decoded[2] << 8);
+
+//        if(packet_length < MOD_SRP_MIN_VALID_LENGTH)
+//        {
+//            emit consolePutData(QString("HS data parsing error, packet length is too short %1\n").arg(packet_length), 1);
+//            packet_length = MOD_SRP_MIN_VALID_LENGTH;
+//        }
+
+//        data_offset += TxPacketDataSize;
+
+//        // Whole data received?
+//        if(data_offset >= packet_length)
+//        {
+//            data_offset = 0;
+
+//            // Check crc
+//            uint16_t crc = ((uint16_t)data_decoded[packet_length - 1] << 8)
+//                           | (uint16_t)data_decoded[packet_length - 2];
+
+//            bool res = check_crc16(data_decoded, packet_length - 2, crc);
+
+//            if(res)
+//            {
+//                // Transmit decoded data to PC
+//                packet_length -= MOD_SRP_PROTOCOL_HEADER_SIZE + MOD_SRP_PROTOCOL_CRC_SIZE + MASTER_ADDR_SIZE;
+//                emit postTxDataToSerialPort((uint8_t*)&data_decoded[MOD_SRP_PROTOCOL_HEADER_SIZE + MASTER_ADDR_SIZE], packet_length);
+//                //emit consolePutData(QString("Profiler timer elapsed %1 # data to serial port\n").arg(profiler_timer.elapsed()), 1);
+
+//                if(first_pass)
+//                {
+//                    first_pass = false;
+//                    f0 = f_est_data;
+//                    mode = 0;
+//                }
+//            }
+//            else
+//            {
+//                emit consolePutData(QString("HS data parsing crc error, packet length %1\n").arg(packet_length), 1);
+//            }
+//        }
+//    }
+//    else
+//    {
+//        emit consolePutData(QString("HS data parsing error, addr != SRP\n"), 1);
+//        data_offset = 0;
+//    }
 
     // Debug information
     int r = int(warning_status);
@@ -295,5 +264,5 @@ void QamThread::QAM_Decoder()
 //    s.append("\n");
 //    emit consolePutData(s, 0);
 
-    //HS_EWL_RECEIVE_terminate();
+//    HS_EWL_DEMOD_QAM_terminate();
 }

@@ -6,6 +6,7 @@ TEMPLATE = app
 
 SOURCES += \
     crc16.cpp \
+    crc8.cpp \
     freq_sweep_thread.cpp \
     main.cpp \
     mainwindow.cpp \
@@ -112,6 +113,7 @@ HEADERS += \
     ../SRP_HS_USB_PROTOCOL/SRP_HS_USB_Protocol.h \
     agc_algorithm.h \
     crc16.h \
+    crc8.h \
     freq_sweep_thread.h \
     mainwindow.h \
     message_box.h \

@@ -14,21 +14,22 @@
 
 typedef enum
 {
-    ENUM_FRAME_START = 0,
-    ENUM_FRAME_STOP	= 1
+    ENUM_FRAME_NOT_LAST = 0,
+    ENUM_FRAME_LAST	= 1
 } enum_line_frame_flag;
 
 typedef struct
 {
     uint8_t frame_flag 	: 1;
     uint8_t frame_id	: 7;
-} start_header_t;
+    uint8_t crc8        : 8;
+} frame_tail_nlast_t;
 
 typedef struct
 {
     uint16_t len;
-    uint16_t crc16;
-} stop_header_t;
+    frame_tail_nlast_t tail;
+} frame_tail_last_t;
 
 #pragma pack(pop)
 
