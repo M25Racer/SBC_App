@@ -61,8 +61,10 @@ Console::Console(QWidget *parent) :
 {
     document()->setMaximumBlockCount(1000);
     QPalette p = palette();
-    p.setColor(QPalette::Base, Qt::lightGray);
-    p.setColor(QPalette::Text, Qt::black);
+//    p.setColor(QPalette::Base, Qt::lightGray);
+//    p.setColor(QPalette::Text, Qt::black);
+    p.setColor(QPalette::Base, Qt::GlobalColor::black);
+    p.setColor(QPalette::Text, QColor(255,99,71));
     setPalette(p);
 
     // Set the logging file

@@ -93,8 +93,6 @@ void QamThread::run()
 
 void QamThread::QAM_Decoder()
 {
-    static bool first_pass = true;
-
     emit consolePutData(QString("QAM decoder starting, length %1\n").arg(Length), 1);
 
     double *signal = (double*)&Signal;
@@ -138,7 +136,7 @@ void QamThread::QAM_Decoder()
     for(uint8_t i = 0; i < TxPacketDataSize; ++i)
         data_decoded[data_offset + i] = (uint8_t)byte_data[i];
 
-    // Parse decoded data /////////////////////////////////////////////////////////
+    // Parse decoded data
     // Parse 'frame' tail
     frame_tail_nlast_t *tail = (frame_tail_nlast_t*)&data_decoded[data_offset + TxPacketDataSize - sizeof(frame_tail_nlast_t)];
 
@@ -147,18 +145,11 @@ void QamThread::QAM_Decoder()
 
     if(crc8 != tail->crc8)
     {
-        emit consolePutData(QString("HS data parsing crc error\n"), 1);
+        emit consolePutData(QString("HS frame parsing crc error\n"), 1);
         data_offset = 0;
     }
     else
     {
-        if(first_pass)
-        {
-            first_pass = false;
-            f0 = f_est_data;
-            mode = 0;
-        }
-
         if(tail->frame_flag == ENUM_FRAME_NOT_LAST)
         {
             data_offset += TxPacketDataSize - sizeof(frame_tail_nlast_t);
@@ -167,66 +158,37 @@ void QamThread::QAM_Decoder()
         else // tail->frame_flag == ENUM_FRAME_LAST
         {
             frame_tail_last_t *tail_last = (frame_tail_last_t*)&data_decoded[data_offset + TxPacketDataSize - sizeof(frame_tail_last_t)];
-            emit consolePutData(QString("Last frame #%1, data length %2\n").arg(tail_last->tail.frame_id).arg(tail_last->len), 1);
 
-            // Transmit decoded data to PC
-            //emit postTxDataToSerialPort((uint8_t*)&data_decoded[MOD_SRP_PROTOCOL_HEADER_SIZE + MASTER_ADDR_SIZE], packet_length);//todo master size????
-            emit postTxDataToSerialPort((uint8_t*)&data_decoded[MASTER_ADDR_SIZE], tail_last->len - MASTER_ADDR_SIZE);
+            // Check data length
+            if(tail_last->len < MOD_SRP_MIN_VALID_LENGTH_NEW)
+            {
+                // Error length is too short
+                emit consolePutData(QString("HS data parsing error, packet data length is too short %1\n").arg(tail_last->len), 1);
+            }
+            else if(tail_last->len > (data_offset + TxPacketDataSize - sizeof(frame_tail_nlast_t)))
+            {
+                // Error length is too long
+                emit consolePutData(QString("HS data parsing error, packet data length is too long %1\n").arg(tail_last->len), 1);
+            }
+            else
+            {
+                // Transmit decoded data to PC
+                emit postTxDataToSerialPort((uint8_t*)&data_decoded[MASTER_ADDR_SIZE], tail_last->len - MASTER_ADDR_SIZE);
+            }
+
+            emit consolePutData(QString("Last frame #%1, data length %2\n").arg(tail_last->tail.frame_id).arg(tail_last->len), 1);
 
             // Reset offset
             data_offset = 0;
         }
+
+        if(m_QamDecoderFirstPassFlag)
+        {
+            m_QamDecoderFirstPassFlag = false;
+            f0 = f_est_data;
+            mode = 0;
+        }
     }
-
-
-//    if(data_decoded[0] == MessageBox::SRP_ADDR)
-//    {
-//        uint16_t packet_length = (uint16_t)data_decoded[1] | ((uint16_t)data_decoded[2] << 8);
-
-//        if(packet_length < MOD_SRP_MIN_VALID_LENGTH)
-//        {
-//            emit consolePutData(QString("HS data parsing error, packet length is too short %1\n").arg(packet_length), 1);
-//            packet_length = MOD_SRP_MIN_VALID_LENGTH;
-//        }
-
-//        data_offset += TxPacketDataSize;
-
-//        // Whole data received?
-//        if(data_offset >= packet_length)
-//        {
-//            data_offset = 0;
-
-//            // Check crc
-//            uint16_t crc = ((uint16_t)data_decoded[packet_length - 1] << 8)
-//                           | (uint16_t)data_decoded[packet_length - 2];
-
-//            bool res = check_crc16(data_decoded, packet_length - 2, crc);
-
-//            if(res)
-//            {
-//                // Transmit decoded data to PC
-//                packet_length -= MOD_SRP_PROTOCOL_HEADER_SIZE + MOD_SRP_PROTOCOL_CRC_SIZE + MASTER_ADDR_SIZE;
-//                emit postTxDataToSerialPort((uint8_t*)&data_decoded[MOD_SRP_PROTOCOL_HEADER_SIZE + MASTER_ADDR_SIZE], packet_length);
-//                //emit consolePutData(QString("Profiler timer elapsed %1 # data to serial port\n").arg(profiler_timer.elapsed()), 1);
-
-//                if(first_pass)
-//                {
-//                    first_pass = false;
-//                    f0 = f_est_data;
-//                    mode = 0;
-//                }
-//            }
-//            else
-//            {
-//                emit consolePutData(QString("HS data parsing crc error, packet length %1\n").arg(packet_length), 1);
-//            }
-//        }
-//    }
-//    else
-//    {
-//        emit consolePutData(QString("HS data parsing error, addr != SRP\n"), 1);
-//        data_offset = 0;
-//    }
 
     // Debug information
     int r = int(warning_status);
@@ -238,19 +200,19 @@ void QamThread::QAM_Decoder()
             break;
         case WARNING_1:
             // warning_status = 1 not enough sample in the end array
-            emit consolePutData("warning_status = 1 not enough sample in the end array\n", 1);
+            emit consolePutData("warning_status = 1: not enough sample in the end array\n", 1);
             break;
         case WARNING_2:
             // warning_status = 2 all or more than 0.2 array equal 0
-            emit consolePutData("warning_status = 2 all or more than 0.2 array equal 0\n", 1);
+            emit consolePutData("warning_status = 2: all or more than 0.2 array equal 0\n", 1);
             break;
         case WARNING_3:
             // warning_status = 3 start array sample equal 0 less than 0
-            emit consolePutData("warning_status = 3 start array sample equal 0 less than 0\n", 1);
+            emit consolePutData("warning_status = 3: start array sample equal 0 less than 0\n", 1);
             break;
         case WARNING_4:
-            // warning_status = 4 kostyl check error
-            emit consolePutData("warning_status = 4 kostyl check error\n", 1);
+            // warning_status = 4 f_est == 0
+            emit consolePutData("warning_status = 4: error probably wrong f_est\n", 1);
             break;
     };
 
