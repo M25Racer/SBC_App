@@ -74,7 +74,7 @@ uint8_t mod_status_reg;
 //    return true;
 //}
 
-bool MessageBox::message_box_srp(uint8_t* Buf, uint16_t len, uint8_t master_address, uint8_t own_address)
+bool CMessageBox::message_box_srp(uint8_t* Buf, uint16_t len, uint8_t master_address, uint8_t own_address)
 {
     if(len > sizeof(messege_box_buffer))
         len = sizeof(messege_box_buffer);
@@ -377,6 +377,20 @@ bool MessageBox::message_box_srp(uint8_t* Buf, uint16_t len, uint8_t master_addr
 //            emit postData(messege_box_buffer + 1, tx_len);
 //            break;
 
+        case CALC_PREDISTORTION:
+            // todo
+            emit calculatePredistortionTablesStart();
+            tx_len = message_header_to_array(&message, messege_box_buffer);
+            emit postData(messege_box_buffer + 1, tx_len);
+            break;
+
+        case GET_PREDIST_STATUS:
+            message.data_len = 1;
+            messege_box_buffer[11] = 0xFF; // todo status
+            tx_len = message_header_to_array(&message, messege_box_buffer);
+            emit postData(messege_box_buffer + 1, tx_len);
+            break;
+
         default:
             // Unknown command for SBC, retransmit it to STM32H7 board
             emit postDataToStm32H7(messege_box_buffer, len);
@@ -390,7 +404,7 @@ bool MessageBox::message_box_srp(uint8_t* Buf, uint16_t len, uint8_t master_addr
     return true;
 }
 
-uint16_t MessageBox::message_header_to_array(const message_header* message, uint8_t* Buf)
+uint16_t CMessageBox::message_header_to_array(const message_header* message, uint8_t* Buf)
 {
     Buf[0] = message->master_address;
     Buf[1] = message->own_address;

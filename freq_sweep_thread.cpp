@@ -15,6 +15,7 @@
 
 #include "crc16.h"
 #include "srp_mod_protocol.h"
+#include "global_vars.h"
 
 using namespace QAM_Common;
 
@@ -130,6 +131,8 @@ void FreqSweepThread::FreqEstimateForSweep()
 {
     emit consolePutData(QString("QAM frequency estimate for sweep starting, length %1\n").arg(LengthSin), 1);
 
+    Set_FreqEstState(FREQ_EST_WORK_IN_PROGRESS);
+
     double *sine = (double*)&SignalSin;
     double sine_len = LengthSin;
 
@@ -160,11 +163,14 @@ void FreqSweepThread::FreqEstimateForSweep()
     }
 
     emit consolePutData(QString("Sweep freq f_opt = %1, elapsed time = %2 ms\n").arg(f_opt).arg(peformance_timer.elapsed()), 1);
+    Set_FreqEstState(FREQ_EST_COMPLETE);
 }
 
 void FreqSweepThread::Sweep()
 {
     emit consolePutData(QString("QAM sweep starting, length %1\n").arg(LengthSweep), 1);
+
+    Set_SweepState(SWEEP_WORK_IN_PROGRESS);
 
     peformance_timer.start();
 
@@ -221,4 +227,6 @@ void FreqSweepThread::Sweep()
 
     emit consolePutData(QString("Sweep elapsed time = %1 ms\n").arg(peformance_timer.elapsed()), 1);
     emit consolePutData(QString("Sweep shift_for_qam_data = %1\n").arg(shift_for_qam_data_int), 1);
+
+    Set_SweepState(SWEEP_COMPLETE);
 }

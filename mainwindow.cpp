@@ -59,13 +59,9 @@
 #include <QTimer>
 #include <QThread>
 #include "crc16.h"
+#include "global_vars.h"
 
 extern QElapsedTimer profiler_timer;
-extern bool special_cmd_transmitted;
-extern bool special_cmd_transmitted2;
-
-extern QWaitCondition modTransmitWakeUp;
-extern QMutex m_mutex_mod;
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -73,7 +69,7 @@ MainWindow::MainWindow(QWidget *parent) :
     m_status(new QLabel),
     m_console(new Console),
     m_serial(new QSerialPort(this)),
-    m_message_box(new MessageBox)
+    m_message_box(new CMessageBox)
 {
     m_ui->setupUi(this);
 
@@ -94,10 +90,11 @@ MainWindow::MainWindow(QWidget *parent) :
 
     initActionsConnections();
 
-    connect(m_serial, &QSerialPort::errorOccurred, this, &MainWindow::handleError);
+    //connect(m_serial, &QSerialPort::errorOccurred, this, &MainWindow::handleError);
     connect(m_serial, &QSerialPort::readyRead, this, &MainWindow::readDataSerialPort);
-    connect(m_message_box, &MessageBox::postData, this, &MainWindow::transmitDataSerialPort);
-    connect(m_message_box, &MessageBox::postDataToStm32H7, this, &MainWindow::postTxDataSTM);
+    connect(m_message_box, &CMessageBox::postData, this, &MainWindow::transmitDataSerialPort);
+    connect(m_message_box, &CMessageBox::postDataToStm32H7, this, &MainWindow::postTxDataSTM);
+    connect(m_message_box, &CMessageBox::calculatePredistortionTablesStart, this, &MainWindow::calculatePredistortionTablesStart);
     connect(&m_usb_thread, &UsbWorkThread::postTxDataToSerialPort, this, &MainWindow::transmitDataSerialPort, Qt::ConnectionType::QueuedConnection);
     connect(&m_usb_thread, &UsbWorkThread::consolePutData, this, &MainWindow::consolePutData, Qt::ConnectionType::QueuedConnection);
     connect(&m_usb_thread, &UsbWorkThread::usbInitTimeoutStart, this, &MainWindow::usbInitTimeoutStart, Qt::ConnectionType::QueuedConnection);
@@ -109,6 +106,9 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(&m_freq_sweep_thread, &FreqSweepThread::consolePutData, this, &MainWindow::consolePutData, Qt::ConnectionType::QueuedConnection);
     connect(&m_mod_tx_thread, &ModTransmitterThread::consolePutData, this, &MainWindow::consolePutData, Qt::ConnectionType::QueuedConnection);
     connect(&m_mod_tx_thread, &ModTransmitterThread::postDataToStm32H7, this, &MainWindow::postTxDataSTM, Qt::ConnectionType::QueuedConnection);
+    connect(&m_mod_tx_thread, &ModTransmitterThread::sendCommandToSTM32, this, &MainWindow::sendCommandToSTM32, Qt::ConnectionType::QueuedConnection);
+
+    //agcStartCommandToSTM32
 
     m_console->putData("SBC Application\n", 1);
     m_console->putData("Opening serial port...\n", 1);
@@ -527,17 +527,34 @@ void MainWindow::about()
 void MainWindow::logFileFlush()
 {
     m_console->fileFlush();
-    QMessageBox::information(this, tr("Info"),
-                       tr("Log file has been flushed!"));
+    QMessageBox::information(this, tr("Info"), tr("Log file has been flushed!"));
 }
 
 void MainWindow::logFileOpen()
 {
     m_console->fileOpen();
-//    QMessageBox::information(this, tr("Info"),
-//                       tr("Todo!"));
 }
 
+void MainWindow::sendCommandToSTM32(quint8 command, const quint8 *p_data, quint32 data_size)
+{
+    if(data_size && p_data == nullptr)
+    {
+        m_console->putData("Error sendCommandToSTM32sendCommandToSTM32 wrong parameters\n", 1);
+        return;
+    }
+
+    if(command == USB_CMD_AGC_START)
+        m_usb_thread.agc_is_active = true;
+
+    m_usb_thread.sendHsCommand(command, data_size, p_data);
+}
+
+void MainWindow::usbHsDataReceived()
+{
+    m_mod_tx_thread.ModAnswerDataReceived();
+}
+
+// Debug HS command from GUI
 void MainWindow::sendHsCommandGetStatus()
 {
     // Get status
@@ -563,7 +580,7 @@ void MainWindow::sendHsCommandAdcStart()
 
 void MainWindow::sendHsCommandAdcStart2()
 {
-    special_cmd_transmitted = true;
+    Set_Special_Command_SIN600(true);
 
     uint32_t adc_data_length = 31400;
     m_usb_thread.sendHsCommand(USB_CMD_ADC_START, 4, (uint8_t*)&adc_data_length);
@@ -571,7 +588,7 @@ void MainWindow::sendHsCommandAdcStart2()
 
 void MainWindow::sendHsCommandAdcStart3()
 {
-    special_cmd_transmitted2 = true;
+    Set_Special_Command_Sweep(true);
 
     uint32_t adc_data_length = 440000;
     m_usb_thread.sendHsCommand(USB_CMD_ADC_START, 4, (uint8_t*)&adc_data_length);
@@ -579,8 +596,7 @@ void MainWindow::sendHsCommandAdcStart3()
 
 void MainWindow::sendHsCommandAgcStart()
 {
-    m_usb_thread.agc_is_active = true;
-    m_usb_thread.sendHsCommand(USB_CMD_AGC_START, 0, nullptr);
+    sendCommandToSTM32(USB_CMD_AGC_START, nullptr, 0);
 }
 
 void MainWindow::sendPredistortionTables()
@@ -590,7 +606,7 @@ void MainWindow::sendPredistortionTables()
     m_mod_tx_thread.ModStartTransmitPhaseGain();
 }
 
-void MainWindow::usbHsDataReceived()
+void MainWindow::calculatePredistortionTablesStart()
 {
-    m_mod_tx_thread.ModAnswerDataReceived();
+    m_mod_tx_thread.calculatePredistortionTablesStart();
 }

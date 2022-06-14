@@ -54,7 +54,8 @@ SOURCES += \
     settingsdialog.cpp \
     console.cpp \
     statistics.cpp \
-    usb_workthread.cpp
+    usb_workthread.cpp \
+    global_vars.cpp
 
 CONFIG += c++11
 
@@ -172,7 +173,8 @@ HEADERS += \
     srp_mod_protocol.h \
     statistics.h \
     usb_global.h \
-    usb_workthread.h
+    usb_workthread.h \
+    global_vars.h
 
 FORMS += \
     mainwindow.ui

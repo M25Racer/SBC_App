@@ -4,6 +4,8 @@
 
 #include "crc16.h"
 #include "srp_mod_protocol.h"
+#include "../SRP_HS_USB_PROTOCOL/SRP_HS_USB_Protocol.h"
+#include "global_vars.h"
 
 /* Extern global variables */
 extern QWaitCondition modTransmitWakeUp;
@@ -34,140 +36,346 @@ ModTransmitterThread::~ModTransmitterThread()
 
 void ModTransmitterThread::run()
 {
+    static uint32_t n_commands = 0;
+    static uint32_t Timeout = 0;
+
     while(!m_quit)
     {
         m_mutex_mod.lock();
         modTransmitWakeUp.wait(&m_mutex_mod); // Wait condition unlocks mutex before 'wait', and will lock it again just after 'wait' is complete
 
-        if(State == IDLE)
+        // Report states for logs
+        if(StatePrev != State)
         {
-            m_mutex_mod.unlock();
-            continue;
+            StatePrev = State;
+            emit consolePutData(QString(":: Predistortion auto cfg :: State #%1\n").arg(State), 1);
         }
 
-        if(retry)
-        {
-            retry = false;
-            if(++n_attempts == n_MaxAttempts)
-            {
-                n_attempts = 0;
-
-                if(++n_attempts_high_level > n_MaxAttemptsHighLevel)
-                {
-                    emit consolePutData("ModTransmitterThread: failed to transmit predistorion tables to MOD\n", 1);
-                    n_attempts_high_level = 0;
-                    State = IDLE;
-                    m_mutex_mod.unlock();
-                    continue;
-                }
-
-                emit consolePutData(QString("ModTransmitterThread: error attempts exceeded %1, start again from first command\n").arg(n_MaxAttempts), 1);
-                emit consolePutData("Starting transmit 'phase table' \n", 1);
-                State = TX_PHASE_TABLE;
-                n_channel = 0;
-            }
-        }
-        else
-        {
-            n_attempts = 0;
-
-            switch(State)
-            {
-                case TX_START:
-                    emit consolePutData(QString("Starting transmit predistortion tables, attempt %1\n").arg(n_attempts_high_level), 1);
-                    emit consolePutData("Starting transmit 'phase table' \n", 1);
-
-                    State = TX_PHASE_TABLE;
-                    n_channel = 0;
-                    break;
-
-                case TX_PHASE_TABLE:
-                    if(++n_channel == n_elements/64)
-                    {
-                        emit consolePutData("Finished transmitting 'phase table', transmit 'gain table' next\n", 1);
-                        State = TX_GAIN_TABLE;
-                        n_channel = 0;
-                    }
-                    break;
-
-                case TX_GAIN_TABLE:
-                    if(++n_channel == n_elements/64)
-                    {
-                        emit consolePutData("Finished transmitting 'gain table', transmit 'shift + crc' next\n", 1);
-                        State = TX_SHIFT_CRC;
-                    }
-                    break;
-
-                case TX_SHIFT_CRC:
-                    emit consolePutData("Mod predistortion tables and 'shift + crc' transmission completed\n", 1);
-                    State = IDLE;
-                    m_mutex_mod.unlock();
-                    continue;
-                    break;
-
-                 default:
-                    emit consolePutData("ModTransmitterThread error wrong state\n", 1);
-                    break;
-            }
-        }
-
-        // Send next command
         switch(State)
         {
-            case TX_PHASE_TABLE:
-            case TX_GAIN_TABLE:
-            {
-                message.command = (State == TX_PHASE_TABLE) ? MessageBox::SET_PHASE_TABLE : MessageBox::SET_GAIN_TABLE;
-                message.packet_adr = n_channel;
+            case IDLE:
+                m_mutex_mod.unlock();
+                continue;
 
-                uint8_t *p_f;
-                uint32_t j = 0;
+            case AUTOCFG_START:
+                // Send 'AGC start' to STM32
+                emit consolePutData(":: Predistortion auto cfg :: send 'AGC start'\n", 1);
+                emit sendCommandToSTM32(USB_CMD_AGC_START, nullptr, 0);
 
-                for(uint32_t i = 0; i < 64; ++i)
+                // Delay
+                QThread::msleep(100);
+
+                State = SIN35KHZ_MOD_COMMANDS_FOR_AGC;
+                n_commands = 0;
+                /* fallthrough */
+
+            case SIN35KHZ_MOD_COMMANDS_FOR_AGC:
                 {
-                    if(State == TX_PHASE_TABLE)
-                        p_f = reinterpret_cast<uint8_t*>(&phase_data_float[n_channel*64 + i]);
-                    else //if(State == TRANSMIT_GAIN)
-                        p_f = reinterpret_cast<uint8_t*>(&gain_data_float[n_channel*64 + i]);
+                    // Send 'SEND_SIN_35KHZ' command to MOD
+                    uint8_t AGCState = Get_AGC_State();
 
-                    message_box_buffer_mod[11 + j++] = p_f[0];
-                    message_box_buffer_mod[11 + j++] = p_f[1];
-                    message_box_buffer_mod[11 + j++] = p_f[2];
-                    message_box_buffer_mod[11 + j++] = p_f[3];
+                    // At least one 'SIN 35kHz' must be transmitted and AGCState = AGC_OK
+                    if(AGCState != AGC_OK || !n_commands)
+                    {
+                        if(++n_commands > n_MaxSin35kHzCommands)
+                        {
+                            emit consolePutData(":: Predistortion auto cfg :: AGC for 'SIN 35kHz' error: too many 'SEND_SIN_35KHZ' commands transmitted to MOD and still no 'AGC OK' status from STM32\n", 1);
+                            State = IDLE;
+                            break;
+                        }
+
+                        message.command = CMessageBox::SEND_SIN_35KHZ;
+                        message.packet_adr = 0;
+                        message.data_len = 0;
+                        message.message_id = 0;
+                        message.master_address = CMessageBox::MOD_ADDR;
+                        message.own_address = CMessageBox::MASTER_ADDR;
+
+                        uint16_t tx_len = CMessageBox::message_header_to_array(&message, message_box_buffer_mod);
+                        emit consolePutData(QString(":: Predistortion auto cfg :: Send 'SEND_SIN_35KHZ' command to MOD #%1 of max #%2\n").arg(n_commands).arg(n_MaxSin35kHzCommands), 1);
+                        postDataToStm32H7(message_box_buffer_mod, tx_len);
+
+                        // Start timeout before next command
+                        emit startAnswerTimeoutTimer(timeoutAgcSin35kHzCommands_ms);
+                        break;
+                    }
+
+                    emit consolePutData(":: Predistortion auto cfg :: AGC for 'SIN 35kHz' configured, state AGC_OK\n", 1);
+                    State = ADC_START_FOR_SIN600;
                 }
-                break;
-            }
+                /* fallthrough */
 
-            case TX_SHIFT_CRC:
+            case ADC_START_FOR_SIN600:
             {
-                message.command = MessageBox::SET_SHIFT_QAM_DATA;
+                // Send 'ADC_START for SIN 600' to STM32
+                emit consolePutData(":: Predistortion auto cfg :: send 'ADC_START for SIN 600'\n", 1);
+                Set_Special_Command_SIN600(true);
+
+                uint32_t adc_data_length = 31400;
+                emit sendCommandToSTM32(USB_CMD_ADC_START, (uint8_t*)&adc_data_length, 4);
+
+                // Next state
+                State = SIN600_MOD_COMMAND;
+
+                // Delay
+                QThread::msleep(100);
+            }
+                /* fallthrough */
+
+            case SIN600_MOD_COMMAND:
+            {
+                emit consolePutData(QString(":: Predistortion auto cfg :: Send 'SEND_SIN_35KHZ_600' command to MOD\n"), 1);
+                Set_FreqEstState(FREQ_EST_START);
+
+                message.command = CMessageBox::SEND_SIN_35KHZ_600;
                 message.packet_adr = 0;
+                message.data_len = 0;
+                message.message_id = 0;
+                message.master_address = CMessageBox::MOD_ADDR;
+                message.own_address = CMessageBox::MASTER_ADDR;
 
-                message_box_buffer_mod[11] = uint8_t(shift_for_qam_data_int & 0xFF);
-                message_box_buffer_mod[12] = uint8_t((shift_for_qam_data_int >> 8) & 0xFF);
+                uint16_t tx_len = CMessageBox::message_header_to_array(&message, message_box_buffer_mod);
+                postDataToStm32H7(message_box_buffer_mod, tx_len);
 
-                // Calculate crc16 for phase & gain tables and shift
-                calc_crc16((uint8_t*)&phase_data_float, sizeof(phase_data_float));
-                calc_crc16_continue((uint8_t*)&gain_data_float, sizeof(phase_data_float));
-                uint16_t crc16 = calc_crc16_continue((uint8_t*)&shift_for_qam_data_int, sizeof(shift_for_qam_data_int));
+                // Wait for freq estimate
+                QThread::msleep(100);
 
-                message_box_buffer_mod[13] = uint8_t(crc16 & 0xFF);
-                message_box_buffer_mod[14] = uint8_t((crc16 >> 8) & 0xFF);
+                // Next state
+                State = FREQ_ESTIMATE_FUNC_WAIT;
+
+                // Reset timeout
+                Timeout = 0;
+
+                // Start timeout to check 'frequency estimate' function completion
+                emit startAnswerTimeoutTimer(100);
             }
                 break;
 
-            default:
-                emit consolePutData("ModTransmitterThread error wrong state\n", 1);
+            case FREQ_ESTIMATE_FUNC_WAIT:
+                {
+                    ++Timeout;
+
+                    TFreqEstState s = Get_FreqEstState();
+
+                    if(s == FREQ_EST_COMPLETE)
+                    {
+                        // Complete, go to next state
+                        State = AGC_START_FOR_SWEEP;
+                    }
+                    else if(Timeout >= 30000/100)  // 30 sec
+                    {
+                        emit consolePutData(":: Predistortion auto cfg :: Error freq estimate timeout elapsed\n", 1);
+                        State = IDLE;
+                        break;
+                    }
+                    else
+                    {
+                        // Start timeout to check 'frequency estimate' function completion
+                        emit startAnswerTimeoutTimer(100);
+                        break;
+                    }
+                }
+                /* fallthrough */
+
+            case AGC_START_FOR_SWEEP:
+                // Send 'AGC start' to STM32
+                emit consolePutData(":: Predistortion auto cfg :: send 'AGC start'\n", 1);
+                emit sendCommandToSTM32(USB_CMD_AGC_START, nullptr, 0);
+
+                // Delay
+                QThread::msleep(100);
+
+                State = SWEEP_MOD_COMMANDS_FOR_AGC;
+                n_commands = 0;
+                /* fallthrough */
+
+            case SWEEP_MOD_COMMANDS_FOR_AGC:
+                {
+                    // 2. Send 'SWEEP' command to MOD
+                    uint8_t AGCState = Get_AGC_State();
+
+                    // At least one 'SWEEP' must be transmitted and AGCState = AGC_OK
+                    if(AGCState != AGC_OK || !n_commands)
+                    {
+                        if(++n_commands > n_MaxSweepCommands)
+                        {
+                            emit consolePutData(":: Predistortion auto cfg :: AGC for 'SWEEP' error: too many 'SEND_SWEEP_SIGNAL' commands transmitted to MOD and still no 'AGC OK' status from STM32\n", 1);
+                            State = IDLE;
+                            break;
+                        }
+
+                        message.command = CMessageBox::SEND_SWEEP_SIGNAL;
+                        message.packet_adr = 0;
+                        message.data_len = 0;
+                        message.message_id = 0;
+                        message.master_address = CMessageBox::MOD_ADDR;
+                        message.own_address = CMessageBox::MASTER_ADDR;
+
+                        uint16_t tx_len = CMessageBox::message_header_to_array(&message, message_box_buffer_mod);
+                        emit consolePutData(QString(":: Predistortion auto cfg :: Send 'SEND_SWEEP_SIGNAL' command to MOD #%1 of max #%2\n").arg(n_commands).arg(n_MaxSweepCommands), 1);
+                        postDataToStm32H7(message_box_buffer_mod, tx_len);
+
+                        // Start timeout before next command
+                        emit startAnswerTimeoutTimer(timeoutAgcSweepCommands_ms);
+                        break;
+                    }
+
+                    emit consolePutData(":: Predistortion auto cfg :: AGC for 'SIN 35kHz' configured, state AGC_OK\n", 1);
+                    State = ADC_START_FOR_SWEEP;
+                }
+                /* fallthrough */
+
+            case ADC_START_FOR_SWEEP:
+                {
+                    // 3. Send 'ADC_START for SWEEP' to STM32
+                    emit consolePutData("Predistortion auto cfg: send 'ADC_START for SIN 600'\n", 1);
+                    Set_Special_Command_Sweep(true);
+
+                    uint32_t adc_data_length = 440000;
+                    emit sendCommandToSTM32(USB_CMD_ADC_START, (uint8_t*)&adc_data_length, 4);
+
+                    // Next state
+                    State = SWEEP_MOD_COMMAND;
+
+                    // Delay
+                    QThread::msleep(100);
+                }
+                /* fallthrough */
+
+            case SWEEP_MOD_COMMAND:
+                {
+                    Set_SweepState(SWEEP_START);    //todo
+
+                    message.command = CMessageBox::SEND_SWEEP_SIGNAL;
+                    message.packet_adr = 0;
+                    message.data_len = 0;
+                    message.message_id = 0;
+                    message.master_address = CMessageBox::MOD_ADDR;
+                    message.own_address = CMessageBox::MASTER_ADDR;
+
+                    uint16_t tx_len = CMessageBox::message_header_to_array(&message, message_box_buffer_mod);
+                    emit consolePutData(QString(":: Predistortion auto cfg :: Send 'SEND_SIN_35KHZ_600Z' command to MOD\n"), 1);
+                    postDataToStm32H7(message_box_buffer_mod, tx_len);
+
+                    // Wait for freq estimate
+                    QThread::msleep(100);
+
+                    // Next state
+                    State = SWEEP_FUNC_WAIT;
+
+                    // Reset timeout
+                    Timeout = 0;
+
+                    // Start timeout to check 'frequency estimate' function completion
+                    emit startAnswerTimeoutTimer(100);
+                }
+                /* fallthrough */
+
+            case SWEEP_FUNC_WAIT:
+                {
+                    ++Timeout;
+
+                    TSweepState s = Get_SweepState();
+
+                    if(s == SWEEP_COMPLETE)
+                    {
+                        // Complete, go to next state
+                        State = AGC_START_FOR_MOD_STAT;
+                    }
+                    else if(Timeout >= 30000/100)  // 30 sec
+                    {
+                        emit consolePutData(":: Predistortion auto cfg :: Error predistortion auto cfg: sweep func timeout elapsed\n", 1);
+                        State = IDLE;
+                        break;
+                    }
+                    else
+                    {
+                        // Start timeout to check 'sweep' function completion
+                        emit startAnswerTimeoutTimer(100);
+                        break;
+                    }
+                }
+                /* fallthrough */
+
+            case AGC_START_FOR_MOD_STAT:
+                // Send 'AGC start' to STM32
+                emit consolePutData(":: Predistortion auto cfg :: send 'AGC start'\n", 1);
+                emit sendCommandToSTM32(USB_CMD_AGC_START, nullptr, 0);
+
+                // Delay
+                QThread::msleep(100);
+
+                State = STAT_MOD_COMMANDS_FOR_AGC;
+                n_commands = 0;
+                /* fallthrough */
+
+             case STAT_MOD_COMMANDS_FOR_AGC:
+                {
+                    // Send 'GET_STATUS' command to MOD
+                    uint8_t AGCState = Get_AGC_State();
+
+                    // At least one 'GET STATUS' must be transmitted and AGCState = AGC_OK
+                    if(AGCState != AGC_OK || !n_commands)
+                    {
+                        if(++n_commands > n_MaxModStatusCommands)
+                        {
+                            emit consolePutData(":: Predistortion auto cfg :: AGC for 'MOD STATUS' error: too many 'GET STATUS' commands transmitted to MOD and still no 'AGC OK' status from STM32\n", 1);
+                            State = IDLE;
+                            break;
+                        }
+
+                        message.command = CMessageBox::STATUS;
+                        message.packet_adr = 0;
+                        message.data_len = 0;
+                        message.message_id = 0;
+                        message.master_address = CMessageBox::MOD_ADDR;
+                        message.own_address = CMessageBox::MASTER_ADDR;
+
+                        uint16_t tx_len = CMessageBox::message_header_to_array(&message, message_box_buffer_mod);
+                        emit consolePutData(QString(":: Predistortion auto cfg :: Send 'GET STATUS' command to MOD #%1 of max #%2\n").arg(n_commands).arg(n_MaxModStatusCommands), 1);
+                        postDataToStm32H7(message_box_buffer_mod, tx_len);
+
+                        // Start timeout before next command
+                        emit startAnswerTimeoutTimer(timeoutModStatusCommands_ms);
+                        break;
+                    }
+
+                    emit consolePutData(":: Predistortion auto cfg :: AGC for 'GET STATUS' configured, state AGC_OK\n", 1);
+                    //State = START_TX_PREDISTORTION_TABLES_TO_MOD;
+                }
+                /* fallthrough */
+
+            case START_TX_PREDISTORTION_TABLES_TO_MOD:
+                // Start tranmitting predistortion tables to MOD
+                message.command = CMessageBox::SET_PHASE_TABLE;
+                message.message_id = 0;
+                message.master_address = CMessageBox::MOD_ADDR;
+                message.own_address = CMessageBox::MASTER_ADDR;
+                message.data_len = 256;
+
+                StatePredistTx = TX_START;
+
+                retry = false;
+                n_attempts = 0;
+                n_attempts_high_level = 0;
+
+                State = TX_PREDISTORTION_TABLES_TO_MOD;
+                /* fallthrough */
+
+             case TX_PREDISTORTION_TABLES_TO_MOD:
+                transmitPredistortionTables();
+                break;
+
+             case AUTOCFG_COMPLETE:
+                emit consolePutData(":: Predistortion auto cfg :: all operations completed successfully\n", 1);
+                State = IDLE;
+                break;
+
+             default:
+                emit consolePutData(":: Predistortion auto cfg :: error wrong state\n", 1);
                 break;
         }
 
-        hs_data_received = false;
-
-        uint16_t tx_len = MessageBox::message_header_to_array(&message, message_box_buffer_mod);
-        postDataToStm32H7(message_box_buffer_mod, tx_len);
-
-        // Start answer timeout
-        emit startAnswerTimeoutTimer(timeoutAnswer_ms);
         m_mutex_mod.unlock();
     }
 }
@@ -176,20 +384,221 @@ void ModTransmitterThread::ModStartTransmitPhaseGain()
 {
     m_mutex_mod.lock();
 
-    message.command = MessageBox::SET_PHASE_TABLE;
-    message.message_id = 0;
-    message.master_address = MessageBox::MOD_ADDR;
-    message.own_address = MessageBox::MASTER_ADDR;
-    message.data_len = 256;
+    if(State != IDLE)
+    {
+        emit consolePutData("Error: unable to start transmitting phase & gain tables, state != IDLE (already transmitting?)\n", 1);
+        m_mutex_mod.unlock();
+        return;
+    }
 
-    State = TX_START;
-
-    retry = false;
-    n_attempts = 0;
-    n_attempts_high_level = 0;
+    State = START_TX_PREDISTORTION_TABLES_TO_MOD;
 
     m_mutex_mod.unlock();
+    modTransmitWakeUp.wakeOne();
+}
 
+void ModTransmitterThread::transmitPredistortionTables()
+{
+    if(retry)
+    {
+        retry = false;
+        if(++n_attempts == n_MaxAttempts)
+        {
+            n_attempts = 0;
+
+            if(++n_attempts_high_level > n_MaxAttemptsHighLevel)
+            {
+                emit consolePutData(":: Predistortion auto cfg :: failed to transmit predistorion tables to MOD\n", 1);
+                State = IDLE;
+                return;
+            }
+
+            emit consolePutData(QString(":: Predistortion auto cfg :: error attempts exceeded %1, start again from first command\n").arg(n_MaxAttempts), 1);
+            emit consolePutData(":: Predistortion auto cfg :: Starting transmit 'phase table' \n", 1);
+            StatePredistTx = TX_PHASE_TABLE;
+            n_channel = 0;
+        }
+    }
+    else
+    {
+        n_attempts = 0;
+
+        switch(StatePredistTx)
+        {
+            case TX_START:
+                emit consolePutData(QString(":: Predistortion auto cfg :: Starting transmit predistortion tables, attempt %1\n").arg(n_attempts_high_level), 1);
+                emit consolePutData(":: Predistortion auto cfg :: Starting transmit 'phase table' \n", 1);
+
+                StatePredistTx = TX_PHASE_TABLE;
+                n_channel = 0;
+                break;
+
+            case TX_PHASE_TABLE:
+                if(++n_channel == n_elements/64)
+                {
+                    emit consolePutData(":: Predistortion auto cfg :: Finished transmitting 'phase table', transmit 'gain table' next\n", 1);
+                    StatePredistTx = TX_GAIN_TABLE;
+                    n_channel = 0;
+                }
+                break;
+
+            case TX_GAIN_TABLE:
+                if(++n_channel == n_elements/64)
+                {
+                    emit consolePutData(":: Predistortion auto cfg :: Finished transmitting 'gain table', transmit 'shift + crc' next\n", 1);
+                    StatePredistTx = TX_SHIFT_CRC;
+                }
+                break;
+
+            case TX_SHIFT_CRC:
+                emit consolePutData(":: Predistortion auto cfg :: Mod predistortion tables and 'shift + crc' transmission completed\n", 1);
+                StatePredistTx = IDLE_T;
+                State = AUTOCFG_COMPLETE;
+                emit startAnswerTimeoutTimer(1);
+                return;
+
+             default:
+                emit consolePutData(":: Predistortion auto cfg :: error wrong state\n", 1);
+                break;
+        }
+    }
+
+    // Send next command
+    switch(StatePredistTx)
+    {
+        case TX_PHASE_TABLE:
+        case TX_GAIN_TABLE:
+        {
+            message.command = (StatePredistTx == TX_PHASE_TABLE) ? CMessageBox::SET_PHASE_TABLE : CMessageBox::SET_GAIN_TABLE;
+            message.packet_adr = n_channel;
+
+            uint8_t *p_f;
+            uint32_t j = 0;
+
+            for(uint32_t i = 0; i < 64; ++i)
+            {
+                if(StatePredistTx == TX_PHASE_TABLE)
+                    p_f = reinterpret_cast<uint8_t*>(&phase_data_float[n_channel*64 + i]);
+                else //if(State == TRANSMIT_GAIN)
+                    p_f = reinterpret_cast<uint8_t*>(&gain_data_float[n_channel*64 + i]);
+
+                message_box_buffer_mod[11 + j++] = p_f[0];
+                message_box_buffer_mod[11 + j++] = p_f[1];
+                message_box_buffer_mod[11 + j++] = p_f[2];
+                message_box_buffer_mod[11 + j++] = p_f[3];
+            }
+            break;
+        }
+
+        case TX_SHIFT_CRC:
+        {
+            message.command = CMessageBox::SET_SHIFT_QAM_DATA;
+            message.packet_adr = 0;
+
+            message_box_buffer_mod[11] = uint8_t(shift_for_qam_data_int & 0xFF);
+            message_box_buffer_mod[12] = uint8_t((shift_for_qam_data_int >> 8) & 0xFF);
+
+            // Calculate crc16 for phase & gain tables and shift
+            calc_crc16((uint8_t*)&phase_data_float, sizeof(phase_data_float));
+            calc_crc16_continue((uint8_t*)&gain_data_float, sizeof(phase_data_float));
+            uint16_t crc16 = calc_crc16_continue((uint8_t*)&shift_for_qam_data_int, sizeof(shift_for_qam_data_int));
+
+            message_box_buffer_mod[13] = uint8_t(crc16 & 0xFF);
+            message_box_buffer_mod[14] = uint8_t((crc16 >> 8) & 0xFF);
+        }
+            break;
+
+        default:
+            emit consolePutData(":: Predistortion auto cfg :: error wrong state\n", 1);
+            break;
+    }
+
+    hs_data_received = false;
+
+    uint16_t tx_len = CMessageBox::message_header_to_array(&message, message_box_buffer_mod);
+    postDataToStm32H7(message_box_buffer_mod, tx_len);
+
+    // Start answer timeout
+    emit startAnswerTimeoutTimer(timeoutAnswer_ms);
+}
+
+void ModTransmitterThread::ModAnswerDataReceived()
+{
+    m_mutex_mod.lock();
+    if(State != IDLE)
+        hs_data_received = true;
+    m_mutex_mod.unlock();
+}
+
+void ModTransmitterThread::timeoutAnswer()
+{
+//    emit consolePutData("Mod answer timeout\n", 1);
+
+    m_mutex_mod.lock();
+    if(State == IDLE)
+    {
+        m_mutex_mod.unlock();
+        return;
+    }
+
+    else if(State == SIN35KHZ_MOD_COMMANDS_FOR_AGC
+            || State == SWEEP_MOD_COMMANDS_FOR_AGC
+            || State == STAT_MOD_COMMANDS_FOR_AGC)
+    {
+        // Timeout, send next command to MOD
+        m_mutex_mod.unlock();
+        modTransmitWakeUp.wakeOne();
+        return;
+    }
+    else if(State == FREQ_ESTIMATE_FUNC_WAIT
+            || State == SWEEP_FUNC_WAIT)
+    {
+        // Wait for 'frequency estimate' function completion
+        m_mutex_mod.unlock();
+        modTransmitWakeUp.wakeOne();
+        return;
+    }
+
+    else if(State == TX_PREDISTORTION_TABLES_TO_MOD)
+    {
+        if(!hs_data_received)
+        {
+            emit consolePutData(":: Predistortion auto cfg :: retry previous transfer\n", 1);
+            retry = true;
+            m_mutex_mod.unlock();
+            modTransmitWakeUp.wakeOne();
+            return;
+        }
+
+        // Some HS data (probably broken) received
+        // Assume it is an answer from MOD
+        emit consolePutData(":: Predistortion auto cfg :: some HS data was received, assume it was a good answer from MOD\n", 1);
+        hs_data_received = false;
+        m_mutex_mod.unlock();
+        modTransmitWakeUp.wakeOne();
+        return;
+    }
+
+    else if(State == AUTOCFG_COMPLETE)
+    {
+        // Finishing up
+        m_mutex_mod.unlock();
+        modTransmitWakeUp.wakeOne();
+        return;
+    }
+
+    m_mutex_mod.unlock();
+}
+
+void ModTransmitterThread::calculatePredistortionTablesStart()
+{
+    emit consolePutData("==================================================\n"
+                        "Starting predistortion auto configuration sequence\n"
+                        "==================================================\n", 1);
+    m_mutex_mod.lock();
+    if(State == IDLE)
+        State = AUTOCFG_START;
+    m_mutex_mod.unlock();
     modTransmitWakeUp.wakeOne();
 }
 
@@ -279,40 +688,4 @@ bool ModTransmitterThread::ModAnswerReceived(const uint8_t *p_data, int length)
 //    }
 
     return true;
-}
-
-void ModTransmitterThread::ModAnswerDataReceived()
-{
-    m_mutex_mod.lock();
-    if(State != IDLE)
-        hs_data_received = true;
-    m_mutex_mod.unlock();
-}
-
-void ModTransmitterThread::timeoutAnswer()
-{
-    emit consolePutData("Mod answer timeout\n", 1);
-
-    m_mutex_mod.lock();
-    if(State != IDLE)
-    {
-        if(!hs_data_received)
-        {
-            emit consolePutData("Retry previous transfer\n", 1);
-            retry = true;
-            m_mutex_mod.unlock();
-            modTransmitWakeUp.wakeOne();
-            return;
-        }
-
-        // Some HS data (probably broken) received
-        // Assume it is an answer from MOD
-        emit consolePutData("Some HS data was received, assume it was a good answer from MOD\n", 1);
-        hs_data_received = false;
-        m_mutex_mod.unlock();
-        modTransmitWakeUp.wakeOne();
-        return;
-    }
-
-    m_mutex_mod.unlock();
 }

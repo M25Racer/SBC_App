@@ -2,6 +2,7 @@
 #include <message_box.h>
 #include "../SRP_HS_USB_PROTOCOL/SRP_HS_USB_Protocol.h"
 #include "agc_algorithm.h"
+#include "global_vars.h"
 
 /* Extern global variables */
 extern RingBuffer *m_ring;              // ring data buffer (ADC data) for QAM decoder
@@ -15,8 +16,6 @@ extern uint8_t FreqSweepDataBuffer[USB_MAX_DATA_SIZE];
 extern uint8_t SweepDataBuffer[USB_MAX_DATA_SIZE];
 extern uint32_t FreqSweepDataLength;
 extern uint32_t SweepDataLength;
-extern bool special_cmd_transmitted;
-extern bool special_cmd_transmitted2;
 
 /* Global variables */
 uint8_t UserRxBuffer[USB_MAX_DATA_SIZE];
@@ -865,7 +864,7 @@ void UsbWorkThread::USB_Reconnect()
 
 // SRP HS protocol handling (TODO: move to separate class)
 
-void UsbWorkThread::sendHsCommand(uint8_t Command, uint32_t Length, uint8_t *p_Data)
+void UsbWorkThread::sendHsCommand(uint8_t Command, uint32_t Length, const uint8_t *p_Data)
 {
     USBheader_t header;
     header.cmd = Command;
@@ -927,9 +926,9 @@ void UsbWorkThread::parseHsData()
         {
 //            emit consolePutData(QString("parseHsData(): USB_CMD_GET_DATA\n"), 0);
 
-            if(special_cmd_transmitted)
+            if(Get_Special_Command_SIN600())
             {
-                special_cmd_transmitted = false;
+                Set_Special_Command_SIN600(false);
 
                 m_mutex2.lock();
                 FreqSweepDataLength = header->packet_length - sizeof(USBheader_t);
@@ -939,9 +938,9 @@ void UsbWorkThread::parseHsData()
                 // Wake threads waiting for 'wait condiion'
                 sinBufNotEmpty.wakeAll();
             }
-            else if(special_cmd_transmitted2)
+            else if(Get_Special_Command_Sweep())
             {
-                special_cmd_transmitted2 = false;
+                Set_Special_Command_Sweep(false);
 
                 m_mutex3.lock();
                 SweepDataLength = header->packet_length - sizeof(USBheader_t);
@@ -1010,6 +1009,8 @@ void UsbWorkThread::parseHsData()
             {
                 emit consolePutData("parseHsData(): ADC status = busy\n", 0);
             }
+
+            Set_AGC_State(AgcState);
 
             switch(AgcState)
             {

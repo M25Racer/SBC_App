@@ -99,6 +99,7 @@ private slots:
     void readDataSerialPort();
     void transmitDataSerialPort(const uint8_t *p_data, int length);
     void postTxDataSTM(const uint8_t *p_data, const int length);
+    void calculatePredistortionTablesStart();
     void handleError(QSerialPort::SerialPortError error);
     void consolePutData(const QString &data, quint8 priority);
     void consoleAdcData(const quint8 *p_data, quint32 size);
@@ -106,6 +107,7 @@ private slots:
     void timeoutSerialPortReconnect();
     void timeoutUsbInitCallback();
     void usbHsDataReceived();
+    void sendCommandToSTM32(quint8 command, const quint8 *p_data, quint32 data_size);
 
     void usbInitTimeoutStart(int timeout_ms);
     //void modAnswerTimeoutStart(int timeout_ms);
@@ -123,7 +125,7 @@ private:
 
     Console *m_console = nullptr;
     QSerialPort *m_serial = nullptr;
-    MessageBox *m_message_box = nullptr;
+    CMessageBox *m_message_box = nullptr;
     UsbWorkThread m_usb_thread;
     QamThread m_qam_thread;
     FreqSweepThread m_freq_sweep_thread;

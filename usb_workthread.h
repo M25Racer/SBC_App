@@ -6,6 +6,7 @@
 #include <QWaitCondition>
 #include <QElapsedTimer>
 #include <libusb-1.0/libusb.h>
+//#include <libusb-MinGW-Win32\include\libusb-1.0\libusb.h>
 #include <ringbuffer.h>
 #include <usb_global.h>
 
@@ -22,7 +23,7 @@ signals:
     void hsDataReceived();
 
 public slots:
-    void sendHsCommand(uint8_t Command, uint32_t Length, uint8_t *p_Data);
+    void sendHsCommand(uint8_t Command, uint32_t Length, const uint8_t *p_Data);
 
 public:
     explicit UsbWorkThread(QObject *parent = nullptr);

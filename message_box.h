@@ -25,7 +25,7 @@ typedef enum {
 
 #pragma pack(pop)
 
-class MessageBox : public QObject
+class CMessageBox : public QObject
 {
 public:
     Q_OBJECT
@@ -33,6 +33,7 @@ public:
 signals:
     void postData(const uint8_t *p_data, int length);
     void postDataToStm32H7(const uint8_t *p_data, const int length);
+    void calculatePredistortionTablesStart();
 
 public:
     bool message_box_srp(uint8_t* Buf, uint16_t len, uint8_t master_address, uint8_t own_address);
@@ -78,6 +79,8 @@ public:
     static const uint8_t SET_PHASE_TABLE    = 0xE1;
     static const uint8_t SET_SHIFT_QAM_DATA = 0xE2;
 
+    static const uint8_t STATUS                = 0x5C;	//	статус прибора
+
 protected:
 
 private:
@@ -100,7 +103,7 @@ private:
     static const uint8_t GET_POSITION          = 0x8A;	//	запрос текущей позиции
     static const uint8_t STOP                  = 0x0C;	//	старт
     static const uint8_t START                 = 0x1C;	//	стоп
-    static const uint8_t STATUS                = 0x5C;	//	статус прибора
+
     // ///////////команды синхронизации
     static const uint8_t STATUSS               = 0x7D;	//	статус параметров синхронизации
     static const uint8_t SYNCRO                = 0x2D;	// Синхронизация цикла приборов
@@ -121,11 +124,9 @@ private:
     static const uint8_t CABLE_GET_DATA    	= 0xC5;
     static const uint8_t CABLE_ERASE       	= 0xCB;
     static const uint8_t CABLE_STATUS          = 0xC8;
+
+    static const uint8_t CALC_PREDISTORTION  = 0xCD;  // Start calculating new predistortion tables command sequence
+    static const uint8_t GET_PREDIST_STATUS  = 0xCE;  // Get current state\status for predistortion tables command sequence
 };
-
-
-//void message_box_srp(uint8_t* Buf, uint16_t len, uint8_t master_address, uint8_t own_address);
-
-//uint16_t message_header_to_array(const message_header* message, uint8_t* Buf);
 
 #endif // MESSAGE_BOX_H
