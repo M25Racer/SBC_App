@@ -1573,6 +1573,9 @@ void HS_EWL_FREQ_ACQ(emxArray_real_T *data, double len, double Fs, double f_opt,
       f_est_data[0] = f_opt - dv1[ii_data[0] - 1];
     }
   }
+  if(f_est_data[0] < 33000 || f_est_data[0] > 37000){
+      *warningStatus = 4.0;
+  }
 
   emxFree_creal_T(&b_testSignal);
   emxFree_creal_T(&r);

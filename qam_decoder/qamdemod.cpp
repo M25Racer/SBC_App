@@ -36,8 +36,8 @@ namespace coder
     emxArray_int32_T *symbolQ;
     emxArray_real_T *mapping;
     emxArray_real_T *varargin_1;
-    double iIdx_data[255];
-    double rIdx_data[255];
+    double iIdx_data[275];
+    double rIdx_data[275];
     double b_x;
     double sqrtM;
     int i;

@@ -35,7 +35,7 @@
 // Function Definitions
 //
 // sweep_warning_status   = 0; %input array OK
-// sweep_warning_status   = 1; %input sine singal freq or sample freq equal 0
+// sweep_warning_status   = 1; %input sine singal freq less than 33kHz or more 37kHz or sample freq equal 0
 // sweep_warning_status   = 2; %not enough len input array len < 80%
 // sweep_warning_status   = 3; % len input array > 80% or < 100%
 // sweep_warning_status   = 4; %no found sweep preamble(ampMod)
@@ -103,7 +103,7 @@ void HS_EWL_TR_FUN_EST(const emxArray_real_T *sweep_data, const emxArray_real_T 
   emxInit_real_T(&b_resamp_sweep, 1);
   emxInit_real_T(&b_F_tr, 2);
   emxInit_real_T(&r, 2);
-  if ((f_opt == 0.0) || (Fs == 0.0)) {
+  if ((f_opt < 33000.0 || f_opt > 37000.0) || (Fs == 0.0)) {
     *sweep_warning_status = 1.0;
 
     // input sine singal freq or sample freq equal 0
@@ -114,6 +114,7 @@ void HS_EWL_TR_FUN_EST(const emxArray_real_T *sweep_data, const emxArray_real_T 
     phase_size[1] = 1;
     phase_data[0] = 0.0;
     *shift_for_qam_data = 0.0;
+    return;
   } else {
     int flag_array_zero;
     int i;
@@ -141,6 +142,7 @@ void HS_EWL_TR_FUN_EST(const emxArray_real_T *sweep_data, const emxArray_real_T 
       phase_size[1] = 1;
       phase_data[0] = 0.0;
       *shift_for_qam_data = 0.0;
+      return;
     } else {
       int b_i;
       int loop_ub;
@@ -180,6 +182,7 @@ void HS_EWL_TR_FUN_EST(const emxArray_real_T *sweep_data, const emxArray_real_T 
           phase_size[1] = 1;
           phase_data[0] = 0.0;
           *shift_for_qam_data = 0.0;
+          return;
         } else {
           //          resamp_sweep = resamp_sweep(1:length(sweep_math));
           loop_ub = sweep_math->size[1] - resamp_sweep->size[0];
@@ -323,6 +326,7 @@ void HS_EWL_TR_FUN_EST(const emxArray_real_T *sweep_data, const emxArray_real_T 
           phase_size[1] = 1;
           phase_data[0] = 0.0;
           *shift_for_qam_data = 0.0;
+          return;
         } else {
           double ai;
           double ar;

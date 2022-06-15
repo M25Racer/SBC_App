@@ -23,9 +23,6 @@
 #include "rt_nonfinite.h"
 #include <cmath>
 
-// Extern variables
-extern double warning_status;
-
 // Variable Definitions
 static coder::comm::RaisedCosineReceiveFilter rxFilter1;
 static boolean_T rxFilter1_not_empty;
@@ -62,8 +59,8 @@ void HS_EWL_DEMOD_QAM(const emxArray_real_T *data, double index_data, double
   emxArray_real_T *r1;
   emxArray_real_T *resamp_signal;
   emxArray_real_T *trData;
-  creal_T b_z_data[255];
-  creal_T z_data[255];
+  creal_T b_z_data[275];
+  creal_T z_data[275];
   creal_T del;
   double Q;
   double b_r;
@@ -243,14 +240,6 @@ void HS_EWL_DEMOD_QAM(const emxArray_real_T *data, double index_data, double
     i = b_resamp_signal->size[0];
     b_resamp_signal->size[0] = nx;
     emxEnsureCapacity_real_T(b_resamp_signal, i);
-
-    //todo
-    if(resamp_signal->allocatedSize < nx)
-    {
-        warning_status = 4;
-        return;
-    }
-
     for (i = 0; i < nx; i++) {
       b_resamp_signal->data[i] = resamp_signal->data[i];
     }

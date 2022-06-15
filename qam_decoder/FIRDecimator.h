@@ -19,7 +19,7 @@ struct emxArray_creal_T;
 // Type Definitions
 struct emxArray_creal_T_255x1
 {
-  creal_T data[255];
+  creal_T data[275];
   int size[2];
 };
 
