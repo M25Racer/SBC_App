@@ -27,11 +27,13 @@ public:
     explicit QamThread(QObject *parent = nullptr);
     ~QamThread();
 
-    bool m_quit = false;
+    void SetFirstPassFlag();
 
 private:
     void run() override;
     void QAM_Decoder();
+
+    bool m_quit = false;
 
     static const uint32_t DATA_SIZE = (256*1024);
 
@@ -57,6 +59,8 @@ private:
     static const uint32_t TxPacketDataOffset = 23;
 
     bool m_QamDecoderFirstPassFlag = true;
+
+    QMutex mutex;
 };
 
 #endif // QAM_WORKTHREAD_H

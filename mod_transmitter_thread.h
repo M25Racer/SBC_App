@@ -18,6 +18,7 @@ signals:
     void startAnswerTimeoutTimer(int timeout_ms);
     void stopAnswerTimeoutTimer();
     void sendCommandToSTM32(quint8 command, const quint8 *p_data, quint32 data_size);
+    void qamDecoderReset();
 
 public slots:
     void timeoutAnswer();

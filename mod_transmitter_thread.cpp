@@ -628,7 +628,12 @@ void ModTransmitterThread::calculatePredistortionTablesStop()
     State = IDLE;
     StatePredistTx = TX_IDLE;
     emit consolePutData(":: Predistortion auto cfg :: enable QAM decoder ring buffer'\n", 1);
+
+    // Unlock ring buffer for QAM decoder (enable QAM decoder)
     m_ring->SetActive(true);
+
+    // QAM decoder set first pass flag
+    emit qamDecoderReset();
 }
 
 // Parse received data from MOD, for future use

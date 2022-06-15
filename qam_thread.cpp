@@ -21,7 +21,7 @@
 /* Extern global variables */
 extern RingBuffer *m_ring;              // ring data buffer (ADC data) for QAM decoder
 extern QWaitCondition ringNotEmpty;
-extern QMutex m_mutex;
+extern QMutex m_mutex_ring;
 extern QElapsedTimer profiler_timer;
 /* Private variables */
 static double Signal[USB_MAX_DATA_SIZE];
@@ -60,10 +60,10 @@ QamThread::QamThread(QObject *parent) :
 
 QamThread::~QamThread()
 {
-    m_mutex.lock();
+    m_mutex_ring.lock();
     m_quit = true;
     ringNotEmpty.wakeOne();
-    m_mutex.unlock();
+    m_mutex_ring.unlock();
     wait();
 }
 
@@ -73,10 +73,10 @@ void QamThread::run()
 
     while(!m_quit)
     {
-        m_mutex.lock();
+        m_mutex_ring.lock();
         if(!m_ring->DataAvailable())
-            ringNotEmpty.wait(&m_mutex);    // Wait condition unlocks mutex before 'wait', and will lock it again just after 'wait' is complete
-        m_mutex.unlock();
+            ringNotEmpty.wait(&m_mutex_ring);    // Wait condition unlocks mutex before 'wait', and will lock it again just after 'wait' is complete
+        m_mutex_ring.unlock();
 
         res = m_ring->GetDouble(Signal, &Length);
 
@@ -86,9 +86,17 @@ void QamThread::run()
         }
         else
         {
-            emit consolePutData("Error ring buffer get returned false\n", 1);
+            emit consolePutData("Error ring buffer get() returned false\n", 1);
         }
     }
+}
+
+void QamThread::SetFirstPassFlag()
+{
+    emit consolePutData("QAM decoder reset (calcluate and save new frequency next time)\n", 1);
+    mutex.lock();
+    m_QamDecoderFirstPassFlag = true;
+    mutex.unlock();
 }
 
 void QamThread::QAM_Decoder()
@@ -182,12 +190,14 @@ void QamThread::QAM_Decoder()
             data_offset = 0;
         }
 
+        mutex.lock();
         if(m_QamDecoderFirstPassFlag)
         {
             m_QamDecoderFirstPassFlag = false;
             f0 = f_est_data;
             mode = 0;
         }
+        mutex.unlock();
     }
 
     // Debug information

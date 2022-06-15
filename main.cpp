@@ -59,7 +59,7 @@
 //MainWindow *p_w = nullptr;        // pointer to 'mainwindow'
 RingBuffer *m_ring = nullptr;       // ring data buffer (ADC data) for QAM decoder
 QWaitCondition ringNotEmpty;
-QMutex m_mutex;
+QMutex m_mutex_ring;
 
 QWaitCondition sinBufNotEmpty;
 QMutex m_mutex2;
