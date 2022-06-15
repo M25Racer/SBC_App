@@ -27,6 +27,7 @@ public:
     void Clear();
     void Init(){ Clear(); };
     bool DataAvailable();
+    void SetActive(bool s);
 
 protected:
 
@@ -37,6 +38,8 @@ private:
     // Access to this variables should be protected with mutex
     uint32_t tail = 0;
     uint32_t head = 0;
+
+    bool m_isActive = true;
 };
 
 #endif // RINGBUFFER_H

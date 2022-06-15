@@ -24,6 +24,9 @@ typedef enum
 void Set_AGC_State(uint8_t new_state);
 uint8_t Get_AGC_State();
 
+void Set_Common_Special_Command(bool s);
+bool Get_Common_Special_Command();
+
 void Set_Special_Command_SIN600(bool s);
 bool Get_Special_Command_SIN600();
 

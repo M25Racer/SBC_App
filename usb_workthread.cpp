@@ -925,30 +925,32 @@ void UsbWorkThread::parseHsData()
         case USB_CMD_GET_DATA:
         {
 //            emit consolePutData(QString("parseHsData(): USB_CMD_GET_DATA\n"), 0);
-
-            if(Get_Special_Command_SIN600())
+            if(Get_Common_Special_Command())
             {
-                Set_Special_Command_SIN600(false);
+                if(Get_Special_Command_SIN600())
+                {
+                    Set_Special_Command_SIN600(false);
 
-                m_mutex2.lock();
-                FreqSweepDataLength = header->packet_length - sizeof(USBheader_t);
-                memcpy(FreqSweepDataBuffer, UserRxBuffer + pStartData + sizeof(USBheader_t), FreqSweepDataLength);
-                m_mutex2.unlock();
+                    m_mutex2.lock();
+                    FreqSweepDataLength = header->packet_length - sizeof(USBheader_t);
+                    memcpy(FreqSweepDataBuffer, UserRxBuffer + pStartData + sizeof(USBheader_t), FreqSweepDataLength);
+                    m_mutex2.unlock();
 
-                // Wake threads waiting for 'wait condiion'
-                sinBufNotEmpty.wakeAll();
-            }
-            else if(Get_Special_Command_Sweep())
-            {
-                Set_Special_Command_Sweep(false);
+                    // Wake threads waiting for 'wait condiion'
+                    sinBufNotEmpty.wakeAll();
+                }
+                else if(Get_Special_Command_Sweep())
+                {
+                    Set_Special_Command_Sweep(false);
 
-                m_mutex3.lock();
-                SweepDataLength = header->packet_length - sizeof(USBheader_t);
-                memcpy(SweepDataBuffer, UserRxBuffer + pStartData + sizeof(USBheader_t), SweepDataLength);
-                m_mutex3.unlock();
+                    m_mutex3.lock();
+                    SweepDataLength = header->packet_length - sizeof(USBheader_t);
+                    memcpy(SweepDataBuffer, UserRxBuffer + pStartData + sizeof(USBheader_t), SweepDataLength);
+                    m_mutex3.unlock();
 
-                // Wake threads waiting for 'wait condiion'
-                sweepBufNotEmpty.wakeAll();
+                    // Wake threads waiting for 'wait condiion'
+                    sweepBufNotEmpty.wakeAll();
+                }
             }
             else
             {
@@ -961,10 +963,11 @@ void UsbWorkThread::parseHsData()
                 else
                 {
                     // Error: can't add new data to ring buffer
-                    emit consolePutData("Error: unable to add new adc data to ring buffer\n", 1);
+                    emit consolePutData("Unable to add new adc data to ring buffer\n", 1);
                 }
             }
 
+            // Tell other threads that some HS data received
             emit hsDataReceived();
 
 #ifdef QT_DEBUG

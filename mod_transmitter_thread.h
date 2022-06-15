@@ -35,6 +35,7 @@ public:
 private:
     void run() override;
     void transmitPredistortionTables();
+    void calculatePredistortionTablesStop();
 
     bool m_quit = false;
 
@@ -61,7 +62,9 @@ private:
         STAT_MOD_COMMANDS_FOR_AGC = 12,
         START_TX_PREDISTORTION_TABLES_TO_MOD = 13,
         TX_PREDISTORTION_TABLES_TO_MOD = 14,
-        AUTOCFG_COMPLETE = 15
+        AGC_START_FOR_MOD_STAT2 = 15,
+        STAT_MOD_COMMANDS_FOR_AGC2 = 16,
+        AUTOCFG_COMPLETE = 17
     } TState;
 
     TState State = IDLE;
@@ -69,14 +72,15 @@ private:
 
     typedef enum
     {
-        IDLE_T = 0,
+        TX_IDLE = 0,
         TX_START = 1,
         TX_PHASE_TABLE = 2,
         TX_GAIN_TABLE = 3,
-        TX_SHIFT_CRC = 4
+        TX_SHIFT_CRC = 4,
+        TX_FINISHED = 5
     } TPredistTxState;
 
-    TPredistTxState StatePredistTx = IDLE_T;
+    TPredistTxState StatePredistTx = TX_IDLE;
 
     bool retry = false;
     uint32_t n_attempts = 0;

@@ -4,9 +4,11 @@ static QMutex mutex_agc;
 static QMutex mutex_sin600;
 static QMutex mutex_sweep;
 static QMutex mutex_fest;
+static QMutex mutex_common_sp;
 
 static uint8_t AgcState = AGC_OK;
 
+static bool common_special_command = false;
 static bool sin600_command = false;
 static bool sweep_command = false;
 
@@ -28,11 +30,29 @@ uint8_t Get_AGC_State()
     return s;
 }
 
+void Set_Common_Special_Command(bool s)
+{
+    mutex_common_sp.lock();
+    common_special_command = s;
+    mutex_common_sp.unlock();
+}
+
+bool Get_Common_Special_Command()
+{
+    mutex_common_sp.lock();
+    bool s = common_special_command;
+    mutex_common_sp.unlock();
+    return s;
+}
+
+
 void Set_Special_Command_SIN600(bool s)
 {
     mutex_sin600.lock();
     sin600_command = s;
     mutex_sin600.unlock();
+
+    Set_Common_Special_Command(s);
 }
 
 bool Get_Special_Command_SIN600()
@@ -48,6 +68,8 @@ void Set_Special_Command_Sweep(bool s)
     mutex_sweep.lock();
     sweep_command = s;
     mutex_sweep.unlock();
+
+    Set_Common_Special_Command(s);
 }
 
 bool Get_Special_Command_Sweep()

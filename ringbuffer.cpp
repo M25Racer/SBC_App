@@ -8,6 +8,17 @@ extern QMutex m_mutex;
 /* Private variables */
 static uint8_t RingBuf[N_ELEMENTS][USB_MAX_DATA_SIZE];
 
+void RingBuffer::SetActive(bool s)
+{
+    m_mutex.lock();
+    m_isActive = s;
+
+    // Clear
+    head = tail = 0;
+    memset(DataLength, 0, sizeof(DataLength));
+    m_mutex.unlock();
+}
+
 void RingBuffer::Clear()
 {
     m_mutex.lock();
@@ -45,8 +56,15 @@ bool RingBuffer::Append(const uint8_t *p_data_in, const uint32_t data_length)
         return false;
     }
 
-    // Move 'head'
     m_mutex.lock();
+    // Check if ring buffer disabled
+    if(!m_isActive)
+    {
+        m_mutex.unlock();
+        return false;
+    }
+
+    // Move 'head'
     uint32_t h = head;
     uint32_t t = tail;
     m_mutex.unlock();
