@@ -19,6 +19,7 @@ signals:
     void stopAnswerTimeoutTimer();
     void sendCommandToSTM32(quint8 command, const quint8 *p_data, quint32 data_size);
     void qamDecoderReset();
+    void setStatus(quint8 status);
 
 public slots:
     void timeoutAnswer();
@@ -63,8 +64,8 @@ private:
         STAT_MOD_COMMANDS_FOR_AGC = 12,
         START_TX_PREDISTORTION_TABLES_TO_MOD = 13,
         TX_PREDISTORTION_TABLES_TO_MOD = 14,
-        AGC_START_FOR_MOD_STAT2 = 15,
-        STAT_MOD_COMMANDS_FOR_AGC2 = 16,
+//        AGC_START_FOR_MOD_STAT2 = 15,
+//        STAT_MOD_COMMANDS_FOR_AGC2 = 16,
         AUTOCFG_COMPLETE = 17
     } TState;
 

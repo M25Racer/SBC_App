@@ -111,7 +111,7 @@ bool CMessageBox::message_box_srp(uint8_t* Buf, uint16_t len, uint8_t master_add
     {
         case SCAN:
             tx_len = message_header_to_array(&message, messege_box_buffer);
-            emit postData(messege_box_buffer + 1, tx_len);
+            emit postData(messege_box_buffer + 1, tx_len - 1);
             break;
 
         case SET_TIME:
@@ -377,17 +377,19 @@ bool CMessageBox::message_box_srp(uint8_t* Buf, uint16_t len, uint8_t master_add
 //            emit postData(messege_box_buffer + 1, tx_len);
 //            break;
 
-        case CALC_PREDISTORTION:
+        case AUTO_CFG_PREDISTORTION:
             emit calculatePredistortionTablesStart();
             tx_len = message_header_to_array(&message, messege_box_buffer);
-            emit postData(messege_box_buffer + 1, tx_len);
+            emit postData(messege_box_buffer + 1, tx_len - 1);
             break;
 
-        case GET_PREDIST_STATUS:
+        case GET_AUTO_CFG_STATUS:
             message.data_len = 1;
-            messege_box_buffer[11] = 0xFF; // todo status
+            mutex.lock();
+            messege_box_buffer[11] = m_statusAutoCfgPredistortion;
+            mutex.unlock();
             tx_len = message_header_to_array(&message, messege_box_buffer);
-            emit postData(messege_box_buffer + 1, tx_len);
+            emit postData(messege_box_buffer + 1, tx_len - 1);
             break;
 
         default:
@@ -557,3 +559,10 @@ uint16_t CMessageBox::message_header_to_array(const message_header* message, uin
 
 //    post_tx_data(messege_box_buffer, tx_len, ami, line, get_global_baudrate());
 //}
+
+void CMessageBox::setStatusAutoCfgPredistortion(uint8_t status)
+{
+    mutex.lock();
+    m_statusAutoCfgPredistortion = status;
+    mutex.unlock();
+}

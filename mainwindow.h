@@ -109,6 +109,7 @@ private slots:
     void usbHsDataReceived();
     void sendCommandToSTM32(quint8 command, const quint8 *p_data, quint32 data_size);
     void qamDecoderReset();
+    void setAutoCfgStatus(quint8 status);
 
     void usbInitTimeoutStart(int timeout_ms);
     //void modAnswerTimeoutStart(int timeout_ms);

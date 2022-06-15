@@ -52,6 +52,7 @@ void ModTransmitterThread::run()
         {
             StatePrev = State;
             emit consolePutData(QString(":: Predistortion auto cfg :: State #%1\n").arg(State), 1);
+            emit setStatus(State);
         }
 
         switch(State)

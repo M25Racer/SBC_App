@@ -2,6 +2,7 @@
 #define MESSAGE_BOX_H
 
 #include <QCoreApplication>
+#include <QMutex>
 
 #pragma pack(push, 1)
 
@@ -38,6 +39,7 @@ signals:
 public:
     bool message_box_srp(uint8_t* Buf, uint16_t len, uint8_t master_address, uint8_t own_address);
     static uint16_t message_header_to_array(const message_header* message, uint8_t* Buf);
+    void setStatusAutoCfgPredistortion(uint8_t status);
 
     static const uint8_t SRP_ADDR  = 0x53;
     static const uint8_t MOD_ADDR 	= 0x54;
@@ -125,8 +127,12 @@ private:
     static const uint8_t CABLE_ERASE       	= 0xCB;
     static const uint8_t CABLE_STATUS          = 0xC8;
 
-    static const uint8_t CALC_PREDISTORTION  = 0xCD;  // Start calculating new predistortion tables command sequence
-    static const uint8_t GET_PREDIST_STATUS  = 0xCE;  // Get current state\status for predistortion tables command sequence
+    static const uint8_t AUTO_CFG_PREDISTORTION = 0xCD;  // Start auto configuration 'predistortion tables'
+    static const uint8_t GET_AUTO_CFG_STATUS    = 0xCE;  // Get current state\status for auto configuration 'predistortion tables'
+
+    uint8_t m_statusAutoCfgPredistortion = 0x00;
+
+    QMutex mutex;
 };
 
 #endif // MESSAGE_BOX_H

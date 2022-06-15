@@ -108,6 +108,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(&m_mod_tx_thread, &ModTransmitterThread::postDataToStm32H7, this, &MainWindow::postTxDataSTM, Qt::ConnectionType::QueuedConnection);
     connect(&m_mod_tx_thread, &ModTransmitterThread::sendCommandToSTM32, this, &MainWindow::sendCommandToSTM32, Qt::ConnectionType::QueuedConnection);
     connect(&m_mod_tx_thread, &ModTransmitterThread::qamDecoderReset, this, &MainWindow::qamDecoderReset, Qt::ConnectionType::QueuedConnection);
+    connect(&m_mod_tx_thread, &ModTransmitterThread::setStatus, this, &MainWindow::setAutoCfgStatus, Qt::ConnectionType::QueuedConnection);
 
     //agcStartCommandToSTM32
 
@@ -615,4 +616,9 @@ void MainWindow::calculatePredistortionTablesStart()
 void MainWindow::qamDecoderReset()
 {
     m_qam_thread.SetFirstPassFlag();
+}
+
+void MainWindow::setAutoCfgStatus(quint8 status)
+{
+    m_message_box->setStatusAutoCfgPredistortion(status);
 }
