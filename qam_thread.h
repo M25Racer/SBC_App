@@ -29,22 +29,11 @@ public:
 
     void SetFirstPassFlag();
 
-private:
-    void run() override;
-    void QAM_Decoder();
+    static const qint64 qam_rx_timeout_ms = 100;// rx timeout between QAM packets when decoding multi frame packet, ms
 
-    bool m_quit = false;
-
-    static const uint32_t DATA_SIZE = (256*1024);
-
-//    uint8_t AdcDataBuffer[DATA_SIZE];
-//    uint32_t Length = 0;
-    double Length;
-
-    QElapsedTimer peformance_timer;     // timer for QAM decoder performance measurements
-    QElapsedTimer data_timeout_tim;     // data receive timeout timer fro multi frame\packet QAM transfers
-
-    const qint64 qam_rx_timeout_ms = 100;// rx timeout between QAM packets when decoding multi frame packet, ms
+    // QAM data related sizes & offsets
+    static const uint32_t TxPacketDataSize = 212;
+    static const uint32_t TxPacketDataOffset = 23;
 
     enum {
         CORRECT = 0,    // warning_satus = 0 input array correct
@@ -54,13 +43,21 @@ private:
         WARNING_4 = 4,  // warning_satus = 4 kostyl check failed
     } HsEwlReceive_WarningStatus;
 
-    // QAM data related sizes & offsets
-    static const uint32_t TxPacketDataSize = 212;
-    static const uint32_t TxPacketDataOffset = 23;
+private:
+    void run() override;
+//    void QAM_Decoder();
 
-    bool m_QamDecoderFirstPassFlag = true;
+    bool m_quit = false;
 
-    QMutex mutex;
+    static const uint32_t DATA_SIZE = (256*1024);
+
+//    uint8_t AdcDataBuffer[DATA_SIZE];
+//    uint32_t Length = 0;
+    double Length1;
+    double Length2;
+
+//    QElapsedTimer peformance_timer;     // timer for QAM decoder performance measurements
+//    QElapsedTimer data_timeout_tim;     // data receive timeout timer fro multi frame\packet QAM transfers
 };
 
 #endif // QAM_WORKTHREAD_H

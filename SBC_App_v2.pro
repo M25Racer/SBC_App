@@ -1,4 +1,4 @@
-QT += widgets serialport
+QT += widgets serialport concurrent
 requires(qtConfig(combobox))
 
 TARGET = SBC_App_v2
