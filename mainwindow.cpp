@@ -90,7 +90,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     initActionsConnections();
 
-    //connect(m_serial, &QSerialPort::errorOccurred, this, &MainWindow::handleError);
+    connect(m_serial, &QSerialPort::errorOccurred, this, &MainWindow::handleError);
     connect(m_serial, &QSerialPort::readyRead, this, &MainWindow::readDataSerialPort);
     connect(m_message_box, &CMessageBox::postData, this, &MainWindow::transmitDataSerialPort);
     connect(m_message_box, &CMessageBox::postDataToStm32H7, this, &MainWindow::postTxDataSTM);
