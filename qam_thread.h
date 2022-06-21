@@ -29,6 +29,8 @@ public:
 
     void SetFirstPassFlag();
 
+    bool data_drop = false;
+
 private:
     void run() override;
     void QAM_Decoder();
@@ -60,7 +62,7 @@ private:
 
     bool m_QamDecoderFirstPassFlag = true;
 
-    QMutex mutex;
+    QMutex mutex;   
 };
 
 #endif // QAM_WORKTHREAD_H

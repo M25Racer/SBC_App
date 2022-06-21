@@ -61,7 +61,10 @@
 #include "crc16.h"
 #include "global_vars.h"
 
+// Extern variables
 extern QElapsedTimer profiler_timer;
+extern RingBuffer *m_ring;
+extern qint64 elapsed_all_saved;
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -312,6 +315,7 @@ void MainWindow::readDataSerialPort()
 profiler_timer.start();
     // Drop any USB received data to prevent old packets been transmitted to serial port (to PC)
     m_usb_thread.usb_receiver_drop = true;
+    m_qam_thread.data_drop = true;
 
     timerSpRxTimeout->stop();
 
@@ -373,6 +377,8 @@ void MainWindow::parseDataSerialPort()
 
             // Unlock USB receiver
             m_usb_thread.usb_receiver_drop = false;
+            m_qam_thread.data_drop = false;
+            m_ring->Clear();
             return;
         }
 
@@ -387,6 +393,8 @@ void MainWindow::parseDataSerialPort()
 
             // Unlock USB receiver
             m_usb_thread.usb_receiver_drop = false;
+            m_qam_thread.data_drop = false;
+            m_ring->Clear();
             return;
         }
 
@@ -395,10 +403,14 @@ void MainWindow::parseDataSerialPort()
         {
             // Unlock USB receiver
             m_usb_thread.usb_receiver_drop = false;
+            m_qam_thread.data_drop = false;
+            m_ring->Clear();
         }
         else
         {
             // data is being transmitted to STM32H7, usb_receiver_drop flag will be reset after the transfer
+            m_qam_thread.data_drop = false;
+            m_ring->Clear();
         }
 
         serialPortRxCleanup();
@@ -412,6 +424,9 @@ void MainWindow::parseDataSerialPort()
         TtyUserRxBuffer_len = TtyUserRxBuffer_MaxSize;
         m_console->putData("SP Warning: received length is too big\n", 1);
     }
+
+    m_qam_thread.data_drop = false;
+    m_ring->Clear();
 
     // Transmit to STM32H7
     postTxDataSTM((uint8_t*)TtyUserRxBuffer.data(), int(TtyUserRxBuffer_len));
@@ -469,7 +484,9 @@ void MainWindow::transmitDataSerialPort(const uint8_t *p_data, int length)
 #ifdef QT_DEBUG
     m_console->putData("SP Transmit " + QString::number(length) + " bytes\n", 0);
 #endif
-    m_console->putData(QString("Profiler timer elapsed %1 # transmit to sp end\n").arg(profiler_timer.elapsed()), 1);
+
+    qint64 pt_elapsed = profiler_timer.elapsed();
+    m_console->putData(QString("Profiler timer elapsed %1 # transmit to sp end, without qam %2\n").arg(pt_elapsed).arg(pt_elapsed - elapsed_all_saved), 1);
 
     // todo - change slot from 'transmitDataSerialPort' to 'ModAnswerReceived' ?
     // Transmit data to 'm_mod_tx_thread' (MOD transmit & receive commands sequence)

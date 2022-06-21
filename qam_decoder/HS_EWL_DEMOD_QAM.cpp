@@ -27,6 +27,9 @@
 static coder::comm::RaisedCosineReceiveFilter rxFilter1;
 static boolean_T rxFilter1_not_empty;
 
+// Extern variables
+//extern double warning_status;
+
 // Function Definitions
 //
 // Arguments    : const emxArray_real_T *data
@@ -240,6 +243,14 @@ void HS_EWL_DEMOD_QAM(const emxArray_real_T *data, double index_data, double
     i = b_resamp_signal->size[0];
     b_resamp_signal->size[0] = nx;
     emxEnsureCapacity_real_T(b_resamp_signal, i);
+
+//    //todo
+//    if(resamp_signal->allocatedSize < nx)
+//    {
+//        warning_status = 4;
+//        return;
+//    }
+
     for (i = 0; i < nx; i++) {
       b_resamp_signal->data[i] = resamp_signal->data[i];
     }
