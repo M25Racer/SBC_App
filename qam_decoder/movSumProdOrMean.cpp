@@ -73,7 +73,7 @@ namespace coder
     loop_ub = nx - 1;
 
     QFuture<void> f1 = QtConcurrent::run(func_parallel, 0, loop_ub/2, x, y);
-    QFuture<void> f2 = QtConcurrent::run(func_parallel, loop_ub/2, loop_ub, x, y);
+    QFuture<void> f2 = QtConcurrent::run(func_parallel, loop_ub/2+1, loop_ub, x, y);
     f1.waitForFinished();
     f2.waitForFinished();
   }
