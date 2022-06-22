@@ -44,7 +44,6 @@ private:
     double Length;
 
     QElapsedTimer peformance_timer;     // timer for QAM decoder performance measurements
-    QElapsedTimer data_timeout_tim;     // data receive timeout timer fro multi frame\packet QAM transfers
 
     const qint64 qam_rx_timeout_ms = 100;// rx timeout between QAM packets when decoding multi frame packet, ms
 
@@ -62,7 +61,9 @@ private:
 
     bool m_QamDecoderFirstPassFlag = true;
 
-    QMutex mutex;   
+    QMutex mutex;
+
+    uint8_t frame_decoded[TxPacketDataSize];          // data decoded from single qam packet
 };
 
 #endif // QAM_WORKTHREAD_H

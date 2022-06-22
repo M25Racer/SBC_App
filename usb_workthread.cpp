@@ -16,6 +16,7 @@ extern uint8_t FreqSweepDataBuffer[USB_MAX_DATA_SIZE];
 extern uint8_t SweepDataBuffer[USB_MAX_DATA_SIZE];
 extern uint32_t FreqSweepDataLength;
 extern uint32_t SweepDataLength;
+extern QElapsedTimer profiler_timer;
 
 /* Global variables */
 uint8_t UserRxBuffer[USB_MAX_DATA_SIZE];
@@ -954,6 +955,8 @@ void UsbWorkThread::parseHsData()
             }
             else
             {
+emit consolePutData(QString("USB elapsed %1\n").arg(profiler_timer.elapsed()), 1);
+
                 bool res = m_ring->Append(UserRxBuffer + sizeof(USBheader_t), header->packet_length - sizeof(USBheader_t));
                 if(res)
                 {
