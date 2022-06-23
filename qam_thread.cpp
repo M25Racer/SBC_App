@@ -44,7 +44,6 @@ int qam_symbols_size;
 double byte_data[255];
 int byte_data_size;
 
-//static uint8_t data_decoded[TxPacketDataSize];      // data decoded from single qam packet
 static uint8_t data_decoded[128*1024];      // data decoded from all qam packet
 
 double ref_cos[] = {1, 9.927089e-01, 9.709418e-01, 9.350162e-01, 8.854560e-01, 8.229839e-01, 7.485107e-01, 6.631227e-01, 5.680647e-01, 4.647232e-01, 3.546049e-01, 2.393157e-01, 1.205367e-01, 6.123234e-17, -1.205367e-01, -2.393157e-01, -3.546049e-01, -4.647232e-01, -5.680647e-01, -6.631227e-01, -7.485107e-01, -8.229839e-01, -8.854560e-01, -9.350162e-01, -9.709418e-01, -9.927089e-01, -1, -9.927089e-01, -9.709418e-01, -9.350162e-01, -8.854560e-01, -8.229839e-01, -7.485107e-01, -6.631227e-01, -5.680647e-01, -4.647232e-01, -3.546049e-01, -2.393157e-01, -1.205367e-01, -1.836970e-16, 1.205367e-01, 2.393157e-01, 3.546049e-01, 4.647232e-01, 5.680647e-01, 6.631227e-01, 7.485107e-01, 8.229839e-01, 8.854560e-01, 9.350162e-01, 9.709418e-01, 9.927089e-01};
@@ -102,6 +101,7 @@ void QamThread::SetFirstPassFlag()
     emit consolePutData("QAM decoder reset (calcluate and save new frequency next time)\n", 1);
     mutex.lock();
     m_QamDecoderFirstPassFlag = true;
+    mode = 1;
     mutex.unlock();
 }
 
@@ -157,7 +157,7 @@ void QamThread::QAM_Decoder()
                 // Check frame number
                 if(!tail->frame_id)
                 {
-                    emit consolePutData(QString("Error frame number = 0\n").arg(tail->frame_id), 1);
+                    emit consolePutData(QString("Error frame number = 0\n"), 1);
                 }
                 else
                 {
