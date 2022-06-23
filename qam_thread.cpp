@@ -154,23 +154,15 @@ void QamThread::QAM_Decoder()
             {
                 //emit consolePutData(QString("Not last frame #%1, continue receive\n").arg(tail->frame_id), 1);
 
-                // Check frame number
-                if(!tail->frame_id)
+                if(sizeof(data_decoded) < tail->frame_id * data_size_not_last_frame + data_size_not_last_frame)
                 {
-                    emit consolePutData(QString("Error frame number = 0\n"), 1);
+                    emit consolePutData(QString("Error wrong frame number %1 or too too long continuous data receive\n").arg(tail->frame_id), 1);
                 }
                 else
                 {
-                    if(sizeof(data_decoded) < (tail->frame_id - 1) * data_size_not_last_frame + data_size_not_last_frame)
-                    {
-                        emit consolePutData(QString("Error wrong frame number %1 or too too long continuous data receive\n").arg(tail->frame_id), 1);
-                    }
-                    else
-                    {
-                        // Copy decoded frame to data_decoded buffer
-                        for(uint8_t i = 0; i < data_size_not_last_frame; ++i)
-                            data_decoded[(tail->frame_id - 1)* data_size_not_last_frame + i] = (uint8_t)byte_data[i];
-                    }
+                    // Copy decoded frame to data_decoded buffer
+                    for(uint8_t i = 0; i < data_size_not_last_frame; ++i)
+                        data_decoded[tail->frame_id * data_size_not_last_frame + i] = (uint8_t)byte_data[i];
                 }
             }
             // Last frame
@@ -179,43 +171,35 @@ void QamThread::QAM_Decoder()
                 last_frame_received = true;
                 frame_tail_last_t *tail_last = (frame_tail_last_t*)&frame_decoded[TxPacketDataSize - sizeof(frame_tail_last_t)];
 
-                // Check frame number
-                if(!tail_last->tail.frame_id)
+                if(sizeof(data_decoded) < tail->frame_id * data_size_not_last_frame + data_size_last_frame)
                 {
-                    emit consolePutData(QString("Error frame number = 0\n").arg(tail->frame_id), 1);
+                    emit consolePutData(QString("Error wrong frame number %1 or too too long continuous data receive\n").arg(tail->frame_id), 1);
                 }
                 else
                 {
-                    if(sizeof(data_decoded) < (tail->frame_id - 1) * data_size_not_last_frame + data_size_last_frame)
+                    // Check data length
+                    if(tail_last->len < MOD_SRP_MIN_VALID_LENGTH_NEW)
                     {
-                        emit consolePutData(QString("Error wrong frame number %1 or too too long continuous data receive\n").arg(tail->frame_id), 1);
+                        // Error length is too short
+                        emit consolePutData(QString("HS data parsing error, packet data length is too short %1\n").arg(tail_last->len), 1);
+                    }
+                    else if(tail_last->len > (tail->frame_id * data_size_not_last_frame + TxPacketDataSize - sizeof(frame_tail_last_t)))
+                    {
+                        // Error length is too long
+                        emit consolePutData(QString("HS data parsing error, packet data length is too long %1\n").arg(tail_last->len), 1);
                     }
                     else
                     {
-                        // Check data length
-                        if(tail_last->len < MOD_SRP_MIN_VALID_LENGTH_NEW)
-                        {
-                            // Error length is too short
-                            emit consolePutData(QString("HS data parsing error, packet data length is too short %1\n").arg(tail_last->len), 1);
-                        }
-                        else if(tail_last->len > ((tail->frame_id - 1) * data_size_not_last_frame + TxPacketDataSize - sizeof(frame_tail_last_t)))
-                        {
-                            // Error length is too long
-                            emit consolePutData(QString("HS data parsing error, packet data length is too long %1\n").arg(tail_last->len), 1);
-                        }
-                        else
-                        {
-                            // Length is ok
-                            // Copy decoded frame to data_decoded buffer (just copy everything, do not calculate data length in last frame)
-                            for(uint8_t i = 0; i < data_size_last_frame; ++i)
-                                data_decoded[(tail->frame_id - 1) * data_size_not_last_frame + i] = (uint8_t)byte_data[i];
+                        // Length is ok
+                        // Copy decoded frame to data_decoded buffer (just copy everything, do not calculate data length in last frame)
+                        for(uint8_t i = 0; i < data_size_last_frame; ++i)
+                            data_decoded[tail->frame_id * data_size_not_last_frame + i] = (uint8_t)byte_data[i];
 
-                            // TODO - transmit later, when all QAM threads will be ready
-                            // Transmit decoded data to PC
-                            emit postTxDataToSerialPort((uint8_t*)&data_decoded[MASTER_ADDR_SIZE], tail_last->len - MASTER_ADDR_SIZE);
+                        // TODO - transmit later, when all QAM threads will be ready
+                        // Transmit decoded data to PC
+                        emit postTxDataToSerialPort((uint8_t*)&data_decoded[MASTER_ADDR_SIZE], tail_last->len - MASTER_ADDR_SIZE);
 
-                            emit consolePutData(QString("Last frame #%1, data length %2\n").arg(tail_last->tail.frame_id).arg(tail_last->len), 1);
-                        }
+                        emit consolePutData(QString("Last frame #%1, data length %2\n").arg(tail_last->tail.frame_id).arg(tail_last->len), 1);
                     }
                 }
             }

@@ -90,11 +90,12 @@ private:
 
     const uint32_t n_MaxAttempts = 5;
     const uint32_t n_MaxAttemptsHighLevel = 3;
-    const uint32_t timeoutAnswer_ms = 600;
+    const uint32_t timeoutAnswer_ms = 300;
 
-    const uint32_t timeoutAgcSin35kHzCommands_ms = 500;     // timeout between SIN 35 kHz transfers for AGC
-    const uint32_t timeoutAgcSweepCommands_ms = 1000;       // timeout between Sweep transfers for AGC
-    const uint32_t timeoutModStatusCommands_ms = 300;       // timeout between MOD GET STATUS transfers for AGC
+    const uint32_t timeoutAgcSin35kHzCommands_ms = 300;     // timeout between SIN 35 kHz transfers for AGC
+    const uint32_t timeoutAgcSweepCommands_ms = 600;        // timeout between Sweep transfers for AGC
+    const uint32_t timeoutModStatusCommands_ms = 200;       // timeout between MOD GET STATUS transfers for AGC
+//    const uint32_t timeoutModPredistTablesCommands_ms = 250;
 
     const uint32_t n_MaxSin35kHzCommands = 100;             // max number of SIN 35 kHz transfers for AGC
     const uint32_t n_MaxSweepCommands = 100;                // max number of Sweep transfers for AGC

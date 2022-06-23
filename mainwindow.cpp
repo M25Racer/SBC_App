@@ -287,7 +287,7 @@ void MainWindow::usbInitTimeoutStart(int timeout_ms)
 
 void MainWindow::timeoutSerialPortReconnect()
 {
-    m_console->putData("SP Trying to reconnect to a serial port...", 1);
+    m_console->putData("SP Trying to reconnect to a serial port...\n", 1);
     if(!openSerialPort())
     {
         // Start timer again
