@@ -27,30 +27,20 @@ extern QElapsedTimer profiler_timer;
 static double Signal[USB_MAX_DATA_SIZE];
 
 //double Fs = 1832061;//280000;//ADC sample rate
-double f0 = 35000;//carrier freq
-double sps = round(Fs/f0);//sample per symbol
-double mode = 1;//1-both stages enabled, 0-only sevond stage
+//double f0 = 35000;//carrier freq
+//double sps = round(Fs/f0);//sample per symbol
+//double mode = 1;//1-both stages enabled, 0-only sevond stage
 
-//  output var for HS_EWL_FREQ_ACQ
-double warning_status;
-double index_data;
-double len_data;
-double f_est_data;//estimated frequency
-int f_est_size;
-
-//  output var for HS_EWL_DEMOD_QAM
-creal_T qam_symbols_data[255];
-int qam_symbols_size;
-double byte_data[255];
-int byte_data_size;
+// Variables shared between threads
+static double mode = 1;//1-both stages enabled, 0-only sevond stage
 
 static uint8_t data_decoded[128*1024];      // data decoded from all qam packet
+static bool m_QamDecoderFirstPassFlag = true;
 
 double ref_cos[] = {1, 9.927089e-01, 9.709418e-01, 9.350162e-01, 8.854560e-01, 8.229839e-01, 7.485107e-01, 6.631227e-01, 5.680647e-01, 4.647232e-01, 3.546049e-01, 2.393157e-01, 1.205367e-01, 6.123234e-17, -1.205367e-01, -2.393157e-01, -3.546049e-01, -4.647232e-01, -5.680647e-01, -6.631227e-01, -7.485107e-01, -8.229839e-01, -8.854560e-01, -9.350162e-01, -9.709418e-01, -9.927089e-01, -1, -9.927089e-01, -9.709418e-01, -9.350162e-01, -8.854560e-01, -8.229839e-01, -7.485107e-01, -6.631227e-01, -5.680647e-01, -4.647232e-01, -3.546049e-01, -2.393157e-01, -1.205367e-01, -1.836970e-16, 1.205367e-01, 2.393157e-01, 3.546049e-01, 4.647232e-01, 5.680647e-01, 6.631227e-01, 7.485107e-01, 8.229839e-01, 8.854560e-01, 9.350162e-01, 9.709418e-01, 9.927089e-01};
 double ref_sin[] = {0, 1.205367e-01, 2.393157e-01, 3.546049e-01, 4.647232e-01, 5.680647e-01, 6.631227e-01, 7.485107e-01, 8.229839e-01, 8.854560e-01, 9.350162e-01, 9.709418e-01, 9.927089e-01, 1, 9.927089e-01, 9.709418e-01, 9.350162e-01, 8.854560e-01, 8.229839e-01, 7.485107e-01, 6.631227e-01, 5.680647e-01, 4.647232e-01, 3.546049e-01, 2.393157e-01, 1.205367e-01, 1.224647e-16, -1.205367e-01, -2.393157e-01, -3.546049e-01, -4.647232e-01, -5.680647e-01, -6.631227e-01, -7.485107e-01, -8.229839e-01, -8.854560e-01, -9.350162e-01, -9.709418e-01, -9.927089e-01, -1, -9.927089e-01, -9.709418e-01, -9.350162e-01, -8.854560e-01, -8.229839e-01, -7.485107e-01, -6.631227e-01, -5.680647e-01, -4.647232e-01, -3.546049e-01, -2.393157e-01, -1.205367e-01};
 
 // Debug variables
-qint64 elapsed_all = 0;
 qint64 elapsed_all_saved = 0;
 
 QamThread::QamThread(QObject *parent) :
@@ -76,13 +66,13 @@ void QamThread::run()
         m_mutex_ring.lock();
         if(!m_ring->DataAvailable())
             ringNotEmpty.wait(&m_mutex_ring);    // Wait condition unlocks mutex before 'wait', and will lock it again just after 'wait' is complete
-        m_mutex_ring.unlock();
 
         res = m_ring->GetDouble(Signal, &Length);
+        m_mutex_ring.unlock();
 
         if(!res)
         {
-            emit consolePutData("Error ring buffer get() returned false\n", 1);
+            //emit consolePutData("Error ring buffer get() returned false\n", 1);
             continue;
         }
 
@@ -105,8 +95,27 @@ void QamThread::SetFirstPassFlag()
     mutex.unlock();
 }
 
+//using namespace coder;
+
 void QamThread::QAM_Decoder()
 {
+    double f0 = 35000;//carrier freq
+    double sps = round(Fs/f0);//sample per symbol
+
+    //  output var for HS_EWL_FREQ_ACQ
+    double warning_status;
+    double index_data;
+    double len_data;
+    double f_est_data;//estimated frequency
+    int f_est_size;
+
+    //  output var for HS_EWL_DEMOD_QAM
+    creal_T qam_symbols_data[255];
+    int qam_symbols_size;
+    double byte_data[255];
+    int byte_data_size;
+
+
     bool last_frame_received = false;
     double *signal = (double*)&Signal;
     double len = Length;
@@ -118,13 +127,13 @@ void QamThread::QAM_Decoder()
     emxArray_real_T *data_qam256 = NULL;
     data_qam256 = emxCreateWrapper_real_T(signal, 1, len);
 
-    HS_EWL_FREQ_ACQ(data_qam256, len, Fs, f0, sps, mode, preamble_len,
+    HS_EWL_FREQ_ACQ(&b_rxFilter1, &b_rxFilter1_not_empty, data_qam256, len, Fs, f0, sps, mode, preamble_len,
                       message_len, QAM_order, preamble_QAM_symbol, &index_data, &len_data, (double *)&f_est_data,
                       *(int(*)[1]) & f_est_size, &warning_status);
 
     if(warning_status != 4)
     {
-        HS_EWL_DEMOD_QAM(data_qam256, index_data, len_data, f_est_data,
+        HS_EWL_DEMOD_QAM(&b_rxFilter2, &b_rxFilter2_not_empty, data_qam256, index_data, len_data, f_est_data,
                      Fs, sps, preamble_QAM_symbol,
                      QAM_order, qam_symbols_data, &qam_symbols_size,
                      byte_data, &byte_data_size);
@@ -262,5 +271,5 @@ void QamThread::QAM_Decoder()
 //    s.append("\n");
 //    emit consolePutData(s, 0);
 
-//    HS_EWL_DEMOD_QAM_terminate();
+//    HS_EWL_DEMOD_QAM_terminate(&b_rxFilter1);
 }

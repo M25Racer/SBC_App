@@ -24,8 +24,8 @@
 #include <cmath>
 
 // Variable Definitions
-static coder::comm::RaisedCosineReceiveFilter rxFilter1;
-static boolean_T rxFilter1_not_empty;
+//static coder::comm::RaisedCosineReceiveFilter rxFilter1;
+//static boolean_T rxFilter1_not_empty;
 
 // Extern variables
 //extern double warning_status;
@@ -46,7 +46,8 @@ static boolean_T rxFilter1_not_empty;
 //                int byte_data_size[1]
 // Return Type  : void
 //
-void HS_EWL_DEMOD_QAM(const emxArray_real_T *data, double index_data, double
+void HS_EWL_DEMOD_QAM(coder::comm::RaisedCosineReceiveFilter *b_rxFilter2, boolean_T *b_rxFilter2_not_empty,
+                      const emxArray_real_T *data, double index_data, double
                       len_data, double f_est, double Fs, double sps, double
                       pre_qam, double M, creal_T qam_symbols_data[], int
                       qam_symbols_size[1], double byte_data_data[], int
@@ -73,7 +74,7 @@ void HS_EWL_DEMOD_QAM(const emxArray_real_T *data, double index_data, double
   extern double ref_cos[];
   extern double ref_sin[];
   if (!isInitialized_HS_EWL_DEMOD_QAM) {
-    HS_EWL_DEMOD_QAM_initialize();
+    HS_EWL_DEMOD_QAM_initialize(b_rxFilter2, b_rxFilter2_not_empty);
   }
 
   emxInit_real_T(&input_data, 2);
@@ -138,9 +139,9 @@ void HS_EWL_DEMOD_QAM(const emxArray_real_T *data, double index_data, double
     }
 
     start_inf_data = 0;
-    if (!rxFilter1_not_empty) {
-      rxFilter1.init();
-      rxFilter1_not_empty = true;
+    if (!*b_rxFilter2_not_empty) {
+      b_rxFilter2->init();
+      *b_rxFilter2_not_empty = true;
     }
 
     coder::rat(f_est * sps / Fs, &b_r, &Q);
@@ -377,7 +378,7 @@ void HS_EWL_DEMOD_QAM(const emxArray_real_T *data, double index_data, double
       c_resamp_signal->data[unnamed_idx_1].im = 0.0;
     }
 
-    rxFilter1.step(c_resamp_signal, z_data, z_size);
+    b_rxFilter2->step(c_resamp_signal, z_data, z_size);
     del = coder::qammod(pre_qam, M);
     if (z_data[9].im == 0.0) {
       if (del.im == 0.0) {
@@ -500,22 +501,22 @@ void HS_EWL_DEMOD_QAM(const emxArray_real_T *data, double index_data, double
 // Arguments    : void
 // Return Type  : void
 //
-void HS_EWL_DEMOD_QAM_free()
+void HS_EWL_DEMOD_QAM_free(coder::comm::RaisedCosineReceiveFilter *rxFilter2)
 {
-  rxFilter1.matlabCodegenDestructor();
-  rxFilter1._pobj0.matlabCodegenDestructor();
+  rxFilter2->matlabCodegenDestructor();
+  rxFilter2->_pobj0.matlabCodegenDestructor();
 }
 
 //
 // Arguments    : void
 // Return Type  : void
 //
-void HS_EWL_DEMOD_QAM_init()
+void HS_EWL_DEMOD_QAM_init(coder::comm::RaisedCosineReceiveFilter *rxFilter2, boolean_T *rxFilter2_not_empty)
 {
-  emxInitStruct_RaisedCosineReceiveFilter(&rxFilter1);
-  rxFilter1_not_empty = false;
-  rxFilter1._pobj0.matlabCodegenIsDeleted = true;
-  rxFilter1.matlabCodegenIsDeleted = true;
+  emxInitStruct_RaisedCosineReceiveFilter(rxFilter2);
+  *rxFilter2_not_empty = false;
+  rxFilter2->_pobj0.matlabCodegenIsDeleted = true;
+  rxFilter2->matlabCodegenIsDeleted = true;
 }
 
 //

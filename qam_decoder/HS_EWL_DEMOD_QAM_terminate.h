@@ -12,9 +12,10 @@
 #include "omp.h"
 #include <cstddef>
 #include <cstdlib>
+#include "RaisedCosineReceiveFilter.h"
 
 // Function Declarations
-extern void HS_EWL_DEMOD_QAM_terminate();
+extern void HS_EWL_DEMOD_QAM_terminate(coder::comm::RaisedCosineReceiveFilter *b_rxFilter1);
 
 #endif
 

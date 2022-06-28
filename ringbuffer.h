@@ -22,7 +22,7 @@ signals:
 
 public:
     bool Append(const uint8_t *p_data_in, const uint32_t data_length);
-    bool Get(uint8_t *p_data_out, uint32_t *p_length);
+    //bool Get(uint8_t *p_data_out, uint32_t *p_length);
     bool GetDouble(double *p_data_out, double *p_length);
     void Clear();
     void Init(){ Clear(); };

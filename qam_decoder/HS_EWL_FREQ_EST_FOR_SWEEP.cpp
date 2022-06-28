@@ -33,7 +33,8 @@
 //                double *sweep_freq_warning_status
 // Return Type  : void
 //
-void HS_EWL_FREQ_EST_FOR_SWEEP(emxArray_real_T *s2, double len, double Fs,
+void HS_EWL_FREQ_EST_FOR_SWEEP(coder::comm::RaisedCosineReceiveFilter *b_rxFilter1, boolean_T *b_rxFilter1_not_empty,
+                               emxArray_real_T *s2, double len, double Fs,
   double f0, double per_numb, double sps, double *f_opt, double *ph_opt, double *
   sweep_freq_warning_status)
 {
@@ -52,7 +53,7 @@ void HS_EWL_FREQ_EST_FOR_SWEEP(emxArray_real_T *s2, double len, double Fs,
   int nx;
   boolean_T guard1 = false;
   if (!isInitialized_HS_EWL_DEMOD_QAM) {
-    HS_EWL_DEMOD_QAM_initialize();
+    HS_EWL_DEMOD_QAM_initialize(b_rxFilter1, b_rxFilter1_not_empty);
   }
 
   sps = rt_roundd_snf(sps);

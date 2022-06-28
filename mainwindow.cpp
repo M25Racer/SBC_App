@@ -104,8 +104,10 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(&m_usb_thread, &UsbWorkThread::consoleAdcFile, this, &MainWindow::consoleAdcData, Qt::ConnectionType::QueuedConnection);
     connect(&m_usb_thread, &UsbWorkThread::hsDataReceived, this, &MainWindow::usbHsDataReceived, Qt::ConnectionType::QueuedConnection);
     //connect(&m_usb_thread, &UsbWorkThread::postDataToStm32H7, this, &MainWindow::postTxDataSTM);
-    connect(&m_qam_thread, &QamThread::consolePutData, this, &MainWindow::consolePutData, Qt::ConnectionType::QueuedConnection);
-    connect(&m_qam_thread, &QamThread::postTxDataToSerialPort, this, &MainWindow::transmitDataSerialPort, Qt::ConnectionType::QueuedConnection);
+    connect(&m_qam_thread1, &QamThread::consolePutData, this, &MainWindow::consolePutData, Qt::ConnectionType::QueuedConnection);
+    connect(&m_qam_thread1, &QamThread::postTxDataToSerialPort, this, &MainWindow::transmitDataSerialPort, Qt::ConnectionType::QueuedConnection);
+    connect(&m_qam_thread2, &QamThread::consolePutData, this, &MainWindow::consolePutData, Qt::ConnectionType::QueuedConnection);
+    connect(&m_qam_thread2, &QamThread::postTxDataToSerialPort, this, &MainWindow::transmitDataSerialPort, Qt::ConnectionType::QueuedConnection);
     connect(&m_freq_sweep_thread, &FreqSweepThread::consolePutData, this, &MainWindow::consolePutData, Qt::ConnectionType::QueuedConnection);
     connect(&m_mod_tx_thread, &ModTransmitterThread::consolePutData, this, &MainWindow::consolePutData, Qt::ConnectionType::QueuedConnection);
     connect(&m_mod_tx_thread, &ModTransmitterThread::postDataToStm32H7, this, &MainWindow::postTxDataSTM, Qt::ConnectionType::QueuedConnection);
@@ -150,8 +152,9 @@ MainWindow::MainWindow(QWidget *parent) :
     // Start timer for continuous usb initialization attempts
     timerUsbInit->start(m_usb_thread.timeoutUsbInit_ms);
 
-    // Start QAM decoder thread
-    m_qam_thread.start();
+    // Start QAM decoder threads
+    m_qam_thread1.start();
+    m_qam_thread2.start();
 
     // Start QAM frequency estimate for sweep thread
     m_freq_sweep_thread.start();
@@ -315,7 +318,8 @@ void MainWindow::readDataSerialPort()
 profiler_timer.start();
     // Drop any USB received data to prevent old packets been transmitted to serial port (to PC)
     m_usb_thread.usb_receiver_drop = true;
-    m_qam_thread.data_drop = true;
+    m_qam_thread1.data_drop = true;
+    m_qam_thread2.data_drop = true;
 
     timerSpRxTimeout->stop();
 
@@ -342,6 +346,12 @@ profiler_timer.start();
     // Continue receive
     // Start receive timeout
     timerSpRxTimeout->start(timeoutSerialPortRx_ms);
+}
+
+void MainWindow::setQamDataDrop(bool state)
+{
+    m_qam_thread1.data_drop = state;
+    m_qam_thread2.data_drop = state;
 }
 
 void MainWindow::parseDataSerialPort()
@@ -377,7 +387,7 @@ void MainWindow::parseDataSerialPort()
 
             // Unlock USB receiver
             m_usb_thread.usb_receiver_drop = false;
-            m_qam_thread.data_drop = false;
+            setQamDataDrop(false);
             m_ring->Clear();
             return;
         }
@@ -393,7 +403,7 @@ void MainWindow::parseDataSerialPort()
 
             // Unlock USB receiver
             m_usb_thread.usb_receiver_drop = false;
-            m_qam_thread.data_drop = false;
+            setQamDataDrop(false);
             m_ring->Clear();
             return;
         }
@@ -403,13 +413,13 @@ void MainWindow::parseDataSerialPort()
         {
             // Unlock USB receiver
             m_usb_thread.usb_receiver_drop = false;
-            m_qam_thread.data_drop = false;
+            setQamDataDrop(false);
             m_ring->Clear();
         }
         else
         {
             // data is being transmitted to STM32H7, usb_receiver_drop flag will be reset after the transfer
-            m_qam_thread.data_drop = false;
+            setQamDataDrop(false);
             m_ring->Clear();
         }
 
@@ -425,7 +435,7 @@ void MainWindow::parseDataSerialPort()
         m_console->putData("SP Warning: received length is too big\n", 1);
     }
 
-    m_qam_thread.data_drop = false;
+    setQamDataDrop(false);
     m_ring->Clear();
 
     // Transmit to STM32H7
@@ -632,7 +642,8 @@ void MainWindow::calculatePredistortionTablesStart()
 
 void MainWindow::qamDecoderReset()
 {
-    m_qam_thread.SetFirstPassFlag();
+    m_qam_thread1.SetFirstPassFlag();
+    m_qam_thread2.SetFirstPassFlag();
 }
 
 void MainWindow::setAutoCfgStatus(quint8 status)

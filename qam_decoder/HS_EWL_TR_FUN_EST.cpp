@@ -55,7 +55,9 @@
 //                double *sweep_warning_status
 // Return Type  : void
 //
-void HS_EWL_TR_FUN_EST(const emxArray_real_T *sweep_data, const emxArray_real_T *
+void HS_EWL_TR_FUN_EST(coder::comm::RaisedCosineReceiveFilter *b_rxFilter1,
+                       boolean_T *b_rxFilter1_not_empty,
+                       const emxArray_real_T *sweep_data, const emxArray_real_T *
   sweep_math, double Fs, double f_opt, double f_sine, double PreSPP, double
   gain_data[], int gain_size[2], double phase_data[], int phase_size[2], double *
   shift_for_qam_data, double *sweep_warning_status)
@@ -88,7 +90,7 @@ void HS_EWL_TR_FUN_EST(const emxArray_real_T *sweep_data, const emxArray_real_T 
   int c_resampSweepAfter23[1];
   int iindx;
   if (!isInitialized_HS_EWL_DEMOD_QAM) {
-    HS_EWL_DEMOD_QAM_initialize();
+    HS_EWL_DEMOD_QAM_initialize(b_rxFilter1, b_rxFilter1_not_empty);
   }
 
   emxInit_real_T(&resamp_sweep, 1);

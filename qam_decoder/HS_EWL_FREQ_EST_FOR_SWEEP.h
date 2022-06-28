@@ -13,9 +13,11 @@
 #include "omp.h"
 #include <cstddef>
 #include <cstdlib>
+#include "RaisedCosineReceiveFilter.h"
 
 // Function Declarations
-extern void HS_EWL_FREQ_EST_FOR_SWEEP(emxArray_real_T *s2, double len, double Fs,
+extern void HS_EWL_FREQ_EST_FOR_SWEEP(coder::comm::RaisedCosineReceiveFilter *b_rxFilter1, boolean_T *b_rxFilter1_not_empty,
+                                      emxArray_real_T *s2, double len, double Fs,
   double f0, double per_numb, double sps, double *f_opt, double *ph_opt, double *
   sweep_freq_warning_status);
 

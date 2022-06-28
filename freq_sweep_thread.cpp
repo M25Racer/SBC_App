@@ -129,6 +129,9 @@ bool FreqSweepThread::ConvertToDouble(uint8_t *p_data_in, uint32_t length_in, do
 
 void FreqSweepThread::FreqEstimateForSweep()
 {
+    coder::comm::RaisedCosineReceiveFilter b_rxFilter1;
+    boolean_T b_rxFilter1_not_empty;
+
     emit consolePutData(QString("QAM frequency estimate for sweep starting, length %1\n").arg(LengthSin), 1);
 
     Set_FreqEstState(FREQ_EST_WORK_IN_PROGRESS);
@@ -141,7 +144,7 @@ void FreqSweepThread::FreqEstimateForSweep()
     emxArray_real_T *sine_data = NULL;
     sine_data = emxCreateWrapper_real_T(sine, 1, sine_len);
 
-    HS_EWL_FREQ_EST_FOR_SWEEP(sine_data, sine_len, Fs, f_sine, period_amount, sine_sps,
+    HS_EWL_FREQ_EST_FOR_SWEEP(&b_rxFilter1, &b_rxFilter1_not_empty, sine_data, sine_len, Fs, f_sine, period_amount, sine_sps,
                      &f_opt, &ph_opt, &sweep_freq_warning_status);
 
     int sweep_warning_status_int = int(sweep_freq_warning_status);
@@ -168,6 +171,9 @@ void FreqSweepThread::FreqEstimateForSweep()
 
 void FreqSweepThread::Sweep()
 {
+    coder::comm::RaisedCosineReceiveFilter b_rxFilter1;
+    boolean_T b_rxFilter1_not_empty;
+
     emit consolePutData(QString("QAM sweep starting, length %1\n").arg(LengthSweep), 1);
 
     Set_SweepState(SWEEP_WORK_IN_PROGRESS);
@@ -184,7 +190,8 @@ void FreqSweepThread::Sweep()
     emxArray_real_T *sweep_data = NULL;
     sweep_data = emxCreateWrapper_real_T(sweep, 1, len_sweep);
 
-    HS_EWL_TR_FUN_EST(sweep_data, sweep_math, Fs, f_opt, f_sine, pream_sps,
+    HS_EWL_TR_FUN_EST(&b_rxFilter1, &b_rxFilter1_not_empty,
+                     sweep_data, sweep_math, Fs, f_opt, f_sine, pream_sps,
                      gain_data, gain_size, phase_data, phase_size, &shift_for_qam_data,
                      &sweep_warning_status);
 

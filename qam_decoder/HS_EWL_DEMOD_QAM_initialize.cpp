@@ -17,11 +17,11 @@
 // Arguments    : void
 // Return Type  : void
 //
-void HS_EWL_DEMOD_QAM_initialize()
+void HS_EWL_DEMOD_QAM_initialize(coder::comm::RaisedCosineReceiveFilter *b_rxFilter1, boolean_T *b_rxFilter1_not_empty)
 {
 //  omp_init_nest_lock(&emlrtNestLockGlobal);
-  HS_EWL_DEMOD_QAM_init();
-  HS_EWL_FREQ_ACQ_init();
+  HS_EWL_DEMOD_QAM_init(b_rxFilter1, b_rxFilter1_not_empty);
+  HS_EWL_FREQ_ACQ_init(b_rxFilter1, b_rxFilter1_not_empty);
   isInitialized_HS_EWL_DEMOD_QAM = true;
 }
 

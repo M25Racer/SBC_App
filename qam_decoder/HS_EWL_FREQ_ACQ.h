@@ -13,17 +13,20 @@
 #include "omp.h"
 #include <cstddef>
 #include <cstdlib>
+#include "qam_decoder/RaisedCosineReceiveFilter.h"
 
 // Type Declarations
 struct emxArray_real_T;
 
 // Function Declarations
-extern void HS_EWL_FREQ_ACQ(emxArray_real_T *data, double len, double Fs, double
+extern void HS_EWL_FREQ_ACQ(coder::comm::RaisedCosineReceiveFilter *b_rxFilter1,
+                            boolean_T *b_rxFilter1_not_empty,
+                            emxArray_real_T *data, double len, double Fs, double
   f_opt, double sps, double mode, double Pl, double msg_len, double M, double
   pre_qam, double *index_data, double *len_data, double f_est_data[], int
   f_est_size[1], double *warningStatus);
-void HS_EWL_FREQ_ACQ_free();
-void HS_EWL_FREQ_ACQ_init();
+void HS_EWL_FREQ_ACQ_free(coder::comm::RaisedCosineReceiveFilter *b_rxFilter1);
+void HS_EWL_FREQ_ACQ_init(coder::comm::RaisedCosineReceiveFilter *b_rxFilter1, boolean_T *b_rxFilter1_not_empty);
 double absolute_min(double idx, const double FF[50]);
 double preambule_from(const emxArray_real_T *s, double len);
 

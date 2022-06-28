@@ -13,19 +13,21 @@
 #include "omp.h"
 #include <cstddef>
 #include <cstdlib>
+#include "RaisedCosineReceiveFilter.h"
 
 // Type Declarations
 struct emxArray_real_T;
 
 // Function Declarations
-extern void HS_EWL_DEMOD_QAM(const emxArray_real_T *data, double index_data,
+extern void HS_EWL_DEMOD_QAM(coder::comm::RaisedCosineReceiveFilter *b_rxFilter1, boolean_T *b_rxFilter1_not_empty,
+                             const emxArray_real_T *data, double index_data,
   double len_data, double f_est, double Fs, double sps, double pre_qam, double M,
   creal_T qam_symbols_data[], int qam_symbols_size[1], double byte_data_data[],
   int byte_data_size[1]);
-void HS_EWL_DEMOD_QAM_free();
-void HS_EWL_DEMOD_QAM_init();
-void lagrange_resamp(emxArray_real_T *s, double p, double q, emxArray_real_T
-                     *resamp_data);
+//void HS_EWL_DEMOD_QAM_free();
+void HS_EWL_DEMOD_QAM_free(coder::comm::RaisedCosineReceiveFilter *rxFilter2);
+void HS_EWL_DEMOD_QAM_init(coder::comm::RaisedCosineReceiveFilter *rxFilter2, boolean_T *rxFilter2_not_empty);
+void lagrange_resamp(emxArray_real_T *s, double p, double q, emxArray_real_T *resamp_data);
 
 #endif
 

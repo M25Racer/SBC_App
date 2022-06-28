@@ -8,6 +8,7 @@
 #include <ringbuffer.h>
 #include <message_box.h>
 #include "qam_common.h"
+#include "qam_decoder/RaisedCosineReceiveFilter.h"
 
 using namespace QAM_Common;
 
@@ -59,11 +60,14 @@ private:
     static const uint32_t TxPacketDataSize = 212;
     static const uint32_t TxPacketDataOffset = 23;
 
-    bool m_QamDecoderFirstPassFlag = true;
-
     QMutex mutex;
 
     uint8_t frame_decoded[TxPacketDataSize];          // data decoded from single qam packet
+
+    qint64 elapsed_all = 0;
+
+    coder::comm::RaisedCosineReceiveFilter b_rxFilter1, b_rxFilter2;
+    boolean_T b_rxFilter1_not_empty, b_rxFilter2_not_empty;
 };
 
 #endif // QAM_WORKTHREAD_H

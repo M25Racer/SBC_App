@@ -121,6 +121,7 @@ private:
     void showStatusMessage(const QString &message);
     void parseDataSerialPort();
     void serialPortRxCleanup();
+    void setQamDataDrop(bool state);
 
     Ui::MainWindow *m_ui = nullptr;
     QLabel *m_status = nullptr;
@@ -129,7 +130,8 @@ private:
     QSerialPort *m_serial = nullptr;
     CMessageBox *m_message_box = nullptr;
     UsbWorkThread m_usb_thread;
-    QamThread m_qam_thread;
+    QamThread m_qam_thread1;
+    QamThread m_qam_thread2;
     FreqSweepThread m_freq_sweep_thread;
     ModTransmitterThread m_mod_tx_thread;
 
