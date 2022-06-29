@@ -64,7 +64,7 @@
 // Extern variables
 extern QElapsedTimer profiler_timer;
 extern RingBuffer *m_ring;
-extern qint64 elapsed_all_saved;
+//extern qint64 elapsed_all_saved;
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -496,7 +496,8 @@ void MainWindow::transmitDataSerialPort(const uint8_t *p_data, int length)
 #endif
 
     qint64 pt_elapsed = profiler_timer.elapsed();
-    m_console->putData(QString("Profiler timer elapsed %1 # transmit to sp end, without qam %2\n").arg(pt_elapsed).arg(pt_elapsed - elapsed_all_saved), 1);
+    //m_console->putData(QString("Profiler timer elapsed %1 # transmit to sp end, without qam %2\n").arg(pt_elapsed).arg(pt_elapsed - elapsed_all_saved), 1);
+    m_console->putData(QString("Profiler timer elapsed %1 # transmit to sp end\n").arg(pt_elapsed), 1);
 
     // todo - change slot from 'transmitDataSerialPort' to 'ModAnswerReceived' ?
     // Transmit data to 'm_mod_tx_thread' (MOD transmit & receive commands sequence)

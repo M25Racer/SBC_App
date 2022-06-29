@@ -16,7 +16,6 @@ extern uint8_t FreqSweepDataBuffer[USB_MAX_DATA_SIZE];
 extern uint8_t SweepDataBuffer[USB_MAX_DATA_SIZE];
 extern uint32_t FreqSweepDataLength;
 extern uint32_t SweepDataLength;
-extern QElapsedTimer profiler_timer;
 
 /* Global variables */
 uint8_t UserRxBuffer[USB_MAX_DATA_SIZE];

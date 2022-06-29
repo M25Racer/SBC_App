@@ -60,8 +60,6 @@ private:
     static const uint32_t TxPacketDataSize = 212;
     static const uint32_t TxPacketDataOffset = 23;
 
-    QMutex mutex;
-
     uint8_t frame_decoded[TxPacketDataSize];          // data decoded from single qam packet
 
     qint64 elapsed_all = 0;

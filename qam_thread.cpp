@@ -22,7 +22,7 @@
 extern RingBuffer *m_ring;              // ring data buffer (ADC data) for QAM decoder
 extern QWaitCondition ringNotEmpty;
 extern QMutex m_mutex_ring;
-extern QElapsedTimer profiler_timer;
+//extern QElapsedTimer profiler_timer;
 /* Private variables */
 static double Signal[USB_MAX_DATA_SIZE];
 
@@ -31,17 +31,23 @@ static double Signal[USB_MAX_DATA_SIZE];
 //double sps = round(Fs/f0);//sample per symbol
 //double mode = 1;//1-both stages enabled, 0-only sevond stage
 
+// QAM threads mutex to protect global shared variables
+static QMutex mutex;
+
 // Variables shared between threads
+double f0 = 35000;//carrier freq
+double sps = round(Fs/f0);//sample per symbol
 static double mode = 1;//1-both stages enabled, 0-only sevond stage
+static uint32_t n_decoders_started = 0;
+static bool transmit_to_sp = false;         // Transmit data to serial port
+static uint32_t transmit_sp_length = 0;     // Data length to serial port
+static uint8_t last_frame_number = 0;
 
 static uint8_t data_decoded[128*1024];      // data decoded from all qam packet
 static bool m_QamDecoderFirstPassFlag = true;
 
 double ref_cos[] = {1, 9.927089e-01, 9.709418e-01, 9.350162e-01, 8.854560e-01, 8.229839e-01, 7.485107e-01, 6.631227e-01, 5.680647e-01, 4.647232e-01, 3.546049e-01, 2.393157e-01, 1.205367e-01, 6.123234e-17, -1.205367e-01, -2.393157e-01, -3.546049e-01, -4.647232e-01, -5.680647e-01, -6.631227e-01, -7.485107e-01, -8.229839e-01, -8.854560e-01, -9.350162e-01, -9.709418e-01, -9.927089e-01, -1, -9.927089e-01, -9.709418e-01, -9.350162e-01, -8.854560e-01, -8.229839e-01, -7.485107e-01, -6.631227e-01, -5.680647e-01, -4.647232e-01, -3.546049e-01, -2.393157e-01, -1.205367e-01, -1.836970e-16, 1.205367e-01, 2.393157e-01, 3.546049e-01, 4.647232e-01, 5.680647e-01, 6.631227e-01, 7.485107e-01, 8.229839e-01, 8.854560e-01, 9.350162e-01, 9.709418e-01, 9.927089e-01};
 double ref_sin[] = {0, 1.205367e-01, 2.393157e-01, 3.546049e-01, 4.647232e-01, 5.680647e-01, 6.631227e-01, 7.485107e-01, 8.229839e-01, 8.854560e-01, 9.350162e-01, 9.709418e-01, 9.927089e-01, 1, 9.927089e-01, 9.709418e-01, 9.350162e-01, 8.854560e-01, 8.229839e-01, 7.485107e-01, 6.631227e-01, 5.680647e-01, 4.647232e-01, 3.546049e-01, 2.393157e-01, 1.205367e-01, 1.224647e-16, -1.205367e-01, -2.393157e-01, -3.546049e-01, -4.647232e-01, -5.680647e-01, -6.631227e-01, -7.485107e-01, -8.229839e-01, -8.854560e-01, -9.350162e-01, -9.709418e-01, -9.927089e-01, -1, -9.927089e-01, -9.709418e-01, -9.350162e-01, -8.854560e-01, -8.229839e-01, -7.485107e-01, -6.631227e-01, -5.680647e-01, -4.647232e-01, -3.546049e-01, -2.393157e-01, -1.205367e-01};
-
-// Debug variables
-qint64 elapsed_all_saved = 0;
 
 QamThread::QamThread(QObject *parent) :
     QThread(parent)
@@ -83,6 +89,17 @@ void QamThread::run()
         }
 
         QAM_Decoder();
+
+        mutex.lock();
+        if(transmit_to_sp && (n_decoders_started >= (unsigned int)last_frame_number + 1))
+        {                   
+            n_decoders_started = 0;
+            transmit_to_sp = false;
+
+            // Transmit decoded data to PC
+            emit postTxDataToSerialPort((uint8_t*)&data_decoded[MASTER_ADDR_SIZE], transmit_sp_length);
+        }
+        mutex.unlock();
     }
 }
 
@@ -92,6 +109,7 @@ void QamThread::SetFirstPassFlag()
     mutex.lock();
     m_QamDecoderFirstPassFlag = true;
     mode = 1;
+    f0 = 35000;
     mutex.unlock();
 }
 
@@ -99,8 +117,15 @@ void QamThread::SetFirstPassFlag()
 
 void QamThread::QAM_Decoder()
 {
-    double f0 = 35000;//carrier freq
-    double sps = round(Fs/f0);//sample per symbol
+    mutex.lock();
+    ++n_decoders_started;
+    mutex.unlock();
+
+    double f0_static;
+
+    mutex.lock();
+    f0_static = f0;
+    mutex.unlock();
 
     //  output var for HS_EWL_FREQ_ACQ
     double warning_status;
@@ -116,7 +141,7 @@ void QamThread::QAM_Decoder()
     int byte_data_size;
 
 
-    bool last_frame_received = false;
+//    bool last_frame_received = false;
     double *signal = (double*)&Signal;
     double len = Length;
 
@@ -127,13 +152,13 @@ void QamThread::QAM_Decoder()
     emxArray_real_T *data_qam256 = NULL;
     data_qam256 = emxCreateWrapper_real_T(signal, 1, len);
 
-    HS_EWL_FREQ_ACQ(&b_rxFilter1, &b_rxFilter1_not_empty, data_qam256, len, Fs, f0, sps, mode, preamble_len,
+    HS_EWL_FREQ_ACQ(&b_rxFilter1, &b_rxFilter1_not_empty, data_qam256, len, Fs, f0_static, sps, mode, preamble_len,
                       message_len, QAM_order, preamble_QAM_symbol, &index_data, &len_data, (double *)&f_est_data,
                       *(int(*)[1]) & f_est_size, &warning_status);
 
     if(warning_status != 4)
     {
-        HS_EWL_DEMOD_QAM(&b_rxFilter2, &b_rxFilter2_not_empty, data_qam256, index_data, len_data, f_est_data,
+        HS_EWL_DEMOD_QAM(&b_rxFilter1, &b_rxFilter1_not_empty, data_qam256, index_data, len_data, f_est_data,
                      Fs, sps, preamble_QAM_symbol,
                      QAM_order, qam_symbols_data, &qam_symbols_size,
                      byte_data, &byte_data_size);
@@ -177,7 +202,7 @@ void QamThread::QAM_Decoder()
             // Last frame
             else // tail->frame_flag == ENUM_FRAME_LAST
             {
-                last_frame_received = true;
+//                last_frame_received = true;
                 frame_tail_last_t *tail_last = (frame_tail_last_t*)&frame_decoded[TxPacketDataSize - sizeof(frame_tail_last_t)];
 
                 if(sizeof(data_decoded) < tail->frame_id * data_size_not_last_frame + data_size_last_frame)
@@ -204,9 +229,11 @@ void QamThread::QAM_Decoder()
                         for(uint8_t i = 0; i < data_size_last_frame; ++i)
                             data_decoded[tail->frame_id * data_size_not_last_frame + i] = (uint8_t)byte_data[i];
 
-                        // TODO - transmit later, when all QAM threads will be ready
-                        // Transmit decoded data to PC
-                        emit postTxDataToSerialPort((uint8_t*)&data_decoded[MASTER_ADDR_SIZE], tail_last->len - MASTER_ADDR_SIZE);
+                        mutex.lock();
+                        transmit_to_sp = true;
+                        transmit_sp_length = tail_last->len - MASTER_ADDR_SIZE;
+                        last_frame_number = tail_last->tail.frame_id;
+                        mutex.unlock();
 
                         emit consolePutData(QString("Last frame #%1, data length %2\n").arg(tail_last->tail.frame_id).arg(tail_last->len), 1);
                     }
@@ -251,17 +278,7 @@ void QamThread::QAM_Decoder()
     };
 
     // Debug
-    qint64 elapsed = peformance_timer.elapsed();
-    elapsed_all += elapsed;
-
-    emit consolePutData(QString("QAM decoder finished for length %1: freq = %2 Hz, elapsed time = %3 ms\n").arg(Length).arg(f_est_data).arg(elapsed), 1);
-
-    if(last_frame_received)
-    {
-        emit consolePutData(QString("Elapsed all qam = %1\n").arg(elapsed_all), 1);
-        elapsed_all_saved = elapsed_all;
-        elapsed_all = 0;
-    }
+    emit consolePutData(QString("QAM decoder finished for length %1: freq = %2 Hz, elapsed time = %3 ms\n").arg(Length).arg(f_est_data).arg(peformance_timer.elapsed()), 1);
 
 //    QString s;
 //    for(int i = 0; i < byte_data_size; i++)
