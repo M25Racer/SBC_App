@@ -77,15 +77,15 @@ Console::Console(QWidget *parent) :
 
 
     // Set the adc data file
-    m_adcFile1.reset(new QFile("SBC_adc_data1_"+ QDateTime::currentDateTime().toString("yyyy-MM-dd_hh.mm.ss.zzz") + ".txt"));
-    m_adcFile2.reset(new QFile("SBC_adc_data2_"+ QDateTime::currentDateTime().toString("yyyy-MM-dd_hh.mm.ss.zzz") + ".txt"));
-    // Open the file logging
-    m_adcFile1.data()->open(QFile::Append | QFile::Text);
-    m_adcFile2.data()->open(QFile::Append | QFile::Text);
+    for(uint8_t i = 0; i < 20; ++i)
+    {
+        m_adcFile[i].reset(new QFile("SBC_adc_data" + QString::number(i) + "_" + QDateTime::currentDateTime().toString("yyyy-MM-dd_hh.mm.ss.zzz") + ".txt"));
+        // Open the file logging
+        m_adcFile[i].data()->open(QFile::Append | QFile::Text);
 
-    // Open stream file writes
-    outAdc1.setDevice(m_adcFile1.data());
-    outAdc2.setDevice(m_adcFile2.data());
+        // Open stream file writes
+        outAdc[i].setDevice(m_adcFile[i].data());
+    }
 }
 
 void Console::putData(const QString &data, uint8_t priority)
@@ -126,20 +126,13 @@ void Console::putDataAdc(const quint8 *p_data, quint32 size)
     }
 
     // Choose adc data file to write to
-    if(n_file)
-    {
-        n_file = false;
-        m_adcFile2->resize(0);   // Clear file
-        outAdc2 << data;
-        outAdc2.flush();    // Clear the buffered data
-    }
-    else
-    {
-        n_file = true;
-        m_adcFile1->resize(0);   // Clear file
-        outAdc1 << data;
-        outAdc1.flush();    // Clear the buffered data
-    }
+
+    m_adcFile[n_file]->resize(0);   // Clear file
+    outAdc[n_file] << data;
+    outAdc[n_file].flush();    // Clear the buffered data
+
+    if(++n_file >= 20)
+        n_file = 0;
 }
 
 void Console::fileFlush()
@@ -169,8 +162,9 @@ void Console::Close()
     out.flush();    // Clear the buffered data
     m_logFile->close();
 
-    outAdc1.flush();
-    outAdc2.flush();
-    m_adcFile1->close();
-    m_adcFile2->close();
+    for(uint8_t i = 0; i < 20; ++i)
+    {
+        outAdc[i].flush();
+        m_adcFile[i]->close();
+    }
 }

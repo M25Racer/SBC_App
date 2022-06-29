@@ -93,14 +93,12 @@ private:
     }
 
     QScopedPointer<QFile> m_logFile;        // Smart pointer to log file
-    QScopedPointer<QFile> m_adcFile1;       // Smart pointer to received adc data file
-    QScopedPointer<QFile> m_adcFile2;       // Smart pointer to received adc data file
+    QScopedPointer<QFile> m_adcFile[20];       // Smart pointer to received adc data file
 
     QTextStream out;
-    QTextStream outAdc1;
-    QTextStream outAdc2;
+    QTextStream outAdc[20];
 
-    bool n_file = false;                    // ADC data file switcher
+    uint8_t n_file = 0;                    // ADC data file switcher
 };
 
 #endif // CONSOLE_H
