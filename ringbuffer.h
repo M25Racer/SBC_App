@@ -6,7 +6,7 @@
 
 namespace RingBufferNS
 {
-    const uint32_t N_ELEMENTS = (10);
+    const uint32_t N_ELEMENTS = (20);
     //const uint32_t DATA_SIZE = (10*1024*1024);//(256*1024);
 }
 
