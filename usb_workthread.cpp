@@ -19,7 +19,7 @@ extern uint32_t SweepDataLength;
 
 /* Global variables */
 uint8_t UserRxBuffer[USB_MAX_DATA_SIZE];
-uint8_t AdcDataBuffer[USB_MAX_DATA_SIZE];
+uint8_t AdcDataBuffer[20][USB_MAX_DATA_SIZE];
 
 UsbWorkThread::UsbWorkThread(QObject *parent) :
     QThread(parent)
@@ -973,8 +973,11 @@ emit consolePutData(QString("USB elapsed %1\n").arg(profiler_timer.elapsed()), 1
             emit hsDataReceived();
 
 #ifdef QT_DEBUG
-            memcpy(AdcDataBuffer, UserRxBuffer + pStartData + sizeof(USBheader_t), header->packet_length - sizeof(USBheader_t));
-            emit consoleAdcFile(AdcDataBuffer, header->packet_length - sizeof(USBheader_t));
+            static uint8_t n = 0;
+            memcpy((uint8_t*)&AdcDataBuffer[n][0], UserRxBuffer + pStartData + sizeof(USBheader_t), header->packet_length - sizeof(USBheader_t));
+            emit consoleAdcFile((uint8_t*)&AdcDataBuffer[n][0], header->packet_length - sizeof(USBheader_t));
+            if(++n >= 20)
+                n = 0;
 #endif
             break;
         }
