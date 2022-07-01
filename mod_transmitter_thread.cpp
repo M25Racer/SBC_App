@@ -76,6 +76,7 @@ void ModTransmitterThread::run()
 
                 State = SIN35KHZ_MOD_COMMANDS_FOR_AGC;
                 n_commands = 0;
+                Set_AGC_State(AGC_START);
                 /* fallthrough */
 
             case SIN35KHZ_MOD_COMMANDS_FOR_AGC:
@@ -83,9 +84,23 @@ void ModTransmitterThread::run()
                     // Send 'SEND_SIN_35KHZ' command to MOD
                     uint8_t AGCState = Get_AGC_State();
 
+                    // Check for continuous AGC errors
+                    if(AGCState == AGC_ERROR)
+                    {
+                        if(++n_continuous_errors > n_MaxContinuousAgcErrors)
+                        {
+                            n_continuous_errors = 0;
+                            emit consolePutData(":: Predistortion auto cfg :: AGC failed with status 'AGC error' (too much continuous errors)\n", 1);
+                            calculatePredistortionTablesStop();
+                            break;
+                        }
+                    }
+                    else
+                        n_continuous_errors = 0;
+
                     // At least one 'SIN 35kHz' must be transmitted and AGCState = AGC_OK
                     if(AGCState != AGC_OK || !n_commands)
-                    {
+                    {                       
                         if(++n_commands > n_MaxSin35kHzCommands)
                         {
                             emit consolePutData(":: Predistortion auto cfg :: AGC for 'SIN 35kHz' error: too many 'SEND_SIN_35KHZ' commands transmitted to MOD and still no 'AGC OK' status from STM32\n", 1);
@@ -96,7 +111,7 @@ void ModTransmitterThread::run()
                         message.command = CMessageBox::SEND_SIN_35KHZ;
                         message.packet_adr = 0;
                         message.data_len = 0;
-                        message.message_id = 0;
+                        message.message_id = 3;//0;
                         message.master_address = CMessageBox::MOD_ADDR;
                         message.own_address = CMessageBox::MASTER_ADDR;
 
@@ -196,6 +211,7 @@ void ModTransmitterThread::run()
 
                 State = SWEEP_MOD_COMMANDS_FOR_AGC;
                 n_commands = 0;
+                Set_AGC_State(AGC_START);
                 /* fallthrough */
 
             case SWEEP_MOD_COMMANDS_FOR_AGC:
@@ -316,6 +332,7 @@ void ModTransmitterThread::run()
 
                 State = STAT_MOD_COMMANDS_FOR_AGC;
                 n_commands = 0;
+                Set_AGC_State(AGC_START);
                 /* fallthrough */
 
              case STAT_MOD_COMMANDS_FOR_AGC:
@@ -626,6 +643,29 @@ void ModTransmitterThread::calculatePredistortionTablesStart()
 // Private
 void ModTransmitterThread::calculatePredistortionTablesStop()
 {
+    // Check AGC state, stop AGC if needed
+    uint8_t n_retrys = 2;
+
+    while(1)
+    {
+        if(Get_AGC_State() == AGC_OK)
+            break;
+
+        if(!n_retrys)
+        {
+            emit consolePutData(":: Predistortion auto cfg :: error 'AGC stop' failed\n", 1);
+            break;
+        }
+
+        emit consolePutData(":: Predistortion auto cfg :: send 'AGC stop'\n", 1);
+        emit sendCommandToSTM32(USB_CMD_AGC_STOP, nullptr, 0);
+        QThread::msleep(1000);
+        emit sendCommandToSTM32(USB_CMD_GET_STATUS, nullptr, 0);
+        QThread::msleep(1000);
+
+        --n_retrys;
+    }
+
     State = IDLE;
     StatePredistTx = TX_IDLE;
     emit consolePutData(":: Predistortion auto cfg :: enable QAM decoder ring buffer'\n", 1);

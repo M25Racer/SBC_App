@@ -87,20 +87,23 @@ private:
     bool retry = false;
     uint32_t n_attempts = 0;
     uint32_t n_attempts_high_level = 0;
+    uint32_t n_continuous_errors = 0;                       // number of continuous AGC errors
 
-    const uint32_t n_MaxAttempts = 5;
+    const uint32_t n_MaxAttempts = 15;
     const uint32_t n_MaxAttemptsHighLevel = 3;
+    const uint32_t n_MaxContinuousAgcErrors = 10;           // max number of continuous AGC errors
+
     const uint32_t timeoutAnswer_ms = 800;
 
-    const uint32_t timeoutAgcSin35kHzCommands_ms = 300;     // timeout between SIN 35 kHz transfers for AGC
+    const uint32_t timeoutAgcSin35kHzCommands_ms = 400;     // timeout between SIN 35 kHz transfers for AGC
     const uint32_t timeoutAgcSweepCommands_ms = 600;        // timeout between Sweep transfers for AGC
-    const uint32_t timeoutModStatusCommands_ms = 200;       // timeout between MOD GET STATUS transfers for AGC
+    const uint32_t timeoutModStatusCommands_ms = 400;       // timeout between MOD GET STATUS transfers for AGC
 
     const uint32_t n_MaxSin35kHzCommands = 100;             // max number of SIN 35 kHz transfers for AGC
     const uint32_t n_MaxSweepCommands = 100;                // max number of Sweep transfers for AGC
     const uint32_t n_MaxModStatusCommands = 100;            // max number of MOD STATUS transfers for AGC
 
-    bool hs_data_received = false;      // If true, indicates that at least some 'HS' data was received from usb STM32 H7
+    bool hs_data_received = false;      // If true, indicates that at least some 'HS' data was received from usb STM32 H7   
 };
 
 #endif // MOD_TRANSMITTER_THREAD_H
