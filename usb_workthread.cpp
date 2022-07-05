@@ -4,6 +4,11 @@
 #include "agc_algorithm.h"
 #include "global_vars.h"
 
+/* Private variables */
+#ifdef QT_DEBUG
+static uint8_t AdcDataBuffer[20][USB_MAX_DATA_SIZE];
+#endif
+
 /* Extern global variables */
 extern RingBuffer *m_ring;              // ring data buffer (ADC data) for QAM decoder
 extern QWaitCondition ringNotEmpty;
@@ -20,7 +25,6 @@ extern QElapsedTimer profiler_timer;
 
 /* Global variables */
 uint8_t UserRxBuffer[USB_MAX_DATA_SIZE];
-uint8_t AdcDataBuffer[20][USB_MAX_DATA_SIZE];
 
 UsbWorkThread::UsbWorkThread(QObject *parent) :
     QThread(parent)

@@ -977,9 +977,9 @@ void HS_EWL_FREQ_ACQ(emxArray_real_T *data, double len, double Fs, double f_opt,
     HS_EWL_DEMOD_QAM_initialize();
   }
 
-  //  function f_est =  HS_EWL_FREQ_ACQ(data, len, Fs, f_opt, mode, ... %#codegen 
+  //  function f_est =  HS_EWL_FREQ_ACQ(data, len, Fs, f_opt, mode, ... %#codegen
   //      Pl          ,...               % Length of a preambule in symbols
-  //      msg_len     ,...              % Length of whole message in symbols     
+  //      msg_len     ,...              % Length of whole message in symbols
   //      M           ,...              % QAM order
   //      pre_qam        )           % Preamble QAM symbol)
   //  persistent rxFilter1;
@@ -987,7 +987,7 @@ void HS_EWL_FREQ_ACQ(emxArray_real_T *data, double len, double Fs, double f_opt,
   //      rxFilter1 = HS_EWL_FREQ_ACQ_INIT();
   //  end
   //
-  //  f_est = HS_EWL_FREQ_ACQ_APPLY(data, len, Fs, f_opt, mode,rxFilter1, Pl, msg_len, M, pre_qam); 
+  //  f_est = HS_EWL_FREQ_ACQ_APPLY(data, len, Fs, f_opt, mode,rxFilter1, Pl, msg_len, M, pre_qam);
   //
   //  end
   //
@@ -1188,9 +1188,9 @@ void HS_EWL_FREQ_ACQ(emxArray_real_T *data, double len, double Fs, double f_opt,
         tt->data[i] = s2->data[i];
       }
 
-      receiveByteLen = sps * (Pl - 2.0);
+      receiveByteLen = sps * ((Pl+10) - 2.0);//CHANGE
       b_sps[0] = receiveByteLen;
-      b_sps[1] = static_cast<double>(s2->size[1]) - receiveByteLen;
+      b_sps[1] = static_cast<double>(s2->size[1]) - sps * ((Pl-10) - 2.0);//CAHNGE
       f_opt = optimize_sin(testSignal, tt, b_sps, f_opt);
     }
 
@@ -1357,9 +1357,9 @@ void HS_EWL_FREQ_ACQ(emxArray_real_T *data, double len, double Fs, double f_opt,
         pre_from++;
         if (pre_from == 5.0) {
           startPreamPoint_re = z2_data[static_cast<int>((static_cast<double>(nx)
-            + 6.0) - 2.0) - 1].re;
+            + 6.0) + 2.0) - 1].re;//CHANGE
           startPreamPoint_im = z2_data[static_cast<int>((static_cast<double>(nx)
-            + 6.0) - 2.0) - 1].im;
+            + 6.0) + 2.0) - 1].im;//CHANGE
           exitg1 = true;
         } else {
           nx++;
@@ -1375,7 +1375,7 @@ void HS_EWL_FREQ_ACQ(emxArray_real_T *data, double len, double Fs, double f_opt,
     pre_from = 0.0;
 
     //  for i = length(z2)-(Pl*2-1):length(z2)
-    //      if abs(real(z2(i))) - abs(real(z2(i+1))) <= 0 + disp_pre && abs(real(z2(i))) - abs(real(z2(i+1))) >= 0 - disp_pre 
+    //      if abs(real(z2(i))) - abs(real(z2(i+1))) <= 0 + disp_pre && abs(real(z2(i))) - abs(real(z2(i+1))) >= 0 - disp_pre
     //          preamble_count = preamble_count +1;
     //          if preamble_count == pre_win
     //              endPreamPoint = z2(i-fix(pre_win/2),1);
@@ -1421,27 +1421,27 @@ void HS_EWL_FREQ_ACQ(emxArray_real_T *data, double len, double Fs, double f_opt,
           b_x[i1] = z2_data[(i1 + static_cast<int>(receiveByteLen)) - 4].re;
         }
 
-        if (!(((((b_x[0] + b_x[1]) + b_x[2]) + b_x[3]) + b_x[4]) / 5.0 <= 0.15))
+        if (!(((((b_x[0] + b_x[1]) + b_x[2]) + b_x[3]) + b_x[4]) / 5.0 <= 0.15 && ((((b_x[0] + b_x[1]) + b_x[2]) + b_x[3]) + b_x[4]) / 5.0 >= -0.15))
         {
-          for (i1 = 0; i1 < 5; i1++) {
-            b_x[i1] = z2_data[(i1 + static_cast<int>(receiveByteLen)) - 4].re;
-          }
+//          for (i1 = 0; i1 < 5; i1++) {
+//            b_x[i1] = z2_data[(i1 + static_cast<int>(receiveByteLen)) - 4].re;
+//          }
 
-          if (!(((((b_x[0] + b_x[1]) + b_x[2]) + b_x[3]) + b_x[4]) / 5.0 >=
-                -0.15)) {
+//          if (!(((((b_x[0] + b_x[1]) + b_x[2]) + b_x[3]) + b_x[4]) / 5.0 >=
+//                -0.15)) {
             pre_from++;
             if (pre_from == 5.0) {
-              endPreamPoint_re = z2_data[static_cast<int>(receiveByteLen) - 3].
+              endPreamPoint_re = z2_data[static_cast<int>(receiveByteLen) + 3].//CHANGE
                 re;
-              endPreamPoint_im = z2_data[static_cast<int>(receiveByteLen) - 3].
+              endPreamPoint_im = z2_data[static_cast<int>(receiveByteLen) + 3].//CHANGE
                 im;
               exitg1 = true;
             } else {
               nx++;
             }
-          } else {
-            guard1 = true;
-          }
+//          } else {
+//            guard1 = true;
+//          }
         } else {
           guard1 = true;
         }
@@ -1532,7 +1532,7 @@ void HS_EWL_FREQ_ACQ(emxArray_real_T *data, double len, double Fs, double f_opt,
     //  plot(startPreamPoint*del,'r *');
     //  hold on
     //  plot(endPreamPoint*del,'r *');
-    //  dist_preambules = sqrt((real(z2(span/2+preamb_shift)*del)-real(z2(end-preamb_shift)*del))^2 + (imag(z2(span/2+preamb_shift)*del)-imag(z2(end-preamb_shift)*del))^2); 
+    //  dist_preambules = sqrt((real(z2(span/2+preamb_shift)*del)-real(z2(end-preamb_shift)*del))^2 + (imag(z2(span/2+preamb_shift)*del)-imag(z2(end-preamb_shift)*del))^2);
     //  if angle(z2(span/2+preamb_shift)*del)<angle(z2(end-preamb_shift)*del)
     //      dist_preambules = -dist_preambules;
     //  end

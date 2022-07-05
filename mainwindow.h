@@ -103,6 +103,7 @@ private slots:
     void handleError(QSerialPort::SerialPortError error);
     void consolePutData(const QString &data, quint8 priority);
     void consoleAdcData(const quint8 *p_data, quint32 size);
+    void consoleFrameErrorData(const qint16 *p_data, quint32 len);
     void timeoutSerialPortRx();
     void timeoutSerialPortReconnect();
     void timeoutUsbInitCallback();

@@ -105,6 +105,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(&m_usb_thread, &UsbWorkThread::hsDataReceived, this, &MainWindow::usbHsDataReceived, Qt::ConnectionType::QueuedConnection);
     //connect(&m_usb_thread, &UsbWorkThread::postDataToStm32H7, this, &MainWindow::postTxDataSTM);
     connect(&m_qam_thread, &QamThread::consolePutData, this, &MainWindow::consolePutData, Qt::ConnectionType::QueuedConnection);
+    connect(&m_qam_thread, &QamThread::consoleFrameErrorFile, this, &MainWindow::consoleFrameErrorData, Qt::ConnectionType::QueuedConnection);
     connect(&m_qam_thread, &QamThread::postTxDataToSerialPort, this, &MainWindow::transmitDataSerialPort, Qt::ConnectionType::QueuedConnection);
     connect(&m_freq_sweep_thread, &FreqSweepThread::consolePutData, this, &MainWindow::consolePutData, Qt::ConnectionType::QueuedConnection);
     connect(&m_mod_tx_thread, &ModTransmitterThread::consolePutData, this, &MainWindow::consolePutData, Qt::ConnectionType::QueuedConnection);
@@ -195,6 +196,14 @@ void MainWindow::consoleAdcData(const quint8 *p_data, quint32 size)
         return;
 
     m_console->putDataAdc(p_data, size);
+}
+
+void MainWindow::consoleFrameErrorData(const qint16 *p_data, quint32 len)
+{
+    if(m_console == nullptr)
+        return;
+
+    m_console->putFrameErrorData(p_data, len);
 }
 
 bool MainWindow::openSerialPort()

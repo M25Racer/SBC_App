@@ -20,6 +20,7 @@ class QamThread : public QThread
 signals:
     void consolePutData(const QString &data, quint8 priority);
     void postTxDataToSerialPort(const uint8_t *p_data, int len);
+    void consoleFrameErrorFile(const qint16 *p_data, quint32 len);
 
 public slots:
 
@@ -64,6 +65,8 @@ private:
     QMutex mutex;
 
     uint8_t frame_decoded[TxPacketDataSize];          // data decoded from single qam packet
+
+    uint8_t n_error_frame = 0;
 };
 
 #endif // QAM_WORKTHREAD_H

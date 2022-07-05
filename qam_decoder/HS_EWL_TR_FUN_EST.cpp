@@ -360,9 +360,9 @@ void HS_EWL_TR_FUN_EST(const emxArray_real_T *sweep_data, const emxArray_real_T 
           }
 
           nx_tmp = i2 - i1;
-          int exitg2;
+//          int exitg2;
 //          do {
-            exitg2 = 0;
+//            exitg2 = 0;
             br = (PreSPP * 2.0 - static_cast<double>(iindx)) + corr_var;
             pi_jump_count = static_cast<double>(resamp_sweep->size[0]) - br;
             if (1.0 > pi_jump_count) {
@@ -508,7 +508,7 @@ void HS_EWL_TR_FUN_EST(const emxArray_real_T *sweep_data, const emxArray_real_T 
             }
 
             if (pi_jump_count <= 5.0) {
-              exitg2 = 1;
+//              exitg2 = 1;
             } else {
               corr_var *= 2.0;
             }

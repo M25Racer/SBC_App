@@ -86,6 +86,14 @@ Console::Console(QWidget *parent) :
         // Open stream file writes
         outAdc[i].setDevice(m_adcFile[i].data());
     }
+
+    // Set the adc data file for frame errors
+    m_frameErrorFile.reset(new QFile("Frame_errors_adc_data_" + QDateTime::currentDateTime().toString("yyyy-MM-dd_hh.mm.ss.zzz") + ".txt"));
+    // Open the file logging
+    m_frameErrorFile.data()->open(QFile::Append | QFile::Text);
+
+    // Open stream file writes
+    outFrameErrorAdc.setDevice(m_frameErrorFile.data());
 }
 
 void Console::putData(const QString &data, uint8_t priority)
@@ -135,6 +143,30 @@ void Console::putDataAdc(const quint8 *p_data, quint32 size)
         n_file = 0;
 }
 
+void Console::putFrameErrorData(const qint16 *p_data, quint32 len)
+{
+    QString data;
+//    data.append(QString("=================================== Frame #%1, len %2 ===================================\n").arg(n_frame++).arg(len));
+
+//    for(uint64_t i = 0; i < len; ++i)
+//    {
+//        data.append(QString("%1\n").arg((int16_t)p_data[i]));
+//    }
+
+//    data.append("\n");
+
+    data.append(QString("%1 // =================================== Frame #%2, len %3 ===================================\n").arg((int16_t)p_data[0]).arg(n_frame++).arg(len));
+
+    for(uint64_t i = 1; i < len; ++i)
+    {
+        data.append(QString("%1\n").arg((int16_t)p_data[i]));
+    }
+
+    //m_frameErrorFile->resize(0);    // Clear file
+    outFrameErrorAdc << data;
+    outFrameErrorAdc.flush();       // Clear the buffered data
+}
+
 void Console::fileFlush()
 {
     putData("Force log file flush by user\n", 1);
@@ -159,12 +191,15 @@ void Console::fileOpen()
 
 void Console::Close()
 {
-    out.flush();    // Clear the buffered data
-    m_logFile->close();
+    out.flush();                    // Clear the buffered data
+    m_logFile->close();             // Close file
 
     for(uint8_t i = 0; i < 20; ++i)
     {
-        outAdc[i].flush();
-        m_adcFile[i]->close();
+        outAdc[i].flush();          // Clear the buffered data
+        m_adcFile[i]->close();      // Close file
     }
+
+    outFrameErrorAdc.flush();       // Clear the buffered data
+    m_frameErrorFile->close();      // Close file
 }

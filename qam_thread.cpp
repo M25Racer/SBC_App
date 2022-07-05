@@ -25,6 +25,7 @@ extern QMutex m_mutex_ring;
 extern QElapsedTimer profiler_timer;
 /* Private variables */
 static double Signal[USB_MAX_DATA_SIZE];
+static int16_t FrameErrorAdcBuffer[10][USB_MAX_DATA_SIZE];
 
 //double Fs = 1832061;//280000;//ADC sample rate
 double f0 = 35000;//carrier freq
@@ -107,6 +108,7 @@ void QamThread::SetFirstPassFlag()
 
 void QamThread::QAM_Decoder()
 {
+    bool crc_error = false;
     bool last_frame_received = false;
     double *signal = (double*)&Signal;
     double len = Length;
@@ -142,10 +144,13 @@ void QamThread::QAM_Decoder()
 
         if(crc8 != tail->crc8)
         {
+            crc_error = true;
             emit consolePutData(QString("HS frame parsing crc error\n"), 1);
         }
         else
         {
+            crc_error = false;
+
             const uint32_t data_size_not_last_frame = TxPacketDataSize - sizeof(frame_tail_nlast_t);    // valuable data in 'not last' frame
             const uint32_t data_size_last_frame = TxPacketDataSize - sizeof(frame_tail_last_t);         // valuable data in 'last' frame
 
@@ -240,6 +245,22 @@ void QamThread::QAM_Decoder()
             emit consolePutData("warning_status = 4: error probably wrong f_est\n", 1);
             break;
     };
+
+//#ifdef QT_DEBUG
+    if(crc_error || warning_status != CORRECT)
+    {
+        for(uint32_t i = 0; i < Length; ++i)
+        {
+            double val = Signal[i];
+            FrameErrorAdcBuffer[n_error_frame][i] = (int16_t)val;
+        }
+
+        emit consoleFrameErrorFile(FrameErrorAdcBuffer[n_error_frame], Length);
+
+        if(++n_error_frame == 10)
+            n_error_frame = 0;
+    }
+//#endif
 
     // Debug
     qint64 elapsed = peformance_timer.elapsed();

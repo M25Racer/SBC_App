@@ -69,6 +69,7 @@ public:
 
     void putData(const QString &data, uint8_t priority);
     void putDataAdc(const quint8 *p_data, quint32 size);
+    void putFrameErrorData(const qint16 *p_data, quint32 len);
     //void setLocalEchoEnabled(bool set);
     void Close();
     void fileFlush();
@@ -93,12 +94,15 @@ private:
     }
 
     QScopedPointer<QFile> m_logFile;        // Smart pointer to log file
-    QScopedPointer<QFile> m_adcFile[20];       // Smart pointer to received adc data file
+    QScopedPointer<QFile> m_adcFile[20];    // Smart pointer to received adc data file
+    QScopedPointer<QFile> m_frameErrorFile; // Smart pointer to received adc data file (special for frame errors)
 
     QTextStream out;
     QTextStream outAdc[20];
+    QTextStream outFrameErrorAdc;
 
-    uint8_t n_file = 0;                    // ADC data file switcher
+    uint8_t n_file = 0;                     // ADC data file switcher
+    uint32_t n_frame = 0;                   // Number of frame for 'frame error adc data file'
 };
 
 #endif // CONSOLE_H
