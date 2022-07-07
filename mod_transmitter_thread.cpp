@@ -645,8 +645,8 @@ void ModTransmitterThread::calculatePredistortionTablesStart()
                         "Starting predistortion auto configuration sequence\n"
                         "==================================================\n", 1);
     m_mutex_mod.lock();
-    if(State == IDLE)
-        State = AUTOCFG_START;
+    State = AUTOCFG_START;
+    StatePredistTx = TX_IDLE;
     m_mutex_mod.unlock();
     modTransmitWakeUp.wakeOne();
 }
