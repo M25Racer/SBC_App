@@ -49,24 +49,33 @@ private:
 
     typedef enum
     {
-        IDLE = 0,
-        AUTOCFG_START = 1,
-        SIN35KHZ_MOD_COMMANDS_FOR_AGC = 2,
-        ADC_START_FOR_SIN600 = 3,
-        SIN600_MOD_COMMAND = 4,
-        FREQ_ESTIMATE_FUNC_WAIT = 5,
-        AGC_START_FOR_SWEEP = 6,
-        SWEEP_MOD_COMMANDS_FOR_AGC = 7,
-        ADC_START_FOR_SWEEP = 8,
-        SWEEP_MOD_COMMAND = 9,
-        SWEEP_FUNC_WAIT = 10,
-        AGC_START_FOR_MOD_STAT = 11,
-        STAT_MOD_COMMANDS_FOR_AGC = 12,
-        START_TX_PREDISTORTION_TABLES_TO_MOD = 13,
-        TX_PREDISTORTION_TABLES_TO_MOD = 14,
-//        AGC_START_FOR_MOD_STAT2 = 15,
-//        STAT_MOD_COMMANDS_FOR_AGC2 = 16,
-        AUTOCFG_COMPLETE = 17
+        IDLE = 0,                                   // Auto configuration is not active or finished, idle state
+        AUTOCFG_START = 1,                          // Auto configuration started
+        SIN35KHZ_MOD_COMMANDS_FOR_AGC = 2,          // AGC (automatic gain configuration) for 'sinus 35 kHz' signal is in progress
+        ADC_START_FOR_SIN600 = 3,                   // Configuring ADC to record 'sinus 35 kHz 600 periods' signal
+        SIN600_MOD_COMMAND = 4,                     // Requesting MOD to send 'sinus 34 kHz 600 periods' signal
+        FREQ_ESTIMATE_FUNC_WAIT = 5,                // Frequency estimate is in progress, please wait...
+        AGC_START_FOR_SWEEP = 6,                    // Starting AGC (automatic gain configuration) for 'sweep' signal
+        SWEEP_MOD_COMMANDS_FOR_AGC = 7,             // AGC (automatic gain configuration) for 'sweep' signal is in progress
+        ADC_START_FOR_SWEEP = 8,                    // Configuring ADC to record 'sweep' signal
+        SWEEP_MOD_COMMAND = 9,                      // Requesting MOD to send 'sweep' signal
+        SWEEP_FUNC_WAIT = 10,                       // 'Sweep' is in progress, please wait...
+        AGC_START_FOR_SIN35KHZ = 11,                // tarting AGC (automatic gain configuration) for 'sinus 35 kHz' signal
+        SIN35KHZ_MOD_COMMANDS_FOR_AGC_2 = 12,       // AGC (automatic gain configuration) for 'sinus 35 kHz' signal is in progress
+        START_TX_PREDISTORTION_TABLES_TO_MOD = 13,  // Preparing to transmit 'predistortion tables' to MOD
+        TX_PREDISTORTION_TABLES_TO_MOD = 14,        // Transmitting 'predistortion tables' to MOD, please wait...
+        AGC_START_FOR_MOD_STAT = 15,                // 'Predistortion tables' calculation complete. Starting AGC (automatic gain configuration) for 'MOD get status' signal
+        STAT_MOD_COMMANDS_FOR_AGC = 16,             // AGC (automatic gain configuration) for 'MOD get status' signal is in progress
+
+        ERROR_PREDISTORTION_TABLES_TX_FAILED = 249,     // Errors todo
+        ERROR_AGC_MODSTAT = 250,
+        ERROR_SWEEP_TIMEOUT = 251,
+        ERROR_AGC_SWEEP = 252,
+        ERROR_FREQ_ESTIMATE_TIMEOUT = 253,
+        ERROR_AGC_SIN35KHZ = 254,
+
+        AUTOCFG_COMPLETE_SUCCESSFULLY = 255         // Auto configuration complete successfully, ready for work
+
     } TState;
 
     TState State = IDLE;
