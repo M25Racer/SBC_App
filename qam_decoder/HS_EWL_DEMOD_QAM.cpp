@@ -2,37 +2,36 @@
 // File: HS_EWL_DEMOD_QAM.cpp
 //
 // MATLAB Coder version            : 5.1
-// C/C++ source code generated on  : 06-May-2022 14:49:51
+// C/C++ source code generated on  : 08-Jul-2022 10:21:26
 //
 
 // Include Files
 #include "HS_EWL_DEMOD_QAM.h"
 #include "FIRDecimator.h"
 #include "HS_EWL_DEMOD_QAM_data.h"
-#include "HS_EWL_DEMOD_QAM_emxutil.h"
 #include "HS_EWL_DEMOD_QAM_initialize.h"
 #include "HS_EWL_DEMOD_QAM_rtwutil.h"
-#include "HS_EWL_DEMOD_QAM_types.h"
 #include "RaisedCosineReceiveFilter.h"
 #include "minOrMax.h"
-#include "qamdemod.h"
 #include "qammod.h"
 #include "rat.h"
 #include "rt_nonfinite.h"
-#include "xcorr.h"
 #include "rt_nonfinite.h"
+#include "stdint.h"
 #include <cmath>
+#include <cstring>
+#include <omp.h>
 
 // Variable Definitions
 static coder::comm::RaisedCosineReceiveFilter rxFilter1;
 static boolean_T rxFilter1_not_empty;
-
-// Extern variables
-//extern double warning_status;
+extern double ref_cos[];
+extern double ref_sin[];
 
 // Function Definitions
 //
-// Arguments    : const emxArray_real_T *data
+// Arguments    : const double data[14000]
+//                double len
 //                double index_data
 //                double len_data
 //                double f_est
@@ -40,100 +39,67 @@ static boolean_T rxFilter1_not_empty;
 //                double sps
 //                double pre_qam
 //                double M
-//                creal_T qam_symbols_data[]
-//                int qam_symbols_size[1]
-//                double byte_data_data[]
-//                int byte_data_size[1]
+//                double *qam_symbols_real
+//                double *qam_symbols_imag
+//                double *byte_data
 // Return Type  : void
 //
-void HS_EWL_DEMOD_QAM(const emxArray_real_T *data, double index_data, double
-                      len_data, double f_est, double Fs, double sps, double
-                      pre_qam, double M, creal_T qam_symbols_data[], int
-                      qam_symbols_size[1], double byte_data_data[], int
-                      byte_data_size[1])
+void HS_EWL_DEMOD_QAM(const double data[14000], double len, double index_data,
+                      double len_data, double f_est, double Fs, double, double,
+                      double, double *qam_symbols_real, double *qam_symbols_imag,
+                      double *byte_data)
 {
-  emxArray_creal_T *c_resamp_signal;
-  emxArray_creal_T *r;
-  emxArray_real_T *b_c;
-  emxArray_real_T *b_resamp_signal;
-  //emxArray_real_T *b_time;
-  emxArray_real_T *c;
-  emxArray_real_T *input_data;
-  emxArray_real_T *r1;
-  emxArray_real_T *resamp_signal;
-  emxArray_real_T *trData;
-  creal_T b_z_data[275];
-  creal_T z_data[275];
-  creal_T del;
-  double Q;
-  double b_r;
-  int z_size[2];
-  int b_z_size[1];
-  int unnamed_idx_1;
-  extern double ref_cos[];
-  extern double ref_sin[];
+  static creal_T b_y1[14040];
+  static double s[14044];
+  static double input_data[14040];
+  creal_T z[270];
+  double resamp_signal[14040];
+  double intX[265];
+  double c1[209];
+  double b_varargin_1[105];
+  double a3;
+  double p;
+  double q;
+  int i;
+  unsigned char mapping[256];
+  signed char symbolI[256];
+  signed char symbolQ[256];
   if (!isInitialized_HS_EWL_DEMOD_QAM) {
     HS_EWL_DEMOD_QAM_initialize();
   }
 
-  emxInit_real_T(&input_data, 2);
-  emxInit_real_T(&resamp_signal, 1);
-  emxInit_real_T(&trData, 2);
-  emxInit_real_T(&c, 1);
-  //emxInit_real_T(&b_time, 1);
-  emxInit_creal_T(&r, 1);
-  emxInit_real_T(&b_resamp_signal, 1);
-  emxInit_real_T(&r1, 1);
-  emxInit_creal_T(&c_resamp_signal, 1);
-  emxInit_real_T(&b_c, 1);
+  std::memset(&input_data[0], 0, 14040U * sizeof(double));
   if ((index_data == 0.0) && (len_data == 0.0)) {
-    qam_symbols_size[0] = 1;
-    qam_symbols_data[0].re = 0.0;
-    qam_symbols_data[0].im = 0.0;
-    byte_data_size[0] = 1;
-    byte_data_data[0] = 0.0;
+    *qam_symbols_real = 0.0;
+    *qam_symbols_imag = 0.0;
+    *byte_data = 0.0;
 
     // error = 1;
   } else {
-    double maxval;
-    double re;
-    int i;
-    int i1;
+    creal_T dc;
+    double Fd;
+    double a1;
+    double a3_tmp;
+    double d;
+    double del_re;
+    double resamp_len;
+    double x;
+    int idx;
+    int ihi;
     int k;
-    int nx;
     int start_inf_data;
-    maxval = index_data + len_data;
-    if (maxval > data->size[1]) {
-      if (index_data > data->size[1]) {
-        i = -1;
-        i1 = -1;
-      } else {
-        i = static_cast<int>(index_data) - 2;
-        i1 = data->size[1] - 1;
-      }
-
-      unnamed_idx_1 = static_cast<int>(maxval - static_cast<double>(data->size[1]));
-      k = input_data->size[0] * input_data->size[1];
-      input_data->size[0] = 1;
-      nx = i1 - i;
-      input_data->size[1] = nx + unnamed_idx_1;
-      emxEnsureCapacity_real_T(input_data, k);
-      for (k = 0; k < nx; k++) {
-        input_data->data[k] = data->data[(i + k) + 1];
-      }
-
-      for (k = 0; k < unnamed_idx_1; k++) {
-        input_data->data[(k + i1) - i] = 0.0;
+    int varargin_1;
+    if (index_data + len_data > len) {
+      varargin_1 = static_cast<int>((len - index_data) + 1.0);
+      for (i = 0; i < varargin_1; i++) {
+        input_data[i] = data[static_cast<int>(index_data + static_cast<double>(i))
+          - 1];
       }
     } else {
-      i = input_data->size[0] * input_data->size[1];
-      input_data->size[0] = 1;
-      nx = static_cast<int>(std::floor(len_data));
-      input_data->size[1] = nx + 1;
-      emxEnsureCapacity_real_T(input_data, i);
-      for (i = 0; i <= nx; i++) {
-        input_data->data[i] = data->data[static_cast<int>(index_data +
-          static_cast<double>(i)) - 1];
+      varargin_1 = static_cast<int>(len_data + 1.0);
+      for (i = 0; i < varargin_1; i++) {
+        input_data[i] = data[static_cast<int>(index_data + static_cast<double>(i))
+          - 1];
       }
     }
 
@@ -143,357 +109,292 @@ void HS_EWL_DEMOD_QAM(const emxArray_real_T *data, double index_data, double
       rxFilter1_not_empty = true;
     }
 
-    coder::rat(f_est * sps / Fs, &b_r, &Q);
+    Fd = f_est * 52.0;
+    coder::rat(Fd / Fs, &p, &q);
 
     //      input_data = data(index_data: index_data+len_data);
-    maxval = coder::internal::maximum(input_data);
-    i = input_data->size[0] * input_data->size[1];
-    i1 = input_data->size[0] * input_data->size[1];
-    input_data->size[0] = 1;
-    emxEnsureCapacity_real_T(input_data, i1);
-    nx = i - 1;
-    for (i = 0; i <= nx; i++) {
-      input_data->data[i] /= maxval;
+    a1 = coder::internal::maximum(input_data);
+
+    //  Input parameters
+    //   s   - input signal vector [N x 1];
+    //   p   - p paramter of samplarate conversion
+    //   q   - q paramter of samplarate conversion
+    //   x0  - fractional delay
+    //  Ouptut parameters
+    //   y   - Resampled signal
+    for (i = 0; i < 14040; i++) {
+      input_data[i] /= a1;
+      resamp_signal[i] = 0.0;
     }
 
-    lagrange_resamp(input_data, b_r, Q, resamp_signal);
-    b_r = static_cast<double>(resamp_signal->size[0]) / sps;
-    if (b_r < 0.0) {
-      b_r = std::ceil(b_r);
-    } else {
-      b_r = std::floor(b_r);
-    }
+    if (p > 1.0) {
+      if (q == 1.0) {
+        resamp_len = std::floor(len_data * p) + 1.0;
 
-    Q = (b_r - 1.0) * sps;
-//    if (rtIsNaN(Q - 1.0)) {
-//      i = input_data->size[0] * input_data->size[1];
-//      input_data->size[0] = 1;
-//      input_data->size[1] = 1;
-//      emxEnsureCapacity_real_T(input_data, i);
-//      input_data->data[0] = rtNaN;
-//    } else if (Q - 1.0 < 0.0) {
-//      input_data->size[0] = 1;
-//      input_data->size[1] = 0;
-//    } else if (rtIsInf(Q - 1.0) && (0.0 == Q - 1.0)) {
-//      i = input_data->size[0] * input_data->size[1];
-//      input_data->size[0] = 1;
-//      input_data->size[1] = 1;
-//      emxEnsureCapacity_real_T(input_data, i);
-//      input_data->data[0] = rtNaN;
-//    } else {
-//      i = input_data->size[0] * input_data->size[1];
-//      input_data->size[0] = 1;
-//      nx = static_cast<int>(std::floor(Q - 1.0));
-//      input_data->size[1] = nx + 1;
-//      emxEnsureCapacity_real_T(input_data, i);
-//      for (i = 0; i <= nx; i++) {
-//        input_data->data[i] = i;
-//      }
-//    }
-
-//    b_r = f_est * sps;
-//    i = b_time->size[0];
-//    b_time->size[0] = input_data->size[1];
-//    emxEnsureCapacity_real_T(b_time, i);
-//    nx = input_data->size[1];
-//    for (i = 0; i < nx; i++) {
-//      b_time->data[i] = input_data->data[i] / b_r;
-//    }
-
-    if (1.0 > sps) {
-      nx = 0;
-      unnamed_idx_1 = 0;
-    } else {
-      nx = static_cast<int>(sps);
-      unnamed_idx_1 = static_cast<int>(sps);
-    }
-
-//    b_r = 6.2831853071795862 * f_est;
-//    i = c->size[0];
-//    c->size[0] = nx;
-//    emxEnsureCapacity_real_T(c, i);
-//    for (i = 0; i < nx; i++) {
-//      c->data[i] = b_r * b_time->data[i];
-//    }
-
-//    nx = c->size[0];
-//    for (k = 0; k < nx; k++) {
-//      c->data[k] = ref_cos[k];//std::cos(c->data[k]);
-//    }
-
-//    i = b_c->size[0];
-//    b_c->size[0] = unnamed_idx_1;
-//    emxEnsureCapacity_real_T(b_c, i);
-//    for (i = 0; i < unnamed_idx_1; i++) {
-//      b_c->data[i] = b_r * b_time->data[i];
-//    }
-
-//    nx = b_c->size[0];
-//    for (k = 0; k < nx; k++) {
-//      b_c->data[k] = ref_sin[k];//std::sin(b_c->data[k]);
-//    }
-
-    maxval = sps * 2.0;
-    if (1.0 > maxval) {
-      nx = 0;
-    } else {
-      nx = static_cast<int>(maxval);
-    }
-
-    i = b_resamp_signal->size[0];
-    b_resamp_signal->size[0] = nx;
-    emxEnsureCapacity_real_T(b_resamp_signal, i);
-
-//    //todo
-//    if(resamp_signal->allocatedSize < nx)
-//    {
-//        warning_status = 4;
-//        return;
-//    }
-
-    for (i = 0; i < nx; i++) {
-      b_resamp_signal->data[i] = resamp_signal->data[i];
-    }
-
-    i = r1->size[0];
-    r1->size[0] = unnamed_idx_1 + 53;
-    emxEnsureCapacity_real_T(r1, i);
-    for (i = 0; i < unnamed_idx_1; i++) {
-      r1->data[i] = ref_sin[i] + ref_cos[i];//c->data[i] + b_c->data[i];
-    }
-
-    for (i = 0; i < 53; i++) {
-      r1->data[i + unnamed_idx_1] = 0.0;
-    }
-
-    coder::xcorr(b_resamp_signal, r1, c);
-
-    // find(lags==0,1)
-    maxval = sps * 2.0 + 1.0;
-    if (maxval > c->size[0]) {
-      i = 0;
-      i1 = 0;
-    } else {
-      i = static_cast<int>(maxval) - 1;
-      i1 = c->size[0];
-    }
-
-    nx = i1 - i;
-    i1 = b_c->size[0];
-    b_c->size[0] = nx;
-    emxEnsureCapacity_real_T(b_c, i1);
-    for (i1 = 0; i1 < nx; i1++) {
-      b_c->data[i1] = c->data[i + i1];
-    }
-
-//    i = c->size[0];
-//    c->size[0] = b_c->size[0];
-//    emxEnsureCapacity_real_T(c, i);
-//    nx = b_c->size[0];
-//    for (i = 0; i < nx; i++) {
-//      c->data[i] = b_c->data[i];
-//    }
-
-    coder::internal::maximum(b_c, &b_r, &unnamed_idx_1);
-    maxval = Q + (static_cast<double>(unnamed_idx_1) - 1.0);
-    if (unnamed_idx_1 > maxval) {
-      i = -1;
-      i1 = -1;
-    } else {
-      i = unnamed_idx_1 - 2;
-      i1 = static_cast<int>(maxval) - 1;
-    }
-
-    if (1.0 > Q) {
-      nx = 0;
-    } else {
-      nx = static_cast<int>(Q);
-    }
-
-//    del.re = f_est * 0.0;
-//    del.im = f_est * 6.2831853071795862;
-    k = r->size[0];
-    r->size[0] = nx;
-    emxEnsureCapacity_creal_T(r, k);
-//    for (k = 0; k < nx; k++) {
-//      r->data[k].re = b_time->data[k] * del.re;
-//      r->data[k].im = b_time->data[k] * del.im;
-//    }
-    k = 0;
-    b_r = static_cast<int>(sps);
-    for (int j = 0; j < nx; j++) {
-        r->data[j].re = ref_cos[k];//b_r * (b_r * std::cos(r->data[k].im));
-        r->data[j].im = ref_sin[k];//b_r * (b_r * std::sin(r->data[k].im));
-        k += 1;
-        if (k == b_r)
-            k = 0;
-    }
-
-//    nx = r->size[0];
-//    for (k = 0; k < nx; k++) {
-//      if (r->data[k].im == 0.0) {
-//        r->data[k].re = std::exp(r->data[k].re);
-//        r->data[k].im = 0.0;
-//      } else if (rtIsInf(r->data[k].im) && rtIsInf(r->data[k].re) && (r->data[k]
-//                  .re < 0.0)) {
-//        r->data[k].re = 0.0;
-//        r->data[k].im = 0.0;
-//      } else {
-//        b_r = std::exp(r->data[k].re / 2.0);
-//        r->data[k].re = b_r * (b_r * std::cos(r->data[k].im));
-//        r->data[k].im = b_r * (b_r * std::sin(r->data[k].im));
-//      }
-//    }
-
-    b_r = sps * 10.0 / 2.0;
-    if (b_r < 1.0) {
-      input_data->size[0] = 1;
-      input_data->size[1] = 0;
-    } else {
-      k = input_data->size[0] * input_data->size[1];
-      input_data->size[0] = 1;
-      nx = static_cast<int>(std::floor(b_r - 1.0));
-      input_data->size[1] = nx + 1;
-      emxEnsureCapacity_real_T(input_data, k);
-      for (k = 0; k <= nx; k++) {
-        input_data->data[k] = 0.0;
-      }
-    }
-
-    nx = i1 - i;
-    k = c_resamp_signal->size[0];
-    c_resamp_signal->size[0] = nx + input_data->size[1];
-    emxEnsureCapacity_creal_T(c_resamp_signal, k);
-    for (k = 0; k < nx; k++) {
-      b_r = resamp_signal->data[(i + k) + 1];
-      c_resamp_signal->data[k].re = 2.0 * (b_r * r->data[k].re);
-      c_resamp_signal->data[k].im = 2.0 * (b_r * r->data[k].im);
-    }
-
-    nx = input_data->size[1];
-    for (k = 0; k < nx; k++) {
-      unnamed_idx_1 = (k + i1) - i;
-      c_resamp_signal->data[unnamed_idx_1].re = input_data->data[k];
-      c_resamp_signal->data[unnamed_idx_1].im = 0.0;
-    }
-
-    rxFilter1.step(c_resamp_signal, z_data, z_size);
-    del = coder::qammod(pre_qam, M);
-    if (z_data[9].im == 0.0) {
-      if (del.im == 0.0) {
-        re = del.re / z_data[9].re;
-        b_r = 0.0;
-      } else if (del.re == 0.0) {
-        re = 0.0;
-        b_r = del.im / z_data[9].re;
+        // resamp_data = zeros(floor(length(s)*p/q)+1,1);
       } else {
-        re = del.re / z_data[9].re;
-        b_r = del.im / z_data[9].re;
-      }
-    } else if (z_data[9].re == 0.0) {
-      if (del.re == 0.0) {
-        re = del.im / z_data[9].im;
-        b_r = 0.0;
-      } else if (del.im == 0.0) {
-        re = 0.0;
-        b_r = -(del.re / z_data[9].im);
-      } else {
-        re = del.im / z_data[9].im;
-        b_r = -(del.re / z_data[9].im);
+        resamp_len = std::floor(len_data * p / q);
+
+        // resamp_data = zeros(floor(length(s)*p/q),1);
       }
     } else {
-      maxval = std::abs(z_data[9].re);
-      b_r = std::abs(z_data[9].im);
-      if (maxval > b_r) {
-        b_r = z_data[9].im / z_data[9].re;
-        Q = z_data[9].re + b_r * z_data[9].im;
-        re = (del.re + b_r * del.im) / Q;
-        b_r = (del.im - b_r * del.re) / Q;
-      } else if (b_r == maxval) {
-        if (z_data[9].re > 0.0) {
-          b_r = 0.5;
+      resamp_len = std::floor(len_data * p / q);
+
+      // resamp_data = zeros(floor(length(s)*p/q),1);
+    }
+
+    s[0] = 0.0;
+    s[1] = 0.0;
+    std::memcpy(&s[2], &input_data[0], 14040U * sizeof(double));
+    s[14042] = 0.0;
+    s[14043] = 0.0;
+    varargin_1 = static_cast<int>(resamp_len);
+    for (k = 0; k < varargin_1; k++) {
+      x = (static_cast<double>(k) + 1.0) * q / p;
+      a3 = std::floor(x);
+      d = (a3 + 1.0) - x;
+      x = s[static_cast<int>(a3 + 4.0) - 1];
+      a3_tmp = s[static_cast<int>((a3 + 4.0) - 2.0) - 1];
+      del_re = s[static_cast<int>((a3 + 4.0) - 1.0) - 1];
+      a3 = 0.16666666666666666 * (x - s[static_cast<int>((a3 + 4.0) - 3.0) - 1])
+        + 0.5 * (a3_tmp - del_re);
+      a1 = 0.5 * (x - a3_tmp) - a3;
+      resamp_signal[k] = ((del_re - a1 * d) + (((x - del_re) - a3) - a1) * (d *
+          d)) - a3 * d * d * d;//rt_powd_snf(d, 3.0);
+    }
+
+    x = resamp_len / 52.0;
+    if (x < 0.0) {
+      x = std::ceil(x);
+    } else {
+      x = std::floor(x);
+    }
+
+    std::memset(&input_data[0], 0, 14040U * sizeof(double));
+    varargin_1 = static_cast<int>(((x - 1.0) * 52.0 - 1.0) + 1.0);
+    for (i = 0; i < varargin_1; i++) {
+      input_data[i] = static_cast<double>(i) / Fd;
+    }
+
+    // time = time';
+    a3 = 6.2831853071795862 * f_est;
+    for (k = 0; k < 52; k++) {
+      a1 = a3 * input_data[k];
+      b_varargin_1[k] = std::cos(a1) + std::sin(a1);
+    }
+
+    std::memset(&b_varargin_1[52], 0, 53U * sizeof(double));
+    std::memset(&c1[0], 0, 209U * sizeof(double));
+    for (k = 0; k < 105; k++) {
+      ihi = 103 - k;
+      a3 = 0.0;
+      for (i = 0; i <= ihi; i++) {
+        a3 += b_varargin_1[i] * resamp_signal[k + i];
+      }
+
+      c1[k + 104] = a3;
+    }
+
+    for (k = 0; k < 104; k++) {
+      ihi = 103 - k;
+      a3 = 0.0;
+      for (i = 0; i <= ihi; i++) {
+        a3 += b_varargin_1[(k + i) + 1] * resamp_signal[i];
+      }
+
+      c1[103 - k] = a3;
+    }
+
+    if (!rtIsNaN(c1[104])) {
+      idx = 1;
+    } else {
+      boolean_T exitg1;
+      idx = 0;
+      k = 2;
+      exitg1 = false;
+      while ((!exitg1) && (k < 106)) {
+        if (!rtIsNaN(c1[k + 103])) {
+          idx = k;
+          exitg1 = true;
         } else {
-          b_r = -0.5;
+          k++;
+        }
+      }
+    }
+
+    if (idx == 0) {
+      idx = 1;
+    } else {
+      a3 = c1[idx + 103];
+      varargin_1 = idx + 1;
+      for (k = varargin_1; k < 106; k++) {
+        a3_tmp = c1[k + 103];
+        if (a3 < a3_tmp) {
+          a3 = a3_tmp;
+          idx = k;
+        }
+      }
+    }
+
+    // coder.varsize('y1', [255*52, 1]);
+    std::memset(&b_y1[0], 0, 14040U * sizeof(creal_T));
+    varargin_1 = static_cast<int>((((x - 1.0) * 52.0 + static_cast<double>(idx))
+      - 1.0) + (1.0 - static_cast<double>(idx)));
+    unsigned int b_i;
+    uint8_t count_gar = 0;
+    for (i = 0; i < varargin_1; i++) {
+      b_i = static_cast<unsigned int>(idx) + i;
+      //a3 = input_data[static_cast<int>((static_cast<double>(b_i) - static_cast<
+      //  double>(idx)) + 1.0) - 1];
+      //del_re = a3 * (f_est * 0.0);
+      //x = a3 * (f_est * 6.2831853071795862);
+      //if (x == 0.0) {
+      //  del_re = std::exp(del_re);
+      //  x = 0.0;
+      //} else {
+      //  a3 = std::exp(del_re / 2.0);
+      //  del_re = a3 * (a3 * std::cos(x));
+      //  x = a3 * (a3 * std::sin(x));
+      //}
+
+      a1 = resamp_signal[static_cast<int>(b_i) - 1];
+      ihi = static_cast<int>(b_i) - idx;
+      b_y1[ihi].re = 2.0 * (a1 * ref_cos[count_gar]);
+      b_y1[ihi].im = 2.0 * (a1 * ref_sin[count_gar]);
+      count_gar++;
+      if (count_gar >= 52)
+          count_gar = 0;
+
+    }
+
+    //      y1 = resamp_signal(Im+(0:receive_symbols*samples_per_period-1)).*exp(1j*2*pi*(f_est(1))*time)*2;%(Im:receive_symbols*samples_per_period+(Im-1)) 
+    //      y1 = [y1 ;(1:samples_per_period*span/2)'*0];
+    //      dataIn = [];
+    //      for dat = 1:256
+    //          dataIn(dat) = dat-1;
+    //      end
+    //      dataMod = qammod(dataIn,256,'gray');
+    rxFilter1.step(b_y1, z);
+    dc = coder::qammod();
+    if (z[9].im == 0.0) {
+      if (dc.im == 0.0) {
+        del_re = dc.re / z[9].re;
+        x = 0.0;
+      } else if (dc.re == 0.0) {
+        del_re = 0.0;
+        x = dc.im / z[9].re;
+      } else {
+        del_re = dc.re / z[9].re;
+        x = dc.im / z[9].re;
+      }
+    } else if (z[9].re == 0.0) {
+      if (dc.re == 0.0) {
+        del_re = dc.im / z[9].im;
+        x = 0.0;
+      } else if (dc.im == 0.0) {
+        del_re = 0.0;
+        x = -(dc.re / z[9].im);
+      } else {
+        del_re = dc.im / z[9].im;
+        x = -(dc.re / z[9].im);
+      }
+    } else {
+      a3_tmp = std::abs(z[9].re);
+      a3 = std::abs(z[9].im);
+      if (a3_tmp > a3) {
+        a3 = z[9].im / z[9].re;
+        d = z[9].re + a3 * z[9].im;
+        del_re = (dc.re + a3 * dc.im) / d;
+        x = (dc.im - a3 * dc.re) / d;
+      } else if (a3 == a3_tmp) {
+        if (z[9].re > 0.0) {
+          a1 = 0.5;
+        } else {
+          a1 = -0.5;
         }
 
-        if (z_data[9].im > 0.0) {
-          Q = 0.5;
+        if (z[9].im > 0.0) {
+          a3 = 0.5;
         } else {
-          Q = -0.5;
+          a3 = -0.5;
         }
 
-        re = (del.re * b_r + del.im * Q) / maxval;
-        b_r = (del.im * b_r - del.re * Q) / maxval;
+        del_re = (dc.re * a1 + dc.im * a3) / a3_tmp;
+        x = (dc.im * a1 - dc.re * a3) / a3_tmp;
       } else {
-        b_r = z_data[9].re / z_data[9].im;
-        Q = z_data[9].im + b_r * z_data[9].re;
-        re = (b_r * del.re + del.im) / Q;
-        b_r = (b_r * del.im - del.re) / Q;
+        a3 = z[9].re / z[9].im;
+        d = z[9].im + a3 * z[9].re;
+        del_re = (a3 * dc.re + dc.im) / d;
+        x = (a3 * dc.im - dc.re) / d;
       }
     }
 
-    if (6 > z_size[0]) {
-      i = 0;
-      i1 = 0;
-    } else {
-      i = 5;
-      i1 = z_size[0];
+    for (k = 0; k < 265; k++) {
+      a3_tmp = z[k + 5].re;
+      a1 = z[k + 5].im;
+      a3 = rt_roundd_snf(((a3_tmp * del_re - a1 * x) + 15.0) / 2.0);
+      if (a3 < 0.0) {
+        a3 = 0.0;
+      } else {
+        if (a3 > 15.0) {
+          a3 = 15.0;
+        }
+      }
+
+      a3_tmp = rt_roundd_snf(((a3_tmp * x + a1 * del_re) + 15.0) / 2.0);
+      if (a3_tmp < 0.0) {
+        a3_tmp = 0.0;
+      } else {
+        if (a3_tmp > 15.0) {
+          a3_tmp = 15.0;
+        }
+      }
+
+      intX[k] = ((16.0 - a3_tmp) - 1.0) + 16.0 * a3;
     }
 
-    nx = i1 - i;
-    b_z_size[0] = nx;
-    for (i1 = 0; i1 < nx; i1++) {
-      k = i + i1;
-      maxval = z_data[k].re;
-      Q = z_data[k].im;
-      b_z_data[i1].re = maxval * re - Q * b_r;
-      b_z_data[i1].im = maxval * b_r + Q * re;
+    for (i = 0; i < 256; i++) {
+      mapping[i] = 0U;
+      symbolI[i] = static_cast<signed char>(i >> 4);
+      symbolQ[i] = static_cast<signed char>(i & 15);
     }
 
-    coder::qamdemod(b_z_data, b_z_size, M, trData);
-    if (6 > z_size[0]) {
-      i = 0;
-      i1 = 0;
-    } else {
-      i = 5;
-      i1 = z_size[0];
-    }
-
-    nx = i1 - i;
-    qam_symbols_size[0] = nx;
-    for (i1 = 0; i1 < nx; i1++) {
-      k = i + i1;
-      maxval = z_data[k].re;
-      Q = z_data[k].im;
-      qam_symbols_data[i1].re = maxval * re - Q * b_r;
-      qam_symbols_data[i1].im = maxval * b_r + Q * re;
-    }
-
-    for (unnamed_idx_1 = 0; unnamed_idx_1 < 50; unnamed_idx_1++) {
-      if ((trData->data[unnamed_idx_1] == pre_qam) && (trData->
-           data[unnamed_idx_1 + 1] == pre_qam) && (trData->data[unnamed_idx_1 +
-           2] == pre_qam) && (trData->data[unnamed_idx_1 + 3] == pre_qam * 2.0 -
-           1.0)) {
-        start_inf_data = unnamed_idx_1 + 4;
+    for (i = 1; i < 4; i += i) {
+      for (ihi = 0; ihi < 256; ihi++) {
+        varargin_1 = symbolI[ihi];
+        symbolI[ihi] = static_cast<signed char>(varargin_1 ^ varargin_1 >> i);
+        varargin_1 = symbolQ[ihi];
+        symbolQ[ihi] = static_cast<signed char>(varargin_1 ^ varargin_1 >> i);
       }
     }
 
-    byte_data_size[0] = 212;
+    for (i = 0; i < 256; i++) {
+      mapping[(symbolI[i] << 4) + symbolQ[i]] = static_cast<unsigned char>(i);
+    }
+
+    //      qam_symbols = zeros(273,1,'like',0.0000 + 0.0000i);
+    for (i = 0; i < 265; i++) {
+      a3_tmp = z[i + 5].re;
+      a1 = z[i + 5].im;
+      qam_symbols_real[i] = a3_tmp * del_re - a1 * x;
+      qam_symbols_imag[i] = a3_tmp * x + a1 * del_re;
+    }
+
+    for (i = 0; i < 50; i++) {
+      if ((mapping[static_cast<int>(intX[i] + 1.0) - 1] == 128) && (mapping[
+           static_cast<int>(intX[i + 1] + 1.0) - 1] == 128) && (mapping[
+           static_cast<int>(intX[i + 2] + 1.0) - 1] == 128) && (mapping[
+           static_cast<int>(intX[i + 3] + 1.0) - 1] == 255)) {
+        start_inf_data = i + 4;
+      }
+    }
+
     for (i = 0; i < 212; i++) {
-      byte_data_data[i] = trData->data[start_inf_data + i];
+      byte_data[i] = mapping[static_cast<int>(intX[start_inf_data + i] + 1.0) - 1];
     }
-  }
 
-  emxFree_real_T(&b_c);
-  emxFree_creal_T(&c_resamp_signal);
-  emxFree_real_T(&r1);
-  emxFree_real_T(&b_resamp_signal);
-  emxFree_creal_T(&r);
-  //emxFree_real_T(&b_time);
-  emxFree_real_T(&c);
-  emxFree_real_T(&trData);
-  emxFree_real_T(&resamp_signal);
-  emxFree_real_T(&input_data);
+    // byte_data = trData(start_inf_data+(1:255-43));
+  }
 }
 
 //
@@ -512,107 +413,9 @@ void HS_EWL_DEMOD_QAM_free()
 //
 void HS_EWL_DEMOD_QAM_init()
 {
-  emxInitStruct_RaisedCosineReceiveFilter(&rxFilter1);
   rxFilter1_not_empty = false;
   rxFilter1._pobj0.matlabCodegenIsDeleted = true;
   rxFilter1.matlabCodegenIsDeleted = true;
-}
-
-//
-// Input parameters
-//   s   - input signal vector [N x 1];
-//   p   - p paramter of samplarate conversion
-//   q   - q paramter of samplarate conversion
-//   x0  - fractional delay
-// Arguments    : emxArray_real_T *s
-//                double p
-//                double q
-//                emxArray_real_T *resamp_data
-// Return Type  : void
-//
-void lagrange_resamp(emxArray_real_T *s, double p, double q, emxArray_real_T
-                     *resamp_data)
-{
-  emxArray_real_T *r;
-  double a1;
-  int i;
-  int loop_ub;
-
-  //  Ouptut parameters
-  //   y   - Resampled signal
-  if (p > 1.0) {
-    if (q == 1.0) {
-      a1 = std::floor(static_cast<double>(s->size[1]) * p);
-      i = resamp_data->size[0];
-      resamp_data->size[0] = static_cast<int>(a1 + 1.0);
-      emxEnsureCapacity_real_T(resamp_data, i);
-      loop_ub = static_cast<int>(a1 + 1.0);
-      for (i = 0; i < loop_ub; i++) {
-        resamp_data->data[i] = 0.0;
-      }
-    } else {
-      a1 = std::floor(static_cast<double>(s->size[1]) * p / q);
-      i = resamp_data->size[0];
-      resamp_data->size[0] = static_cast<int>(a1);
-      emxEnsureCapacity_real_T(resamp_data, i);
-      loop_ub = static_cast<int>(a1);
-      for (i = 0; i < loop_ub; i++) {
-        resamp_data->data[i] = 0.0;
-      }
-    }
-  } else {
-    a1 = std::floor(static_cast<double>(s->size[1]) * p / q);
-    i = resamp_data->size[0];
-    resamp_data->size[0] = static_cast<int>(a1);
-    emxEnsureCapacity_real_T(resamp_data, i);
-    loop_ub = static_cast<int>(a1);
-    for (i = 0; i < loop_ub; i++) {
-      resamp_data->data[i] = 0.0;
-    }
-  }
-
-  emxInit_real_T(&r, 2);
-  i = r->size[0] * r->size[1];
-  r->size[0] = 1;
-  r->size[1] = s->size[1] + 4;
-  emxEnsureCapacity_real_T(r, i);
-  r->data[0] = 0.0;
-  r->data[1] = 0.0;
-  loop_ub = s->size[1];
-  for (i = 0; i < loop_ub; i++) {
-    r->data[i + 2] = s->data[i];
-  }
-
-  r->data[s->size[1] + 2] = 0.0;
-  r->data[s->size[1] + 3] = 0.0;
-  i = s->size[0] * s->size[1];
-  s->size[0] = 1;
-  s->size[1] = r->size[1];
-  emxEnsureCapacity_real_T(s, i);
-  loop_ub = r->size[0] * r->size[1];
-  for (i = 0; i < loop_ub; i++) {
-    s->data[i] = r->data[i];
-  }
-
-  emxFree_real_T(&r);
-  i = resamp_data->size[0];
-  for (loop_ub = 0; loop_ub < i; loop_ub++) {
-    double a3;
-    double a3_tmp;
-    double b_a3_tmp;
-    double d;
-    a1 = (static_cast<double>(loop_ub) + 1.0) * q / p;
-    a3 = std::floor(a1);
-    d = (a3 + 1.0) - a1;
-    a3_tmp = s->data[static_cast<int>(a3 + 4.0) - 1];
-    a1 = s->data[static_cast<int>((a3 + 4.0) - 2.0) - 1];
-    b_a3_tmp = s->data[static_cast<int>((a3 + 4.0) - 1.0) - 1];
-    a3 = 0.16666666666666666 * (a3_tmp - s->data[static_cast<int>((a3 + 4.0) -
-      3.0) - 1]) + 0.5 * (a1 - b_a3_tmp);
-    a1 = 0.5 * (a3_tmp - a1) - a3;
-    resamp_data->data[loop_ub] = ((b_a3_tmp - a1 * d) + (((a3_tmp - b_a3_tmp) -
-      a3) - a1) * (d * d)) - a3 *d*d*d; //rt_powd_snf(d, 3.0);
-  }
 }
 
 //

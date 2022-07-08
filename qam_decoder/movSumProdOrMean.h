@@ -2,7 +2,7 @@
 // File: movSumProdOrMean.h
 //
 // MATLAB Coder version            : 5.1
-// C/C++ source code generated on  : 06-May-2022 14:49:51
+// C/C++ source code generated on  : 08-Jul-2022 10:21:26
 //
 #ifndef MOVSUMPRODORMEAN_H
 #define MOVSUMPRODORMEAN_H
@@ -13,13 +13,10 @@
 #include <cstddef>
 #include <cstdlib>
 
-// Type Declarations
-struct emxArray_real_T;
-
 // Function Declarations
 namespace coder
 {
-  void vmovfun(const emxArray_real_T *x, int nx, emxArray_real_T *y);
+  void vmovfun(const double x[14001], int nx, double y[14001]);
 }
 
 #endif

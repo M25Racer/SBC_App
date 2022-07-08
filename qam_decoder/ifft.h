@@ -2,7 +2,7 @@
 // File: ifft.h
 //
 // MATLAB Coder version            : 5.1
-// C/C++ source code generated on  : 06-May-2022 14:49:51
+// C/C++ source code generated on  : 08-Jul-2022 10:21:26
 //
 #ifndef IFFT_H
 #define IFFT_H
@@ -13,14 +13,11 @@
 #include <cstddef>
 #include <cstdlib>
 
-// Type Declarations
-struct emxArray_creal_T;
-
 // Function Declarations
 namespace coder
 {
-  void b_ifft(const emxArray_creal_T *x, emxArray_creal_T *y);
-  void ifft(const emxArray_creal_T *x, emxArray_creal_T *y);
+  void b_ifft(const creal_T x[57820], creal_T y[57820]);
+  void ifft(const creal_T x[131072], creal_T y[131072]);
 }
 
 #endif

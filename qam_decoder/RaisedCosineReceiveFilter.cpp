@@ -2,13 +2,12 @@
 // File: RaisedCosineReceiveFilter.cpp
 //
 // MATLAB Coder version            : 5.1
-// C/C++ source code generated on  : 06-May-2022 14:49:51
+// C/C++ source code generated on  : 08-Jul-2022 10:21:26
 //
 
 // Include Files
 #include "RaisedCosineReceiveFilter.h"
 #include "FIRDecimator.h"
-#include "HS_EWL_DEMOD_QAM_types.h"
 #include "rt_nonfinite.h"
 
 // Function Definitions
@@ -43,9 +42,34 @@ namespace coder
     // Arguments    : void
     // Return Type  : void
     //
+    void b_RaisedCosineReceiveFilter::releaseWrapper()
+    {
+      if (this->isSetupComplete) {
+        this->pFilter->release();
+      }
+    }
+
+    //
+    // Arguments    : void
+    // Return Type  : void
+    //
     void RaisedCosineReceiveFilter::setup()
     {
       dspcodegen::FIRDecimator *filt;
+      this->isSetupComplete = false;
+      this->isInitialized = 1;
+      filt = this->_pobj0.init();
+      this->pFilter = filt;
+      this->isSetupComplete = true;
+    }
+
+    //
+    // Arguments    : void
+    // Return Type  : void
+    //
+    void b_RaisedCosineReceiveFilter::setup()
+    {
+      dspcodegen::b_FIRDecimator *filt;
       this->isSetupComplete = false;
       this->isInitialized = 1;
       filt = this->_pobj0.init();
@@ -67,7 +91,26 @@ namespace coder
     // Arguments    : void
     // Return Type  : void
     //
+    void b_RaisedCosineReceiveFilter::setupAndReset()
+    {
+      this->setup();
+      this->pFilter->reset();
+    }
+
+    //
+    // Arguments    : void
+    // Return Type  : void
+    //
     RaisedCosineReceiveFilter::RaisedCosineReceiveFilter()
+    {
+      this->matlabCodegenIsDeleted = true;
+    }
+
+    //
+    // Arguments    : void
+    // Return Type  : void
+    //
+    b_RaisedCosineReceiveFilter::b_RaisedCosineReceiveFilter()
     {
       this->matlabCodegenIsDeleted = true;
     }
@@ -85,12 +128,9 @@ namespace coder
     // Arguments    : void
     // Return Type  : void
     //
-    void RaisedCosineReceiveFilter::handle_matlabCodegenDestructor()
+    b_RaisedCosineReceiveFilter::~b_RaisedCosineReceiveFilter()
     {
-      if (!this->matlabCodegenIsDeleted) {
-        this->matlabCodegenIsDeleted = true;
-        this->release();
-      }
+      this->matlabCodegenDestructor();
     }
 
     //
@@ -100,6 +140,19 @@ namespace coder
     RaisedCosineReceiveFilter *RaisedCosineReceiveFilter::init()
     {
       RaisedCosineReceiveFilter *obj;
+      obj = this;
+      obj->isInitialized = 0;
+      obj->matlabCodegenIsDeleted = false;
+      return obj;
+    }
+
+    //
+    // Arguments    : void
+    // Return Type  : b_RaisedCosineReceiveFilter *
+    //
+    b_RaisedCosineReceiveFilter *b_RaisedCosineReceiveFilter::init()
+    {
+      b_RaisedCosineReceiveFilter *obj;
       obj = this;
       obj->isInitialized = 0;
       obj->matlabCodegenIsDeleted = false;
@@ -119,19 +172,57 @@ namespace coder
     }
 
     //
-    // Arguments    : const emxArray_creal_T *varargin_1
-    //                creal_T varargout_1_data[]
-    //                int varargout_1_size[2]
+    // Arguments    : void
     // Return Type  : void
     //
-    void RaisedCosineReceiveFilter::step(const emxArray_creal_T *varargin_1,
-      creal_T varargout_1_data[], int varargout_1_size[2])
+    void b_RaisedCosineReceiveFilter::matlabCodegenDestructor()
+    {
+      if (!this->matlabCodegenIsDeleted) {
+        this->matlabCodegenIsDeleted = true;
+        this->release();
+      }
+    }
+
+    //
+    // Arguments    : void
+    // Return Type  : void
+    //
+    void b_RaisedCosineReceiveFilter::release()
+    {
+      if (this->isInitialized == 1) {
+        this->isInitialized = 2;
+        this->releaseWrapper();
+      }
+    }
+
+    //
+    // Arguments    : const creal_T varargin_1[14040]
+    //                creal_T varargout_1[270]
+    // Return Type  : void
+    //
+    void RaisedCosineReceiveFilter::step(const creal_T varargin_1[14040],
+      creal_T varargout_1[270])
     {
       if (this->isInitialized != 1) {
         this->setupAndReset();
       }
 
-      this->pFilter->step(varargin_1, varargout_1_data, varargout_1_size);
+      this->pFilter->step(varargin_1, varargout_1);
+    }
+
+    //
+    // Arguments    : const creal_T varargin_1[2132]
+    //                creal_T varargout_1[41]
+    // Return Type  : void
+    //
+    void b_RaisedCosineReceiveFilter::step(const creal_T varargin_1[2132],
+      creal_T varargout_1[41])
+    {
+      if (this->isInitialized != 1) {
+        this->setupAndReset();
+      }
+
+      this->pFilter->step(varargin_1, varargout_1);
     }
   }
 }

@@ -2,7 +2,7 @@
 // File: FFTImplementationCallback.h
 //
 // MATLAB Coder version            : 5.1
-// C/C++ source code generated on  : 06-May-2022 14:49:51
+// C/C++ source code generated on  : 08-Jul-2022 10:21:26
 //
 #ifndef FFTIMPLEMENTATIONCALLBACK_H
 #define FFTIMPLEMENTATIONCALLBACK_H
@@ -13,11 +13,6 @@
 #include <cstddef>
 #include <cstdlib>
 
-// Type Declarations
-struct emxArray_real_T;
-struct emxArray_creal_T;
-struct emxArray_int32_T;
-
 // Type Definitions
 namespace coder
 {
@@ -26,53 +21,41 @@ namespace coder
     class FFTImplementationCallback
     {
      public:
-      static void get_algo_sizes(int nfft, boolean_T useRadix2, int *n2blue, int
-        *nRows);
-      static void generate_twiddle_tables(int nRows, boolean_T useRadix2,
-        emxArray_real_T *costab, emxArray_real_T *sintab, emxArray_real_T
-        *sintabinv);
-      static void r2br_r2dit_trig(const emxArray_real_T *x, int n1_unsigned,
-        const emxArray_real_T *costab, const emxArray_real_T *sintab,
-        emxArray_creal_T *y);
-      static void dobluesteinfft(const emxArray_real_T *x, int n2blue, int nfft,
-        const emxArray_real_T *costab, const emxArray_real_T *sintab, const
-        emxArray_real_T *sintabinv, emxArray_creal_T *y);
-      static void r2br_r2dit_trig_impl(const emxArray_creal_T *x, int
-        unsigned_nRows, const emxArray_real_T *costab, const emxArray_real_T
-        *sintab, emxArray_creal_T *y);
-      static void c_generate_twiddle_tables(int nRows, boolean_T useRadix2,
-        emxArray_real_T *costab, emxArray_real_T *sintab, emxArray_real_T
-        *sintabinv);
-      static void dobluesteinfft(const emxArray_creal_T *x, int n2blue, int nfft,
-        const emxArray_real_T *costab, const emxArray_real_T *sintab, const
-        emxArray_real_T *sintabinv, emxArray_creal_T *y);
-      static void doHalfLengthRadix2(const double x[1820], emxArray_creal_T *y,
-        int unsigned_nRows, const emxArray_real_T *costab, const emxArray_real_T
-        *sintab);
-      static void doHalfLengthBluestein(const double x[1820], emxArray_creal_T
-        *y, int nRows, int nfft, const emxArray_creal_T *wwc, const
-        emxArray_real_T *costab, const emxArray_real_T *sintab, const
-        emxArray_real_T *costabinv, const emxArray_real_T *sintabinv);
+      static void generate_twiddle_tables(double costab[65537], double sintab
+        [65537]);
+      static void r2br_r2dit_trig(const creal_T x[131072], const double costab
+        [65537], const double sintab[65537], creal_T y[131072]);
+      static void generate_twiddle_tables(double costab[65537], double sintab
+        [65537], double sintabinv[65537]);
+      static void r2br_r2dit_trig_impl(const creal_T x[56001], const double
+        costab[65537], const double sintab[65537], creal_T y[131072]);
+      static void b_r2br_r2dit_trig(const creal_T x[112001], const double
+        costab[65537], const double sintab[65537], creal_T y[131072]);
+      static void c_r2br_r2dit_trig_impl(const creal_T x[57820], const double
+        costab[65537], const double sintab[65537], creal_T y[131072]);
+      static void e_r2br_r2dit_trig(const creal_T x[115639], const double
+        costab[65537], const double sintab[65537], creal_T y[131072]);
+      static void doHalfLengthRadix2(const double x[57820], int xoffInit,
+        creal_T y[131072], const double costab[65537], const double sintab[65537]);
+      static void b_doHalfLengthRadix2(const double x[1820], int xoffInit,
+        creal_T y[131072], const double costab[65537], const double sintab[65537]);
+      static void doHalfLengthBluestein(const double x[57820], int xoffInit,
+        creal_T y[57820], const creal_T wwc[57819], const double costab[65537],
+        const double sintab[65537], const double costabinv[65537], const double
+        sintabinv[65537]);
      protected:
-      static void get_bitrevIndex(int nRowsM1, int nfftLen, emxArray_int32_T
-        *bitrevIndex);
-      static void b_generate_twiddle_tables(int nRows, emxArray_real_T *costab,
-        emxArray_real_T *sintab, emxArray_real_T *sintabinv);
-      static void get_half_twiddle_tables(const emxArray_real_T *costab, const
-        emxArray_real_T *sintab, const emxArray_real_T *costabinv, const
-        emxArray_real_T *sintabinv, emxArray_real_T *hcostab, emxArray_real_T
-        *hsintab, emxArray_real_T *hcostabinv, emxArray_real_T *hsintabinv);
-      static void doHalfLengthRadix2(const emxArray_real_T *x, emxArray_creal_T *
-        y, int unsigned_nRows, const emxArray_real_T *costab, const
-        emxArray_real_T *sintab);
-      static void getback_radix2_fft(emxArray_creal_T *y, const emxArray_creal_T
-        *reconVar1, const emxArray_creal_T *reconVar2, const emxArray_int32_T
-        *wrapIndex, int hnRows);
-      static void doHalfLengthBluestein(const emxArray_real_T *x,
-        emxArray_creal_T *y, int nrowsx, int nRows, int nfft, const
-        emxArray_creal_T *wwc, const emxArray_real_T *costab, const
-        emxArray_real_T *sintab, const emxArray_real_T *costabinv, const
-        emxArray_real_T *sintabinv);
+      static void get_bitrevIndex(int bitrevIndex[65536]);
+      static void b_generate_twiddle_tables(double costab[57821], double sintab
+        [57821], double sintabinv[57821]);
+      static void b_r2br_r2dit_trig_impl(const creal_T x[28910], const double
+        costab[32768], const double sintab[32768], creal_T y[65536]);
+      static void c_r2br_r2dit_trig(const creal_T x[57819], const double costab
+        [32768], const double sintab[32768], creal_T y[65536]);
+      static void d_r2br_r2dit_trig(const creal_T x[65536], const double costab
+        [32768], const double sintab[32768], creal_T y[65536]);
+      static void getback_radix2_fft(creal_T y[131072], int yoff, const creal_T
+        reconVar1[65536], const creal_T reconVar2[65536], const int wrapIndex
+        [65536], int hnRows);
     };
   }
 }

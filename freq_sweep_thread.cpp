@@ -3,7 +3,7 @@
 #include "qam_common.h"
 #include "qam_decoder/qam_decoder.h"
 #include "qam_decoder/HS_EWL_DEMOD_QAM.h"
-#include "qam_decoder/HS_EWL_DEMOD_QAM_emxAPI.h"
+//#include "qam_decoder/HS_EWL_DEMOD_QAM_emxAPI.h"
 #include "qam_decoder/HS_EWL_DEMOD_QAM_terminate.h"
 #include "qam_decoder/HS_EWL_DEMOD_QAM_types.h"
 #include "qam_decoder/HS_EWL_FREQ_ACQ.h"
@@ -34,8 +34,8 @@ double gain_data[2048];
 double phase_data[2048];
 float gain_data_float[2048];
 float phase_data_float[2048];
-static int gain_size[2];
-static int phase_size[2];
+//static int gain_size[2];
+//static int phase_size[2];
 static double sweep_warning_status;
 static double shift_for_qam_data;
 uint16_t shift_for_qam_data_int;
@@ -138,11 +138,13 @@ void FreqSweepThread::FreqEstimateForSweep()
 
     peformance_timer.start();
 
-    emxArray_real_T *sine_data = NULL;
-    sine_data = emxCreateWrapper_real_T(sine, 1, sine_len);
+//    emxArray_real_T *sine_data = NULL;
+//    sine_data = emxCreateWrapper_real_T(sine, 1, sine_len);
 
-    HS_EWL_FREQ_EST_FOR_SWEEP(sine_data, sine_len, Fs, f_sine, period_amount, sine_sps,
-                     &f_opt, &ph_opt, &sweep_freq_warning_status);
+//    HS_EWL_FREQ_EST_FOR_SWEEP(sine_data, sine_len, Fs, f_sine, period_amount, sine_sps,
+//                     &f_opt, &ph_opt, &sweep_freq_warning_status);
+    HS_EWL_FREQ_EST_FOR_SWEEP(sine, sine_len, Fs, f_sine, period_amount, sine_sps,
+                 &f_opt, &ph_opt, &sweep_freq_warning_status);
 
     int sweep_warning_status_int = int(sweep_freq_warning_status);
 
@@ -174,19 +176,23 @@ void FreqSweepThread::Sweep()
 
     peformance_timer.start();
 
-    double len_math_sweep = MATH_SWEEP_LEN;
-    emxArray_real_T *sweep_math = NULL;
-    sweep_math = emxCreateWrapper_real_T(math_sweep, 1, len_math_sweep);
+//    double len_math_sweep = MATH_SWEEP_LEN;
+//    emxArray_real_T *sweep_math = NULL;
+//    sweep_math = emxCreateWrapper_real_T(math_sweep, 1, len_math_sweep);
 
     double *sweep = (double*)&SignalSweep;
     //double len_sweep = SWEEP_LEN;
     double len_sweep = LengthSweep;
-    emxArray_real_T *sweep_data = NULL;
-    sweep_data = emxCreateWrapper_real_T(sweep, 1, len_sweep);
+//    emxArray_real_T *sweep_data = NULL;
+//    sweep_data = emxCreateWrapper_real_T(sweep, 1, len_sweep);
 
-    HS_EWL_TR_FUN_EST(sweep_data, sweep_math, Fs, f_opt, f_sine, pream_sps,
-                     gain_data, gain_size, phase_data, phase_size, &shift_for_qam_data,
-                     &sweep_warning_status);
+//    HS_EWL_TR_FUN_EST(sweep_data, sweep_math, Fs, f_opt, f_sine, pream_sps,
+//                     gain_data, gain_size, phase_data, phase_size, &shift_for_qam_data,
+//                     &sweep_warning_status);
+
+    HS_EWL_TR_FUN_EST(sweep, math_sweep, Fs, f_opt, f_sine, pream_sps,
+                 gain_data, phase_data,&shift_for_qam_data,
+                 &sweep_warning_status);
 
     // Convert to float
     for(uint16_t i = 0; i < 2048; ++i)
