@@ -42,7 +42,9 @@ public:
     void setStatusAutoCfgPredistortion(uint8_t status);
 
     static const uint8_t SRP_ADDR  = 0x53;
+    static const uint8_t SRP2_ADDR  = 0x97;
     static const uint8_t MOD_ADDR 	= 0x54;
+    static const uint8_t MOD2_ADDR 	= 0x96;
     static const uint8_t MASTER_ADDR = 0x4D;
 
     static const uint8_t PT_ADDR    = 0x44;

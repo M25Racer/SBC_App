@@ -307,7 +307,6 @@ void MainWindow::timeoutSerialPortReconnect()
 void MainWindow::timeoutSerialPortRx()
 {
     m_console->putData("SP receive timeout\n", 0);
-    timeoutSerialPort = true;
     parseDataSerialPort();
 }
 
@@ -315,16 +314,19 @@ void MainWindow::serialPortRxCleanup()
 {
     TtyUserRxBuffer_len = 0;
     TtyUserRxBuffer.clear();
-    timeoutSerialPort = false;
 }
 
 void MainWindow::readDataSerialPort()
 {
     // Serial port data received (from PC)
-profiler_timer.start();
+    profiler_timer.start();
+
     // Drop any USB received data to prevent old packets been transmitted to serial port (to PC)
-    m_usb_thread.usb_receiver_drop = true;
-    m_qam_thread.data_drop = true;
+    if(!m_mod_tx_thread.m_AutoConfigurationMode)
+    {
+        m_usb_thread.usb_receiver_drop = true;
+        m_qam_thread.data_drop = true;
+    }
 
     timerSpRxTimeout->stop();
 
@@ -371,8 +373,8 @@ void MainWindow::parseDataSerialPort()
         quick_answer[0] = addr;
         transmit_quick_answer = true;
     }
-    // If package for SRP
-    else if (addr == m_message_box->SRP_ADDR)
+    // If package for SRP2
+    else if (addr == m_message_box->SRP2_ADDR)
     {
         // Check length
         if(TtyUserRxBuffer_len >= TtyUserRxBuffer_MaxSize)
@@ -408,7 +410,7 @@ void MainWindow::parseDataSerialPort()
         }
 
         // Crc ok, continue to message box
-        if(m_message_box->message_box_srp((uint8_t*)TtyUserRxBuffer.data(), uint16_t(TtyUserRxBuffer_len), m_message_box->MASTER_ADDR, m_message_box->SRP_ADDR))
+        if(m_message_box->message_box_srp((uint8_t*)TtyUserRxBuffer.data(), uint16_t(TtyUserRxBuffer_len), m_message_box->MASTER_ADDR, m_message_box->SRP2_ADDR))
         {
             // Unlock USB receiver
             m_usb_thread.usb_receiver_drop = false;

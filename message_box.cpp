@@ -540,7 +540,7 @@ uint16_t CMessageBox::message_header_to_array(const message_header* message, uin
 //    synchro_buffer[18] = 0; //current_time.time_s >> 56;
 
 //    message.master_address = MOD_ADDR;
-//    message.own_address = SRP_ADDR;
+//    message.own_address = SRP2_ADDR;
 //    message.data_len = 8;
 //    message.command = SYNCRO;
 //    message.packet_adr = 0;

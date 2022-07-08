@@ -145,8 +145,6 @@ private:
     QTimer *timerUsbInit;
     QTimer *timerModAnswerTimeout;
 
-    bool timeoutSerialPort = false;
-
     const int timeoutSerialPortRx_ms = 0;               // timeout for serial port receiver (max time between rx packets)
     const int timeoutSerialPortReconnect_ms = 1000;     // timeout between serial port reconnection attempts (in case of error)
 

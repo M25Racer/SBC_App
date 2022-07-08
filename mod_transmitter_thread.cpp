@@ -37,6 +37,13 @@ ModTransmitterThread::~ModTransmitterThread()
     wait();
 }
 
+void ModTransmitterThread::setState(TState state)
+{
+    State = state;
+    emit consolePutData(QString(":: Predistortion auto cfg :: State #%1\n").arg(State), 1);
+    emit setStatus(State);
+}
+
 void ModTransmitterThread::run()
 {
     static uint32_t n_commands = 0;
@@ -46,14 +53,6 @@ void ModTransmitterThread::run()
     {
         m_mutex_mod.lock();
         modTransmitWakeUp.wait(&m_mutex_mod); // Wait condition unlocks mutex before 'wait', and will lock it again just after 'wait' is complete
-
-        // Report states for logs
-        if(StatePrev != State)
-        {
-            StatePrev = State;
-            emit consolePutData(QString(":: Predistortion auto cfg :: State #%1\n").arg(State), 1);
-            emit setStatus(State);
-        }
 
         switch(State)
         {
@@ -79,7 +78,7 @@ void ModTransmitterThread::run()
                 // Delay
                 QThread::msleep(100);
 
-                State = SIN35KHZ_MOD_COMMANDS_FOR_AGC;
+                setState(SIN35KHZ_MOD_COMMANDS_FOR_AGC);
                 n_commands = 0;
                 Set_AGC_State(AGC_START);
                 /* fallthrough */
@@ -97,7 +96,7 @@ void ModTransmitterThread::run()
                         {
                             n_continuous_errors = 0;
                             emit consolePutData(":: Predistortion auto cfg :: AGC failed with status 'AGC error' (too much continuous errors)\n", 1);
-                            State = ERROR_AGC_SIN35KHZ;
+                            setState(ERROR_AGC_SIN35KHZ);
                             calculatePredistortionTablesStop();
                             break;
                         }
@@ -111,7 +110,7 @@ void ModTransmitterThread::run()
                         if(++n_commands > n_MaxSin35kHzCommands)
                         {
                             emit consolePutData(":: Predistortion auto cfg :: AGC for 'SIN 35kHz' error: too many 'SEND_SIN_35KHZ' commands transmitted to MOD and still no 'AGC OK' status from STM32\n", 1);
-                            State = ERROR_AGC_SIN35KHZ;
+                            setState(ERROR_AGC_SIN35KHZ);
                             calculatePredistortionTablesStop();
                             break;
                         }
@@ -136,12 +135,12 @@ void ModTransmitterThread::run()
 
                     if(State == SIN35KHZ_MOD_COMMANDS_FOR_AGC_2)
                     {
-                        State = START_TX_PREDISTORTION_TABLES_TO_MOD;
+                        setState(START_TX_PREDISTORTION_TABLES_TO_MOD);
                         emit startAnswerTimeoutTimer(100);
                         break;
                     }
 
-                    State = ADC_START_FOR_SIN600;
+                    setState(ADC_START_FOR_SIN600);
                 }
                 /* fallthrough */
 
@@ -155,7 +154,7 @@ void ModTransmitterThread::run()
                 emit sendCommandToSTM32(USB_CMD_ADC_START, (uint8_t*)&adc_data_length, 4);
 
                 // Next state
-                State = SIN600_MOD_COMMAND;
+                setState(SIN600_MOD_COMMAND);
 
                 // Delay
                 QThread::msleep(100);
@@ -200,12 +199,12 @@ void ModTransmitterThread::run()
                     if(s == FREQ_EST_COMPLETE)
                     {
                         // Complete, go to next state
-                        State = AGC_START_FOR_SWEEP;
+                        setState(AGC_START_FOR_SWEEP);
                     }
                     else if(Timeout >= 30000/100)  // 30 sec
                     {
                         emit consolePutData(":: Predistortion auto cfg :: Error freq estimate timeout elapsed\n", 1);
-                        State = ERROR_FREQ_ESTIMATE_TIMEOUT;
+                        setState(ERROR_FREQ_ESTIMATE_TIMEOUT);
                         calculatePredistortionTablesStop();
                         break;
                     }
@@ -226,7 +225,7 @@ void ModTransmitterThread::run()
                 // Delay
                 QThread::msleep(100);
 
-                State = SWEEP_MOD_COMMANDS_FOR_AGC;
+                setState(SWEEP_MOD_COMMANDS_FOR_AGC);
                 n_commands = 0;
                 Set_AGC_State(AGC_START);
                 /* fallthrough */
@@ -242,7 +241,7 @@ void ModTransmitterThread::run()
                         if(++n_commands > n_MaxSweepCommands)
                         {
                             emit consolePutData(":: Predistortion auto cfg :: AGC for 'SWEEP' error: too many 'SEND_SWEEP_SIGNAL' commands transmitted to MOD and still no 'AGC OK' status from STM32\n", 1);
-                            State = ERROR_AGC_SWEEP;
+                            setState(ERROR_AGC_SWEEP);
                             calculatePredistortionTablesStop();
                             break;
                         }
@@ -264,7 +263,7 @@ void ModTransmitterThread::run()
                     }
 
                     emit consolePutData(":: Predistortion auto cfg :: AGC for 'SIN 35kHz' configured, state AGC_OK\n", 1);
-                    State = ADC_START_FOR_SWEEP;
+                    setState(ADC_START_FOR_SWEEP);
                 }
                 /* fallthrough */
 
@@ -278,7 +277,7 @@ void ModTransmitterThread::run()
                     emit sendCommandToSTM32(USB_CMD_ADC_START, (uint8_t*)&adc_data_length, 4);
 
                     // Next state
-                    State = SWEEP_MOD_COMMAND;
+                    setState(SWEEP_MOD_COMMAND);
 
                     // Delay
                     QThread::msleep(100);
@@ -304,7 +303,7 @@ void ModTransmitterThread::run()
                     QThread::msleep(100);
 
                     // Next state
-                    State = SWEEP_FUNC_WAIT;
+                    setState(SWEEP_FUNC_WAIT);
 
                     // Reset timeout
                     Timeout = 0;
@@ -323,12 +322,12 @@ void ModTransmitterThread::run()
                     if(s == SWEEP_COMPLETE)
                     {
                         // Complete, go to next state
-                        State = AGC_START_FOR_SIN35KHZ;
+                        setState(AGC_START_FOR_SIN35KHZ);
                     }
                     else if(Timeout >= 30000/100)  // 30 sec
                     {
                         emit consolePutData(":: Predistortion auto cfg :: Error predistortion auto cfg: sweep func timeout elapsed\n", 1);
-                        State = ERROR_SWEEP_TIMEOUT;
+                        setState(ERROR_SWEEP_TIMEOUT);
                         calculatePredistortionTablesStop();
                         break;
                     }
@@ -349,7 +348,7 @@ void ModTransmitterThread::run()
                 // Delay
                 QThread::msleep(100);
 
-                State = SIN35KHZ_MOD_COMMANDS_FOR_AGC_2;
+                setState(SIN35KHZ_MOD_COMMANDS_FOR_AGC_2);
                 n_commands = 0;
                 Set_AGC_State(AGC_START);
 
@@ -371,7 +370,7 @@ void ModTransmitterThread::run()
                 n_attempts = 0;
                 n_attempts_high_level = 0;
 
-                State = TX_PREDISTORTION_TABLES_TO_MOD;
+                setState(TX_PREDISTORTION_TABLES_TO_MOD);
                 /* fallthrough */
 
              case TX_PREDISTORTION_TABLES_TO_MOD:
@@ -386,7 +385,7 @@ void ModTransmitterThread::run()
                 // Delay
                 QThread::msleep(100);
 
-                State = STAT_MOD_COMMANDS_FOR_AGC;
+                setState(STAT_MOD_COMMANDS_FOR_AGC);
                 n_commands = 0;
                 Set_AGC_State(AGC_START);
                 /* fallthrough */
@@ -402,7 +401,7 @@ void ModTransmitterThread::run()
                         if(++n_commands > n_MaxModStatusCommands)
                         {
                             emit consolePutData(":: Predistortion auto cfg :: AGC for 'MOD STATUS' error: too many 'GET STATUS' commands transmitted to MOD and still no 'AGC OK' status from STM32\n", 1);
-                            State = ERROR_AGC_MODSTAT;
+                            setState(ERROR_AGC_MODSTAT);
                             calculatePredistortionTablesStop();
                             break;
                         }
@@ -426,7 +425,7 @@ void ModTransmitterThread::run()
                     emit consolePutData(":: Predistortion auto cfg :: AGC for 'GET STATUS' configured, state AGC_OK\n", 1);
 
                     // Finishing
-                    State = AUTOCFG_COMPLETE_SUCCESSFULLY;
+                    setState(AUTOCFG_COMPLETE_SUCCESSFULLY);
                     emit startAnswerTimeoutTimer(100);
                 }
                 break;
@@ -462,7 +461,7 @@ void ModTransmitterThread::ModStartTransmitPhaseGain()
         return;
     }
 
-    State = START_TX_PREDISTORTION_TABLES_TO_MOD;
+    setState(START_TX_PREDISTORTION_TABLES_TO_MOD);
 
     m_mutex_mod.unlock();
     modTransmitWakeUp.wakeOne();
@@ -480,7 +479,7 @@ void ModTransmitterThread::transmitPredistortionTables()
             if(++n_attempts_high_level > n_MaxAttemptsHighLevel)
             {
                 emit consolePutData(":: Predistortion auto cfg :: failed to transmit predistorion tables to MOD\n", 1);
-                State = ERROR_PREDISTORTION_TABLES_TX_FAILED;
+                setState(ERROR_PREDISTORTION_TABLES_TX_FAILED);
                 calculatePredistortionTablesStop();
                 return;
             }
@@ -527,7 +526,7 @@ void ModTransmitterThread::transmitPredistortionTables()
                 StatePredistTx = TX_FINISHED;
 
                 // Start AGC for final configuration
-                State = AGC_START_FOR_MOD_STAT;
+                setState(AGC_START_FOR_MOD_STAT);
 
                 // Wait some time before AGC, so MOD could apply new predistortion tables
                 emit startAnswerTimeoutTimer(500);
@@ -641,11 +640,13 @@ void ModTransmitterThread::timeoutAnswer()
 // Public
 void ModTransmitterThread::calculatePredistortionTablesStart()
 {
+    m_AutoConfigurationMode = true;
+
     emit consolePutData("==================================================\n"
                         "Starting predistortion auto configuration sequence\n"
                         "==================================================\n", 1);
     m_mutex_mod.lock();
-    State = AUTOCFG_START;
+    setState(AUTOCFG_START);
     StatePredistTx = TX_IDLE;
     m_mutex_mod.unlock();
     modTransmitWakeUp.wakeOne();
@@ -685,6 +686,8 @@ void ModTransmitterThread::calculatePredistortionTablesStop()
 
     // QAM decoder set first pass flag
     emit qamDecoderReset();
+
+    m_AutoConfigurationMode = false;
 }
 
 // Parse received data from MOD, for future use

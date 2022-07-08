@@ -34,6 +34,8 @@ public:
     void ModAnswerDataReceived();
     void calculatePredistortionTablesStart();
 
+    bool m_AutoConfigurationMode = false;                   // Set true if auto configuration is active (in progress)
+
 private:
     void run() override;
     void transmitPredistortionTables();
@@ -79,7 +81,8 @@ private:
     } TState;
 
     TState State = IDLE;
-    TState StatePrev = IDLE;
+
+    void setState(TState state);
 
     typedef enum
     {
@@ -112,7 +115,7 @@ private:
     const uint32_t n_MaxSweepCommands = 100;                // max number of Sweep transfers for AGC
     const uint32_t n_MaxModStatusCommands = 100;            // max number of MOD STATUS transfers for AGC
 
-    bool hs_data_received = false;      // If true, indicates that at least some 'HS' data was received from usb STM32 H7   
+    bool hs_data_received = false;                          // If true, indicates that at least some 'HS' data was received from usb STM32 H7
 };
 
 #endif // MOD_TRANSMITTER_THREAD_H
