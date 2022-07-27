@@ -2,7 +2,7 @@
 // File: interp1.h
 //
 // MATLAB Coder version            : 5.1
-// C/C++ source code generated on  : 06-May-2022 14:49:51
+// C/C++ source code generated on  : 20-Jul-2022 11:04:49
 //
 #ifndef INTERP1_H
 #define INTERP1_H
@@ -13,18 +13,14 @@
 #include <cstddef>
 #include <cstdlib>
 
-// Type Declarations
-struct emxArray_real_T;
-
 // Function Declarations
 namespace coder
 {
-  void interp1(const emxArray_real_T *varargin_1, const emxArray_real_T
-               *varargin_2, double Vq[513]);
-  void interp1(const double varargin_1_data[], const double varargin_2[1024],
-               const double varargin_3_data[], double Vq_data[], int Vq_size[2]);
-  void interp1(const double varargin_1_data[], const double varargin_2_data[],
-               const emxArray_real_T *varargin_3, emxArray_real_T *Vq);
+  void interp1(const double varargin_1[14001], const double varargin_2[14001],
+               const double varargin_3[513], double Vq[513]);
+  void interp1SplineOrPCHIP(const double y[1024], double yi[2048]);
+  void interp1SplineOrPCHIP(const double y[2048], const double xi[57820], double
+    yi[57820]);
 }
 
 #endif

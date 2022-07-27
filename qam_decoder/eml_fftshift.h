@@ -2,7 +2,7 @@
 // File: eml_fftshift.h
 //
 // MATLAB Coder version            : 5.1
-// C/C++ source code generated on  : 06-May-2022 14:49:51
+// C/C++ source code generated on  : 20-Jul-2022 11:04:49
 //
 #ifndef EML_FFTSHIFT_H
 #define EML_FFTSHIFT_H
@@ -13,13 +13,10 @@
 #include <cstddef>
 #include <cstdlib>
 
-// Type Declarations
-struct emxArray_creal_T;
-
 // Function Declarations
 namespace coder
 {
-  void eml_fftshift(emxArray_creal_T *x, int dim);
+  void eml_fftshift(creal_T x[57820], int dim);
 }
 
 #endif

@@ -2,7 +2,7 @@
 // File: setup.h
 //
 // MATLAB Coder version            : 5.1
-// C/C++ source code generated on  : 06-May-2022 14:49:51
+// C/C++ source code generated on  : 20-Jul-2022 11:04:49
 //
 #ifndef SETUP_H
 #define SETUP_H
@@ -15,13 +15,13 @@
 
 // Type Declarations
 struct dsp_FIRDecimator_0;
-struct emxArray_creal_T;
+struct dsp_FIRDecimator_1;
 
 // Function Declarations
 namespace coder
 {
-  void Outputs(dsp_FIRDecimator_0 *obj, const emxArray_creal_T *U0, creal_T
-               Y0_data[], int Y0_size[2]);
+  void Outputs(dsp_FIRDecimator_0 *obj, const creal_T U0[14040], creal_T Y0[270]);
+  void Outputs(dsp_FIRDecimator_1 *obj, const creal_T U0[2132], creal_T Y0[41]);
 }
 
 #endif

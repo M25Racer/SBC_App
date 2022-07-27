@@ -2,7 +2,7 @@
 // File: qammod.h
 //
 // MATLAB Coder version            : 5.1
-// C/C++ source code generated on  : 06-May-2022 14:49:51
+// C/C++ source code generated on  : 20-Jul-2022 11:04:49
 //
 #ifndef QAMMOD_H
 #define QAMMOD_H
@@ -16,7 +16,7 @@
 // Function Declarations
 namespace coder
 {
-  creal_T qammod(double x, double M);
+  creal_T qammod();
 }
 
 #endif

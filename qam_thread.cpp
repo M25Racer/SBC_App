@@ -2,7 +2,6 @@
 #include "usb_global.h"
 #include "qam_decoder/qam_decoder.h"
 #include "qam_decoder/HS_EWL_DEMOD_QAM.h"
-#include "qam_decoder/HS_EWL_DEMOD_QAM_emxAPI.h"
 #include "qam_decoder/HS_EWL_DEMOD_QAM_terminate.h"
 #include "qam_decoder/HS_EWL_DEMOD_QAM_types.h"
 #include "qam_decoder/HS_EWL_FREQ_ACQ.h"
@@ -17,6 +16,11 @@
 #include "crc8.h"
 #include "crc16.h"
 #include "srp_mod_protocol.h"
+
+#include "qam_decoder/rtwtypes.h"
+//#include "omp.h"
+//#include <cstddef>
+//#include <cstdlib>
 
 /* Extern global variables */
 extern RingBuffer *m_ring;              // ring data buffer (ADC data) for QAM decoder
@@ -34,16 +38,21 @@ double mode = 1;//1-both stages enabled, 0-only sevond stage
 
 //  output var for HS_EWL_FREQ_ACQ
 double warning_status;
-double index_data;
+double data[14040];
+//double index_data;
 double len_data;
 double f_est_data;//estimated frequency
-int f_est_size;
+//int f_est_size;
 
 //  output var for HS_EWL_DEMOD_QAM
-creal_T qam_symbols_data[255];
+//creal_T qam_symbols_data[255];
 int qam_symbols_size;
 double byte_data[255];
 int byte_data_size;
+
+double qam_symbols_real[275];
+double qam_symbols_imag[275];
+double start_inf_data;
 
 static uint8_t data_decoded[128*1024];      // data decoded from all qam packet
 
@@ -53,6 +62,78 @@ double ref_sin[] = {0, 1.205367e-01, 2.393157e-01, 3.546049e-01, 4.647232e-01, 5
 // Debug variables
 qint64 elapsed_all = 0;
 qint64 elapsed_all_saved = 0;
+
+static void argInit_1x14040_real_T(double result[14040]);
+static void argInit_1x33000_real_T(double result[33000]);
+static void argInit_1x450000_real_T(double result[450000]);
+static void argInit_1x57820_real_T(double result[57820]);
+static double argInit_real_T();
+
+// Function Definitions
+//
+// Arguments    : double result[14040]
+// Return Type  : void
+//
+static void argInit_1x14040_real_T(double result[14040])
+{
+  // Loop over the array to initialize each element.
+  for (int idx1 = 0; idx1 < 14040; idx1++) {
+    // Set the value of the array element.
+    // Change this value to the value that the application requires.
+    result[idx1] = argInit_real_T();
+  }
+}
+
+//
+// Arguments    : double result[33000]
+// Return Type  : void
+//
+static void argInit_1x33000_real_T(double result[33000])
+{
+  // Loop over the array to initialize each element.
+  for (int idx1 = 0; idx1 < 33000; idx1++) {
+    // Set the value of the array element.
+    // Change this value to the value that the application requires.
+    result[idx1] = argInit_real_T();
+  }
+}
+
+//
+// Arguments    : double result[450000]
+// Return Type  : void
+//
+static void argInit_1x450000_real_T(double result[450000])
+{
+  // Loop over the array to initialize each element.
+  for (int idx1 = 0; idx1 < 450000; idx1++) {
+    // Set the value of the array element.
+    // Change this value to the value that the application requires.
+    result[idx1] = argInit_real_T();
+  }
+}
+
+//
+// Arguments    : double result[57820]
+// Return Type  : void
+//
+static void argInit_1x57820_real_T(double result[57820])
+{
+  // Loop over the array to initialize each element.
+  for (int idx1 = 0; idx1 < 57820; idx1++) {
+    // Set the value of the array element.
+    // Change this value to the value that the application requires.
+    result[idx1] = argInit_real_T();
+  }
+}
+
+//
+// Arguments    : void
+// Return Type  : double
+//
+static double argInit_real_T()
+{
+  return 0.0;
+}
 
 QamThread::QamThread(QObject *parent) :
     QThread(parent)
@@ -108,6 +189,10 @@ void QamThread::SetFirstPassFlag()
 
 void QamThread::QAM_Decoder()
 {
+    // ERROR status
+    int HS_EWL_FREQ_ACQ_error_status;
+    int HS_EWL_DEMOD_QAM_error_status;
+
     bool crc_error = false;
     bool last_frame_received = false;
     double *signal = (double*)&Signal;
@@ -117,19 +202,26 @@ void QamThread::QAM_Decoder()
 //        Signal[i] = i;
 
     peformance_timer.start();
-    emxArray_real_T *data_qam256 = NULL;
-    data_qam256 = emxCreateWrapper_real_T(signal, 1, len);
+//    emxArray_real_T *data_qam256 = NULL;
+//    data_qam256 = emxCreateWrapper_real_T(signal, 1, len);
+//
+//    HS_EWL_FREQ_ACQ(data_qam256, len, Fs, f0, sps, mode, preamble_len,
+//                      message_len, QAM_order, preamble_QAM_symbol, &index_data, &len_data, (double *)&f_est_data,
+//                      *(int(*)[1]) & f_est_size, &warning_status);
 
-    HS_EWL_FREQ_ACQ(data_qam256, len, Fs, f0, sps, mode, preamble_len,
-                      message_len, QAM_order, preamble_QAM_symbol, &index_data, &len_data, (double *)&f_est_data,
-                      *(int(*)[1]) & f_est_size, &warning_status);
+    HS_EWL_FREQ_ACQ_error_status = HS_EWL_FREQ_ACQ(signal, len, Fs, f0, sps, mode, preamble_len,
+                        message_len, data, &len_data, (double*)&f_est_data, &warning_status);
 
-    if(warning_status != 4)
+//    if(warning_status != 4)
+//    {
+//        HS_EWL_DEMOD_QAM(data_qam256, index_data, len_data, f_est_data,
+//                     Fs, sps, preamble_QAM_symbol,
+//                     QAM_order, qam_symbols_data, &qam_symbols_size,
+//                     byte_data, &byte_data_size);
+    if(HS_EWL_FREQ_ACQ_error_status == 0)
     {
-        HS_EWL_DEMOD_QAM(data_qam256, index_data, len_data, f_est_data,
-                     Fs, sps, preamble_QAM_symbol,
-                     QAM_order, qam_symbols_data, &qam_symbols_size,
-                     byte_data, &byte_data_size);
+        HS_EWL_DEMOD_QAM_error_status = HS_EWL_DEMOD_QAM(data, len_data, f_est_data, Fs, qam_symbols_real,
+                                                        qam_symbols_imag, byte_data, &start_inf_data);
 
         // Data parsing
         // Convert decoded data from 'double' to 'uint8', copy to data_decoded[] buffer
@@ -218,6 +310,10 @@ void QamThread::QAM_Decoder()
             }
             mutex.unlock();
         }
+    }
+    else
+    {
+        HS_EWL_DEMOD_QAM_error_status = -1; // HS_EWL_DEMOD_QAM not use
     }
 
     // Debug information
