@@ -18,6 +18,8 @@
 #include "crc16.h"
 #include "srp_mod_protocol.h"
 
+#include "rs_decoder.h"
+
 /* Extern global variables */
 extern RingBuffer *m_ring;              // ring data buffer (ADC data) for QAM decoder
 extern QWaitCondition ringNotEmpty;
@@ -54,6 +56,10 @@ double ref_sin[] = {0, 1.205367e-01, 2.393157e-01, 3.546049e-01, 4.647232e-01, 5
 qint64 elapsed_all = 0;
 qint64 elapsed_all_saved = 0;
 
+// Reed Solomon decoder variables
+/* generator polynomial */
+unsigned char gs[nn-K1+1];
+
 QamThread::QamThread(QObject *parent) :
     QThread(parent)
 {
@@ -71,6 +77,11 @@ QamThread::~QamThread()
 void QamThread::run()
 {
     bool res = false;
+
+    // RS decoder init
+    generate_gf();
+    gen_poly(T1, gs);
+    //gen_poly(Ts2, gs2);
 
     while(!m_quit)
     {
@@ -108,6 +119,9 @@ void QamThread::SetFirstPassFlag()
 
 void QamThread::QAM_Decoder()
 {
+    int rs_decode_flag = -1;
+    qint64 rs_elapsed = 0;
+
     bool crc_error = false;
     bool last_frame_received = false;
     double *signal = (double*)&Signal;
@@ -146,11 +160,25 @@ void QamThread::QAM_Decoder()
         if(crc8 != tail->crc8)
         {
             crc_error = true;
-            emit consolePutData(QString("HS frame parsing crc error\n"), 1);
+            //emit consolePutData(QString("HS frame parsing crc error, attempting to correct data with rs decoder\n"), 1);
 
-            //todo rs decoder
+            peformance_timer2.start();
+
+            // Zero padding before decode
+            memset(frame_decoded + TxPacketRsCodesSize + TxPacketDataSize, 0x00, sizeof(frame_decoded) - TxPacketRsCodesSize - TxPacketDataSize);
+
+            rs_decode_flag = decode_rs1(frame_decoded);
+
+            if(rs_decode_flag < 2)
+            {
+                // Check crc again
+                crc8 = calc_crc8(frame_decoded + TxPacketRsCodesSize, TxPacketDataSize - 1);
+            }
+
+            rs_elapsed = peformance_timer2.elapsed();
         }
-        else
+
+        if(crc8 == tail->crc8)
         {
             crc_error = false;
 
@@ -221,6 +249,30 @@ void QamThread::QAM_Decoder()
             }
             mutex.unlock();
         }
+
+        if(crc8 != tail->crc8)
+            emit consolePutData(QString("CRC error, rs decoder failed to correct data\n"), 1);
+    }
+
+    // RS decoder debug information
+    switch(rs_decode_flag)
+    {
+        case 0:
+            /* no non-zero syndromes => no errors: output received codeword */
+            emit consolePutData(QString("RS decoder finished in %1 ms: no errors\n").arg(rs_elapsed), 1);
+            break;
+
+        case 1:
+            emit consolePutData(QString("RS decoder finished in %1 ms: errors corrected\n").arg(rs_elapsed), 1);
+            break;
+
+        case 2:
+        case 3:
+            emit consolePutData(QString("RS decoder finished in %1 ms: unable to correct\n").arg(rs_elapsed), 1);
+            break;
+
+        default:
+            break;
     }
 
     // Debug information

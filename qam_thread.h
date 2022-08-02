@@ -45,6 +45,7 @@ private:
     double Length;
 
     QElapsedTimer peformance_timer;     // timer for QAM decoder performance measurements
+    QElapsedTimer peformance_timer2;    // timer for RS decoder performance measurements
 
     const qint64 qam_rx_timeout_ms = 100;// rx timeout between QAM packets when decoding multi frame packet, ms
 
@@ -65,7 +66,8 @@ private:
 
     QMutex mutex;
 
-    uint8_t frame_decoded[TxPacketRsCodesSize + TxPacketDataSize];          // data decoded from single qam packet
+    //uint8_t frame_decoded[TxPacketRsCodesSize + TxPacketDataSize];          // data decoded from single qam packet
+    uint8_t frame_decoded[255];
 
     uint8_t n_error_frame = 0;
 };

@@ -51,6 +51,7 @@ SOURCES += \
     qam_decoder/xcorr.cpp \
     qam_thread.cpp \
     ringbuffer.cpp \
+    rs_decoder.cpp \
     settingsdialog.cpp \
     console.cpp \
     statistics.cpp \
@@ -168,6 +169,7 @@ HEADERS += \
     qam_decoder/xcorr.h \
     qam_thread.h \
     ringbuffer.h \
+    rs_decoder.h \
     settingsdialog.h \
     console.h \
     srp_mod_protocol.h \
