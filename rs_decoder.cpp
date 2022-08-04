@@ -136,15 +136,12 @@ inline int max(const int a, const int b) { return (a < b) ? b : a; }
 
 /**** Primitive polynomial ****/
 int pp [mm+1] = { 1, 0, 1, 1, 1, 0, 0, 0, 1}; /* 1+x^2+x^3+x^4+x^8 */
-
 /* int pp [mm+1] = { 1, 1, 0, 0, 1}; */ /* 1 + x + x^4 */
-
 /* int pp[mm+1] = {1,1,0,1}; */ /* 1 + x + x^3 */
 
 /* generator polynomial, tables for Galois field */
 unsigned char alpha_to[nn+1];
 unsigned char index_of[nn+1];
-//unsigned char gs[nn-Ks+1];
 
 int b0;  /* g(x) has roots @**b0, @**(b0+1), ... ,@^(b0+2*tt-1) */
 

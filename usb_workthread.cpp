@@ -1056,6 +1056,15 @@ emit consolePutData(QString("USB elapsed %1\n").arg(profiler_timer.elapsed()), 1
 
             break;
         }
+
+        case USB_CMD_SYNCHRO_START:
+            synchro_measure_timer.restart();
+            emit consolePutData("USB_CMD_SYNCHRO_START\n", 1);
+            break;
+
+        case USB_CMD_SYNCHRO_STOP:
+            emit consolePutData(QString("USB_CMD_SYNCHRO_STOP, elapsed %1\n").arg(synchro_measure_timer.elapsed()), 1);
+            break;
     }
 }
 

@@ -106,6 +106,7 @@ private:
 
     QElapsedTimer rx_timeout_timer;
     QElapsedTimer console_spam_timer;
+    QElapsedTimer synchro_measure_timer;
 
     const qint64 rx_timeout_ms = 50;//10;            // usb rx timeout between transfers of one big packet, ms
 
