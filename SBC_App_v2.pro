@@ -8,6 +8,7 @@ SOURCES += \
     crc16.cpp \
     crc8.cpp \
     freq_sweep_thread.cpp \
+    indigo_base_protocol.cpp \
     main.cpp \
     mainwindow.cpp \
     message_box.cpp \
@@ -57,7 +58,18 @@ SOURCES += \
     statistics.cpp \
     synchro_watcher.cpp \
     usb_workthread.cpp \
-    global_vars.cpp
+    global_vars.cpp \
+    IndigoProtocol/SharedData/sample_flags_handler.cpp \
+    IndigoProtocol/V1/CRC8.cpp \
+    IndigoProtocol/V1/CRC16.cpp \
+    IndigoProtocol/V1/IndigoBaseProtocolBaseParserV1.cpp \
+    IndigoProtocol/V1/IndigoBaseProtocolBuilderV1.cpp \
+    IndigoProtocol/V1/IndigoBaseProtocolFrameBuilderV1.cpp \
+    IndigoProtocol/V1/IndigoBaseProtocolFrameParserV1.cpp \
+    IndigoProtocol/V1/IndigoBaseProtocolParserV1.cpp \
+    IndigoProtocol/V1/IndigoBaseProtocolUsbBuilderV1.cpp \
+    IndigoProtocol/V1/IndigoProtocolCommandBuilder.cpp \
+    IndigoProtocol/V1/IndigoProtocolHelpClasses.cpp
 
 CONFIG += c++11
 
@@ -114,10 +126,12 @@ DEPENDPATH += $$PWD/
 
 HEADERS += \
     ../SRP_HS_USB_PROTOCOL/SRP_HS_USB_Protocol.h \
+    IndigoProtocol/constants.h \
     agc_algorithm.h \
     crc16.h \
     crc8.h \
     freq_sweep_thread.h \
+    indigo_base_protocol.h \
     mainwindow.h \
     message_box.h \
     mod_transmitter_thread.h \
@@ -178,7 +192,26 @@ HEADERS += \
     synchro_watcher.h \
     usb_global.h \
     usb_workthread.h \
-    global_vars.h
+    global_vars.h \
+    IndigoProtocol/IndigoBaseTypes.h \
+    IndigoProtocol/SharedData/mem_packet_sh.h \
+    IndigoProtocol/SharedData/sample_flags_handler.h \
+    IndigoProtocol/SharedData/SensorBase.h \
+    IndigoProtocol/SharedData/SensorData.h \
+    IndigoProtocol/V1/CommandBodyHeader.h \
+    IndigoProtocol/V1/CommandHeaderHeader.h \
+    IndigoProtocol/V1/CRC8.h \
+    IndigoProtocol/V1/CRC16.h \
+    IndigoProtocol/V1/IndigoBaseProtocolBaseParserV1.h \
+    IndigoProtocol/V1/IndigoBaseProtocolBuilderV1.h \
+    IndigoProtocol/V1/IndigoBaseProtocolFrameBuilderV1.h \
+    IndigoProtocol/V1/IndigoBaseProtocolFrameParserV1.h \
+    IndigoProtocol/V1/IndigoBaseProtocolParserV1.h \
+    IndigoProtocol/V1/IndigoBaseProtocolUsbBuilderV1.h \
+    IndigoProtocol/V1/IndigoBaseTypesV1.h \
+    IndigoProtocol/V1/IndigoProtocolCommandBuilder.h \
+    IndigoProtocol/V1/IndigoProtocolHelpClasses.h \
+    IndigoProtocol/V1/TransportProtocolHeader.h
 
 FORMS += \
     mainwindow.ui

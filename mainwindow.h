@@ -152,15 +152,6 @@ private:
     bool transmit_quick_answer = false;
 
     struct timeval tv = {0, 0};
-
-    // Synchronization 'suspended time' ('busy'\'wait') answer
-    const uint8_t CMD_WAIT = 0xD1;
-#pragma pack(push, 1)
-    struct CmdWait
-    {
-        uint16_t ms;
-    };
-#pragma pack(pop)
 };
 
 #endif // MAINWINDOW_H

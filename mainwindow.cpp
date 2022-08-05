@@ -61,6 +61,7 @@
 #include "crc16.h"
 #include "global_vars.h"
 #include "synchro_watcher.h"
+#include "indigo_base_protocol.h"
 
 // Extern variables
 extern QElapsedTimer profiler_timer;
@@ -435,9 +436,12 @@ void MainWindow::parseDataSerialPort()
     if(syncIsSuspendedTimeInProgress())
     {
         // Answer with 'busy' (todo indigo base protocol answer)
-        QByteArray answer;
-        answer.append(CMD_WAIT);
-        transmitDataSerialPort((uint8_t*)answer.data(), answer.size());
+//        QByteArray answer;
+//        answer.append(CMD_WAIT);
+
+        command_sync_busy_wait_creator();
+
+//        transmitDataSerialPort((uint8_t*)answer.data(), answer.size());
 
         // Unlock USB receiver
         m_usb_thread.usb_receiver_drop = false;
