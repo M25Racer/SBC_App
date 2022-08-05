@@ -55,6 +55,7 @@ SOURCES += \
     settingsdialog.cpp \
     console.cpp \
     statistics.cpp \
+    synchro_watcher.cpp \
     usb_workthread.cpp \
     global_vars.cpp
 
@@ -174,6 +175,7 @@ HEADERS += \
     console.h \
     srp_mod_protocol.h \
     statistics.h \
+    synchro_watcher.h \
     usb_global.h \
     usb_workthread.h \
     global_vars.h

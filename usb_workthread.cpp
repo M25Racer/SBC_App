@@ -3,6 +3,7 @@
 #include "../SRP_HS_USB_PROTOCOL/SRP_HS_USB_Protocol.h"
 #include "agc_algorithm.h"
 #include "global_vars.h"
+#include "synchro_watcher.h"
 
 /* Private variables */
 #ifdef QT_DEBUG
@@ -1058,12 +1059,14 @@ emit consolePutData(QString("USB elapsed %1\n").arg(profiler_timer.elapsed()), 1
         }
 
         case USB_CMD_SYNCHRO_START:
+            syncSetSuspendedTimeInProgress(true);
             synchro_measure_timer.restart();
-            emit consolePutData("USB_CMD_SYNCHRO_START\n", 1);
+            //emit consolePutData("SYNCHRO_START\n", 0);
             break;
 
         case USB_CMD_SYNCHRO_STOP:
-            emit consolePutData(QString("USB_CMD_SYNCHRO_STOP, elapsed %1\n").arg(synchro_measure_timer.elapsed()), 1);
+            syncSetSuspendedTimeInProgress(false);
+            emit consolePutData(QString("SYNCHRO_STOP, elapsed %1\n").arg(synchro_measure_timer.elapsed()), 0);
             break;
     }
 }

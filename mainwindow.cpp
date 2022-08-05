@@ -60,6 +60,7 @@
 #include <QThread>
 #include "crc16.h"
 #include "global_vars.h"
+#include "synchro_watcher.h"
 
 // Extern variables
 extern QElapsedTimer profiler_timer;
@@ -429,6 +430,22 @@ void MainWindow::parseDataSerialPort()
     }
 
     // Data for other tools
+
+    // Check if synchronization 'suspended time' is in progress
+    if(syncIsSuspendedTimeInProgress())
+    {
+        // Answer with 'busy' (todo indigo base protocol answer)
+        QByteArray answer;
+        answer.append(CMD_WAIT);
+        transmitDataSerialPort((uint8_t*)answer.data(), answer.size());
+
+        // Unlock USB receiver
+        m_usb_thread.usb_receiver_drop = false;
+        m_qam_thread.data_drop = false;
+        m_ring->Clear();
+        return;
+    }
+
     // Check length
     if(TtyUserRxBuffer_len > TtyUserRxBuffer_MaxSize)
     {
