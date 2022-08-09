@@ -2,68 +2,58 @@
 // File: movSumProdOrMean.cpp
 //
 // MATLAB Coder version            : 5.1
-// C/C++ source code generated on  : 06-May-2022 14:49:51
+// C/C++ source code generated on  : 20-Jul-2022 11:04:49
 //
 
 // Include Files
 #include "movSumProdOrMean.h"
-#include "HS_EWL_DEMOD_QAM_emxutil.h"
-#include "HS_EWL_DEMOD_QAM_types.h"
 #include "rt_nonfinite.h"
+#include <cstring>
 
 // Function Definitions
 //
-// Arguments    : const emxArray_real_T *x
+// Arguments    : const double x[14001]
 //                int nx
-//                emxArray_real_T *y
+//                double y[14001]
 // Return Type  : void
 //
 namespace coder
 {
-  void vmovfun(const emxArray_real_T *x, int nx, emxArray_real_T *y)
+  void vmovfun(const double x[14001], int nx, double y[14001])
   {
     double b_y;
     int b_k;
-    int i;
     int iLeft;
-    int loop_ub;
+    int ub_loop;
     int vlen;
-    i = y->size[0] * y->size[1];
-    y->size[0] = 1;
-    y->size[1] = x->size[1];
-    emxEnsureCapacity_real_T(y, i);
-    loop_ub = x->size[1];
-    for (i = 0; i < loop_ub; i++) {
-      y->data[i] = 0.0;
-    }
-
-    loop_ub = nx - 1;
+    std::memset(&y[0], 0, 14001U * sizeof(double));
+    ub_loop = nx - 1;
 
 
-    for (int k = 0; k <= loop_ub; k++) {
+    for (int k = 0; k <= ub_loop; k++) {
       if (k + 1 <= 25) {
-        iLeft = 0;
+        iLeft = -24;
       } else {
-        iLeft = k - 25;
+        iLeft = k - 49;
       }
 
-      if (k + 25 > x->size[1]) {
-        b_k = x->size[1];
+      if (k + 25 > 14001) {
+        b_k = 13977;
       } else {
-        b_k = k + 25;
+        b_k = k + 1;
       }
 
       vlen = b_k - iLeft;
-      if ((x->size[1] == 0) || (vlen == 0)) {
+      if (vlen == 0) {
         b_y = 0.0;
       } else {
-        b_y = x->data[iLeft];
+        b_y = x[iLeft + 24];
         for (b_k = 2; b_k <= vlen; b_k++) {
-          b_y += x->data[(iLeft + b_k) - 1];
+          b_y += x[(iLeft + b_k) + 23];
         }
       }
 
-      y->data[k] = b_y / static_cast<double>(vlen);
+      y[k] = b_y / static_cast<double>(vlen);
     }
   }
 }
