@@ -25,10 +25,10 @@ void init_error_header(CmdTypeErrorHeaderV1 *hdr, uint16_t frame_num, uint8_t cm
     hdr->error_id  = error_id;
 }
 
-void command_sync_wait_creator()
+void command_sync_wait_creator(uint16_t time)
 {
     CmdWait cmd_wait;
-    cmd_wait.ms = 30;  //todo
+    cmd_wait.ms = time;
 
     //Fill Command Structures
     CmdCommonHeaderV1 cmd_common_header; // = { .version = SELF_CMD_VERSION, .type = COMMAND_TYPE_COMMAND };

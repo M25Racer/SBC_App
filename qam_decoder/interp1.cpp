@@ -65,9 +65,6 @@ namespace coder
     minx = varargin_1->data[0];
     maxx = varargin_1->data[varargin_1->size[1] - 1];
 
-#pragma omp parallel for \
- num_threads(omp_get_max_threads()) \
- private(d,n,r)
 
     for (int k = 0; k < 513; k++) {
       d = xi[k];
@@ -180,9 +177,6 @@ namespace coder
     pp.coefs.size[1] = 4;
     std::memcpy(&pp.coefs.data[0], &pp_coefs_data[0], 4092U * sizeof(double));
 
-#pragma omp parallel for \
- num_threads(omp_get_max_threads()) \
- private(b_pp,xloc,ip)
 
     for (int b_k = 0; b_k < 2048; b_k++) {
       if (rtIsNaN(xi_data[b_k])) {
@@ -293,9 +287,6 @@ namespace coder
     std::memcpy(&pp.coefs.data[0], &pp_coefs_data[0], 8188U * sizeof(double));
     k = xi->size[1] - 1;
 
-#pragma omp parallel for \
- num_threads(omp_get_max_threads()) \
- private(xloc,b_pp,ip)
 
     for (int b_k = 0; b_k <= k; b_k++) {
       xloc = xi->data[b_k];

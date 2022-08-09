@@ -39,9 +39,6 @@ namespace coder
 
     loop_ub = nx - 1;
 
-#pragma omp parallel for \
- num_threads(omp_get_max_threads()) \
- private(iLeft,b_k,vlen,b_y)
 
     for (int k = 0; k <= loop_ub; k++) {
       if (k + 1 <= 25) {

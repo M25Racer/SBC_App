@@ -438,14 +438,25 @@ void MainWindow::parseDataSerialPort()
     // Check if synchronization 'suspended time' is in progress
     if(syncIsSuspendedTimeInProgress())
     {
-        // Answer with 'wait' (indigo base protocol answer)
-        command_sync_wait_creator();
+        uint16_t suspended_time_left = syncGetTime();
+        if(suspended_time_left)
+        {
+            m_console->putData("Sync suspended time is in progress: answer with 'wait'\n", 1);
 
-        // Unlock USB receiver
-        m_usb_thread.usb_receiver_drop = false;
-        m_qam_thread.data_drop = false;
-        m_ring->Clear();
-        return;
+            // Answer with 'wait' (indigo base protocol answer)
+            command_sync_wait_creator(suspended_time_left);
+
+            // Unlock USB receiver
+            m_usb_thread.usb_receiver_drop = false;
+            m_qam_thread.data_drop = false;
+            m_ring->Clear();
+            return;
+        }
+        else
+        {
+            // Uncomment if we get rid of 'USB_CMD_SYNCHRO_STOP'
+            //syncSetSuspendedTimeInProgress(false, 0);
+        }
     }
 
     // Check length

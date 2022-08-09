@@ -1059,12 +1059,16 @@ emit consolePutData(QString("USB elapsed %1\n").arg(profiler_timer.elapsed()), 1
         }
 
         case USB_CMD_SYNCHRO_START:
-            syncSetSuspendedTimeInProgress(true);
+        {
+            uint16_t SuspendedTime = (uint16_t(*(p_data + 1)) << 8) | *p_data;
+            emit consolePutData(QString("SYNCHRO_START, suspended time %1\n").arg(SuspendedTime), 0);
+            syncSetSuspendedTimeInProgress(true, SuspendedTime);
             synchro_measure_timer.restart();
+        }
             break;
 
         case USB_CMD_SYNCHRO_STOP:
-            syncSetSuspendedTimeInProgress(false);
+            syncSetSuspendedTimeInProgress(false, 0);
             emit consolePutData(QString("SYNCHRO_STOP, elapsed %1\n").arg(synchro_measure_timer.elapsed()), 0);
             break;
     }

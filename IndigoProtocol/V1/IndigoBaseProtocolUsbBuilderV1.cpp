@@ -44,6 +44,8 @@ void IndigoProtocolUsbBuilderV1::Initialize()
 
 void IndigoProtocolUsbBuilderV1::AddOffsets(CmdRepeatOffset *offsets, uint32_t count)
 {
+    Q_UNUSED(offsets);
+    Q_UNUSED(count);
 }
 
 void IndigoProtocolUsbBuilderV1::SetDataLength(uint32_t data_length)
