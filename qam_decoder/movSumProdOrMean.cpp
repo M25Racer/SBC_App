@@ -29,9 +29,6 @@ namespace coder
     std::memset(&y[0], 0, 14001U * sizeof(double));
     ub_loop = nx - 1;
 
-#pragma omp parallel for \
- num_threads(omp_get_max_threads()) \
- private(iLeft,b_k,vlen,b_y)
 
     for (int k = 0; k <= ub_loop; k++) {
       if (k + 1 <= 25) {

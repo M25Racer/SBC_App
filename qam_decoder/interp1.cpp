@@ -55,9 +55,6 @@ namespace coder
     minx = varargin_1[0];
     maxx = varargin_1[14000];
 
-#pragma omp parallel for \
- num_threads(omp_get_max_threads()) \
- private(r_tmp,low_i,low_ip1,high_i,mid_i,r)
 
     for (int k = 0; k < 513; k++) {
       r_tmp = xi[k];
@@ -584,9 +581,6 @@ namespace coder
       pp.coefs[k + 3069] = y[k];
     }
 
-#pragma omp parallel for \
- num_threads(omp_get_max_threads()) \
- private(low_i,low_ip1,high_i,xloc,mid_i)
 
     for (int b_k = 0; b_k < 2048; b_k++) {
       low_i = 0;
@@ -687,9 +681,6 @@ namespace coder
       pp.coefs[k + 6141] = y[k];
     }
 
-#pragma omp parallel for \
- num_threads(omp_get_max_threads()) \
- private(xloc,low_i,low_ip1,high_i,mid_i)
 
     for (int b_k = 0; b_k < 57820; b_k++) {
       xloc = xi[b_k];
