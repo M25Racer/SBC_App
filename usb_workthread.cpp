@@ -1061,7 +1061,6 @@ emit consolePutData(QString("USB elapsed %1\n").arg(profiler_timer.elapsed()), 1
         case USB_CMD_SYNCHRO_START:
             syncSetSuspendedTimeInProgress(true);
             synchro_measure_timer.restart();
-            //emit consolePutData("SYNCHRO_START\n", 0);
             break;
 
         case USB_CMD_SYNCHRO_STOP:

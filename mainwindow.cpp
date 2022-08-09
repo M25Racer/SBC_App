@@ -67,6 +67,7 @@
 extern QElapsedTimer profiler_timer;
 extern RingBuffer *m_ring;
 extern qint64 elapsed_all_saved;
+extern IndigoBaseProtocolBuilderV1 g_frame_builder;
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -116,8 +117,6 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(&m_mod_tx_thread, &ModTransmitterThread::qamDecoderReset, this, &MainWindow::qamDecoderReset, Qt::ConnectionType::QueuedConnection);
     connect(&m_mod_tx_thread, &ModTransmitterThread::setStatus, this, &MainWindow::setAutoCfgStatus, Qt::ConnectionType::QueuedConnection);
 
-    //agcStartCommandToSTM32
-
     m_console->putData("SBC Application\n", 1);
     m_console->putData("Opening serial port...\n", 1);
 
@@ -139,6 +138,10 @@ MainWindow::MainWindow(QWidget *parent) :
     timerUsbInit = new QTimer();
     timerUsbInit->setSingleShot(true);
     connect(timerUsbInit, SIGNAL(timeout()), this, SLOT(timeoutUsbInitCallback()));
+
+    // Indigo base protocol initialization
+    g_frame_builder.Initialize();
+    g_frame_builder.SetNotify(frame_builded_cb, this);
 
     openSerialPort();
 
@@ -435,13 +438,8 @@ void MainWindow::parseDataSerialPort()
     // Check if synchronization 'suspended time' is in progress
     if(syncIsSuspendedTimeInProgress())
     {
-        // Answer with 'busy' (todo indigo base protocol answer)
-//        QByteArray answer;
-//        answer.append(CMD_WAIT);
-
-        command_sync_busy_wait_creator();
-
-//        transmitDataSerialPort((uint8_t*)answer.data(), answer.size());
+        // Answer with 'wait' (indigo base protocol answer)
+        command_sync_wait_creator();
 
         // Unlock USB receiver
         m_usb_thread.usb_receiver_drop = false;
@@ -670,4 +668,16 @@ void MainWindow::qamDecoderReset()
 void MainWindow::setAutoCfgStatus(quint8 status)
 {
     m_message_box->setStatusAutoCfgPredistortion(status);
+}
+
+bool MainWindow::frame_builded_cb(const void *param, const uint8_t *buffer, uint32_t size)
+{
+    MainWindow *self = (MainWindow*)param;
+
+    if(!self)
+        return false;
+
+    self->transmitDataSerialPort(buffer, size);
+
+    return true;
 }

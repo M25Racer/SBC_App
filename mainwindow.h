@@ -123,6 +123,8 @@ private:
     void parseDataSerialPort();
     void serialPortRxCleanup();
 
+    static bool frame_builded_cb(const void *param, const uint8_t *buffer, uint32_t size);
+
     Ui::MainWindow *m_ui = nullptr;
     QLabel *m_status = nullptr;
 
