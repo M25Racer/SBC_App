@@ -710,7 +710,7 @@ int HS_EWL_FREQ_ACQ(const double data[14040], double len, double Fs, double
   static double s[14044];
   static double testSignal[14040];
   creal_T only_pream_filt[2392];
-  creal_T filt2pream[46];
+  creal_T filt2pream[50];
   double position[4];
   double bounds[2];
   double P;
@@ -831,9 +831,10 @@ int HS_EWL_FREQ_ACQ(const double data[14040], double len, double Fs, double
 
       // len_cut_data = pre_to-pre_from;
       // get bounds for processing
+      *len_data = round(*len_data/52)*52;
       sa = sps * ((Pl-10) - 2.0);
       bounds[0] = sps * ((Pl + 10) - 2.0);
-      bounds[1] = round((* len_data - sa)/52)*52;
+      bounds[1] = * len_data - sa;
       pre_from = bounds[1];
       //std::memset(&only_pream_filt[0], 0, 2132U * sizeof(creal_T));
 
@@ -968,9 +969,12 @@ int HS_EWL_FREQ_ACQ(const double data[14040], double len, double Fs, double
 
         std::memset(&only_pream_filt[0], 0, 2392U * sizeof(creal_T));
         bounds1new = bounds[0];
-        bounds2new = bounds[1] - 52 * 5;
-        if(*len_data - bounds2new + 10*52 > 936)
-            bounds2new = bounds2new + (*len_data - bounds2new + 10*52 - 936);
+        if(bounds[0]/52 + (*len_data - bounds[1])/52 <= Pl*2)
+            bounds2new = bounds[1] - 52 * 5;
+        else
+            bounds2new = bounds[1] + ((bounds[0]/52 + (*len_data - bounds[1])/52) - Pl*2 - 5)*52;
+        //if(*len_data - bounds2new + 10*52 > 936)
+        //    bounds2new = bounds2new + (*len_data - bounds2new + 10*52 - 936);
         //  function [y1] = multip_ref_sin_cos(data,bound1,bound2,ref_sin,ref_cos)
         count = 0;
         b_i = static_cast<int>(bounds1new);

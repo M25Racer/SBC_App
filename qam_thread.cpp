@@ -69,77 +69,77 @@ qint64 elapsed_all_saved = 0;
 /* generator polynomial */
 unsigned char gs[nn-K1+1];
 
-static void argInit_1x14040_real_T(double result[14040]);
-static void argInit_1x33000_real_T(double result[33000]);
-static void argInit_1x450000_real_T(double result[450000]);
-static void argInit_1x57820_real_T(double result[57820]);
-static double argInit_real_T();
+//static void argInit_1x14040_real_T(double result[14040]);
+//static void argInit_1x33000_real_T(double result[33000]);
+//static void argInit_1x450000_real_T(double result[450000]);
+//static void argInit_1x57820_real_T(double result[57820]);
+//static double argInit_real_T();
 
-// Function Definitions
-//
-// Arguments    : double result[14040]
-// Return Type  : void
-//
-static void argInit_1x14040_real_T(double result[14040])
-{
-  // Loop over the array to initialize each element.
-  for (int idx1 = 0; idx1 < 14040; idx1++) {
-    // Set the value of the array element.
-    // Change this value to the value that the application requires.
-    result[idx1] = argInit_real_T();
-  }
-}
+//// Function Definitions
+////
+//// Arguments    : double result[14040]
+//// Return Type  : void
+////
+//static void argInit_1x14040_real_T(double result[14040])
+//{
+//  // Loop over the array to initialize each element.
+//  for (int idx1 = 0; idx1 < 14040; idx1++) {
+//    // Set the value of the array element.
+//    // Change this value to the value that the application requires.
+//    result[idx1] = argInit_real_T();
+//  }
+//}
 
-//
-// Arguments    : double result[33000]
-// Return Type  : void
-//
-static void argInit_1x33000_real_T(double result[33000])
-{
-  // Loop over the array to initialize each element.
-  for (int idx1 = 0; idx1 < 33000; idx1++) {
-    // Set the value of the array element.
-    // Change this value to the value that the application requires.
-    result[idx1] = argInit_real_T();
-  }
-}
+////
+//// Arguments    : double result[33000]
+//// Return Type  : void
+////
+//static void argInit_1x33000_real_T(double result[33000])
+//{
+//  // Loop over the array to initialize each element.
+//  for (int idx1 = 0; idx1 < 33000; idx1++) {
+//    // Set the value of the array element.
+//    // Change this value to the value that the application requires.
+//    result[idx1] = argInit_real_T();
+//  }
+//}
 
-//
-// Arguments    : double result[450000]
-// Return Type  : void
-//
-static void argInit_1x450000_real_T(double result[450000])
-{
-  // Loop over the array to initialize each element.
-  for (int idx1 = 0; idx1 < 450000; idx1++) {
-    // Set the value of the array element.
-    // Change this value to the value that the application requires.
-    result[idx1] = argInit_real_T();
-  }
-}
+////
+//// Arguments    : double result[450000]
+//// Return Type  : void
+////
+//static void argInit_1x450000_real_T(double result[450000])
+//{
+//  // Loop over the array to initialize each element.
+//  for (int idx1 = 0; idx1 < 450000; idx1++) {
+//    // Set the value of the array element.
+//    // Change this value to the value that the application requires.
+//    result[idx1] = argInit_real_T();
+//  }
+//}
 
-//
-// Arguments    : double result[57820]
-// Return Type  : void
-//
-static void argInit_1x57820_real_T(double result[57820])
-{
-  // Loop over the array to initialize each element.
-  for (int idx1 = 0; idx1 < 57820; idx1++) {
-    // Set the value of the array element.
-    // Change this value to the value that the application requires.
-    result[idx1] = argInit_real_T();
-  }
-}
+////
+//// Arguments    : double result[57820]
+//// Return Type  : void
+////
+//static void argInit_1x57820_real_T(double result[57820])
+//{
+//  // Loop over the array to initialize each element.
+//  for (int idx1 = 0; idx1 < 57820; idx1++) {
+//    // Set the value of the array element.
+//    // Change this value to the value that the application requires.
+//    result[idx1] = argInit_real_T();
+//  }
+//}
 
-//
-// Arguments    : void
-// Return Type  : double
-//
-static double argInit_real_T()
-{
-  return 0.0;
-}
+////
+//// Arguments    : void
+//// Return Type  : double
+////
+//static double argInit_real_T()
+//{
+//  return 0.0;
+//}
 
 QamThread::QamThread(QObject *parent) :
     QThread(parent)
