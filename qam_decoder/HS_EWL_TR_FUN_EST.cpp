@@ -175,7 +175,7 @@ void HS_EWL_TR_FUN_EST(const double sweep_data[450000], const double sweep_math
   std::memset(&phase[0], 0, 2048U * sizeof(double));
   *shift_for_qam_data = 0.0;
 
-  // gain_phase_impulse_cable_buf634 = load('C:\Users\ramil.ziyadiev\Desktop\Work\qam transmiter\gain_phase_impulse_cable_buf634a.mat'); 
+  // gain_phase_impulse_cable_buf634 = load('C:\Users\ramil.ziyadiev\Desktop\Work\qam transmiter\gain_phase_impulse_cable_buf634a.mat');
   if ((f_opt == 0.0) || (Fs == 0.0) || (f_sine == 0.0) || (PreSPP == 0.0)) {
     *sweep_warning_status = 1.0;
 
@@ -260,8 +260,8 @@ void HS_EWL_TR_FUN_EST(const double sweep_data[450000], const double sweep_math
           double shift_pream;
 
           // START SWEEP CODE
-          //  resampSweepAfter23 = [zeros(1,PreSPP*2-Im+corr_var),resamp_sweep(1:end-(PreSPP*2-Im+corr_var))']; 
-          //      TrFunEst = fftshift(fft(resampSweepAfter23(length(sweepPreamble):end))./fft(sweep_math(length(sweepPreamble):end))); 
+          //  resampSweepAfter23 = [zeros(1,PreSPP*2-Im+corr_var),resamp_sweep(1:end-(PreSPP*2-Im+corr_var))'];
+          //      TrFunEst = fftshift(fft(resampSweepAfter23(length(sweepPreamble):end))./fft(sweep_math(length(sweepPreamble):end)));
           //
           //      newPhase        = angle(TrFunEst(firstFreq:lastFreq));
           //      newGain         = abs(TrFunEst(firstFreq:lastFreq));
@@ -275,7 +275,7 @@ void HS_EWL_TR_FUN_EST(const double sweep_data[450000], const double sweep_math
               resamp_sweep[i];
           }
 
-          // resampSweepAfter23 = [zeros(1,PreSPP*2-Im+corr_var),resamp_sweep(1:end-(PreSPP*2-Im+corr_var))']; 
+          // resampSweepAfter23 = [zeros(1,PreSPP*2-Im+corr_var),resamp_sweep(1:end-(PreSPP*2-Im+corr_var))'];
           coder::fft(*(double (*)[56001])&sweep_math[1819], y_tmp);
           coder::fft(*(double (*)[56001])&resampSweepAfter23[1819], TrFunEst);
           for (b_i = 0; b_i < 56001; b_i++) {
@@ -359,8 +359,8 @@ void HS_EWL_TR_FUN_EST(const double sweep_data[450000], const double sweep_math
           for (i = 0; i < 14000; i++) {
             bi = newPhase[i + 1];
             r = bi - newPhase[i];
-            if (r > std::floor((kd - 1.0) * 2.0 * 3.1415926535897931) - 0.1) {
-              if (r > std::floor(kd * 2.0 * 3.1415926535897931) - 0.1) {
+            if (r > std::floor((kd - 1.0) * 2.0 * 3.1415926535897931) - 0.7) {
+              if (r > std::floor(kd * 2.0 * 3.1415926535897931) - 0.7) {
                 kd++;
               }
 
@@ -373,9 +373,9 @@ void HS_EWL_TR_FUN_EST(const double sweep_data[450000], const double sweep_math
           for (i = 0; i < 14000; i++) {
             bi = newPhase[i + 1];
             r = bi - newPhase[i];
-            if (r < -(std::floor((kd - 1.0) * 2.0 * 3.1415926535897931) - 0.1))
+            if (r < -(std::floor((kd - 1.0) * 2.0 * 3.1415926535897931) - 0.7))
             {
-              if (r < -(std::floor(kd * 2.0 * 3.1415926535897931) - 0.1)) {
+              if (r < -(std::floor(kd * 2.0 * 3.1415926535897931) - 0.7)) {
                 kd++;
               }
 
@@ -396,9 +396,9 @@ void HS_EWL_TR_FUN_EST(const double sweep_data[450000], const double sweep_math
           ft[28909] = -4.8426150121085811;
           ft[28910] = -2.9103830456733704E-11;
 
-          //  plot(gain_sogl_freq(1:end-25),20*log10(gain_sogl(1:end-25))-10, 'lineWidth', 2) 
+          //  plot(gain_sogl_freq(1:end-25),20*log10(gain_sogl(1:end-25))-10, 'lineWidth', 2)
           //  hold on
-          //  plot(gain_phase_impulse_cable_buf634.Gain{4},gain_phase_impulse_cable_buf634.Gain{8}-3.5) 
+          //  plot(gain_phase_impulse_cable_buf634.Gain{4},gain_phase_impulse_cable_buf634.Gain{8}-3.5)
           //  ylabel('Gain, Db');
           //  xlabel('freq, kHz');
           //  legend('Imit + SRP Imit','Cabel')
@@ -616,7 +616,7 @@ void HS_EWL_TR_FUN_EST(const double sweep_data[450000], const double sweep_math
                 resamp_sweep[flag_array_zero];
             }
 
-            // resampSweepAfter23 = [zeros(1,PreSPP*2-(Im-shift_pream)) SignalB(1:end-(PreSPP*2-(Im-shift_pream)))]; 
+            // resampSweepAfter23 = [zeros(1,PreSPP*2-(Im-shift_pream)) SignalB(1:end-(PreSPP*2-(Im-shift_pream)))];
             coder::fft(*(double (*)[56001])&resampSweepAfter23[1819], TrFunEst);
             for (b_i = 0; b_i < 56001; b_i++) {
               ar = TrFunEst[b_i].re;

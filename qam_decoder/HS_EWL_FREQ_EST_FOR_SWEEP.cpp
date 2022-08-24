@@ -18,9 +18,9 @@
 
 // Function Declarations
 static double freq_adjust(const double t[40000], const double y[40000], double
-  Fc, double ph_opt);
+  Fc, double ph_opt, int len);
 static double phase_adjust(const double t[40000], const double y[40000], double
-  Fc, double Ph);
+  Fc, double Ph, int len);
 static double preambule_from(const double s[33000], double len);
 
 // Function Definitions
@@ -32,7 +32,7 @@ static double preambule_from(const double s[33000], double len);
 // Return Type  : double
 //
 static double freq_adjust(const double t[40000], const double y[40000], double
-  Fc, double ph_opt)
+  Fc, double ph_opt, int len)
 {
   static double z1[40000];
   double FFnu[50];
@@ -45,14 +45,14 @@ static double freq_adjust(const double t[40000], const double y[40000], double
   for (i = 0; i < 50; i++) {
     int k;
     nu = nu0 + dnu * ((static_cast<double>(i) + 1.0) - 1.0);
-    for (k = 0; k < 40000; k++) {
+    for (k = 0; k < len; k++) {
       double d;
       d = y[k] - 0.8 * std::sin(nu * t[k] + ph_opt);
       z1[k] = d * d;
     }
 
     nu = z1[0];
-    for (k = 0; k < 39999; k++) {
+    for (k = 0; k < len-1; k++) {
       nu += z1[k + 1];
     }
 
@@ -74,7 +74,7 @@ static double freq_adjust(const double t[40000], const double y[40000], double
 // Return Type  : double
 //
 static double phase_adjust(const double t[40000], const double y[40000], double
-  Fc, double Ph)
+  Fc, double Ph, int len)
 {
   static double z1[40000];
   double FFfi[50];
@@ -87,14 +87,14 @@ static double phase_adjust(const double t[40000], const double y[40000], double
   for (i = 0; i < 50; i++) {
     int k;
     ph = (Ph - 3.1415926535897931) + dfi * ((static_cast<double>(i) + 1.0) - 1.0);
-    for (k = 0; k < 40000; k++) {
+    for (k = 0; k < len; k++) {
       double d;
       d = y[k] - 0.8 * std::sin(a * t[k] + ph);
       z1[k] = d * d;
     }
 
     ph = z1[0];
-    for (k = 0; k < 39999; k++) {
+    for (k = 0; k < len-1; k++) {
       ph += z1[k + 1];
     }
 
@@ -193,6 +193,7 @@ void HS_EWL_FREQ_EST_FOR_SWEEP(double s2[33000], double len, double Fs, double
   double err2;
   double sine_from;
   double sine_len;
+//  double sine_length;
   int i;
   int idx;
   int k;
@@ -254,12 +255,13 @@ void HS_EWL_FREQ_EST_FOR_SWEEP(double s2[33000], double len, double Fs, double
     //  elseif (len - sine_from)/sps < (per_numb-5)
     //      per_numb    = (len - sine_from)/sps - 30;
     //      sine_to     = sine_from + sps*(per_numb-5);
-    //      sweep_freq_warning_status = 2;% path of input array equal 0, less than 33% 
+    //      sweep_freq_warning_status = 2;% path of input array equal 0, less than 33%
     //  else
     //      sine_to = sine_from + sps*(per_numb-5);
     //      sweep_freq_warning_status = 0;% OK input array
     //  end
     sine_len = sps * (per_numb - 5.0);
+//    sine_length = sine_len;
     i = static_cast<int>((sine_len + sine_from) + (1.0 - sine_from));
     for (idx = 0; idx < i; idx++) {
       err1 = sine_from + static_cast<double>(idx);
@@ -267,7 +269,7 @@ void HS_EWL_FREQ_EST_FOR_SWEEP(double s2[33000], double len, double Fs, double
         (err1) - 1];
     }
 
-    // sine = s2(sine_from+(0:sps*(per_numb-5)));%s2(sine_from:sine_to);%sine_from+(0:sps*(per_numb-5)) 
+    // sine = s2(sine_from+(0:sps*(per_numb-5)));%s2(sine_from:sine_to);%sine_from+(0:sps*(per_numb-5))
     std::memset(&t[0], 0, 40000U * sizeof(double));
     i = static_cast<int>(sine_len);
     for (idx = 0; idx < i; idx++) {
@@ -291,19 +293,19 @@ void HS_EWL_FREQ_EST_FOR_SWEEP(double s2[33000], double len, double Fs, double
     }
 
     while (sine_len > 1.0E-6) {
-      *f_opt = freq_adjust(t, sine, *f_opt, *ph_opt);
-      *ph_opt = phase_adjust(t, sine, *f_opt, *ph_opt);
+      *f_opt = freq_adjust(t, sine, *f_opt, *ph_opt, i);
+      *ph_opt = phase_adjust(t, sine, *f_opt, *ph_opt, i);
       sine_from = 6.2831853071795862 * *f_opt;
       err1 = err2;
 
       // idx = idx<=bounds(1) | idx>=bounds(2);
-      for (k = 0; k < 40000; k++) {
+      for (k = 0; k < i; k++) {
         sine_len = 0.8 * std::sin(sine_from * t[k] + *ph_opt) - sine[k];
         x[k] = sine_len * sine_len;
       }
 
       err2 = x[0];
-      for (k = 0; k < 39999; k++) {
+      for (k = 0; k < i-1; k++) {
         err2 += x[k + 1];
       }
 
