@@ -107,13 +107,13 @@ private:
 
     const uint32_t timeoutAnswer_ms = 800;
 
-    const uint32_t timeoutAgcSin35kHzCommands_ms = 400;     // timeout between SIN 35 kHz transfers for AGC
+    const uint32_t timeoutAgcSin35kHzCommands_ms = 500;     // timeout between SIN 35 kHz transfers for AGC
     const uint32_t timeoutAgcSweepCommands_ms = 600;        // timeout between Sweep transfers for AGC
-    const uint32_t timeoutModStatusCommands_ms = 400;       // timeout between MOD GET STATUS transfers for AGC
+    const uint32_t timeoutModStatusCommands_ms = 500;       // timeout between MOD GET STATUS transfers for AGC
 
-    const uint32_t n_MaxSin35kHzCommands = 100;             // max number of SIN 35 kHz transfers for AGC
-    const uint32_t n_MaxSweepCommands = 100;                // max number of Sweep transfers for AGC
-    const uint32_t n_MaxModStatusCommands = 100;            // max number of MOD STATUS transfers for AGC
+    const uint32_t n_MaxSin35kHzCommands = 200;             // max number of SIN 35 kHz transfers for AGC
+    const uint32_t n_MaxSweepCommands = 500;                // max number of Sweep transfers for AGC
+    const uint32_t n_MaxModStatusCommands = 200;            // max number of MOD STATUS transfers for AGC
 
     bool hs_data_received = false;                          // If true, indicates that at least some 'HS' data was received from usb STM32 H7
 };
