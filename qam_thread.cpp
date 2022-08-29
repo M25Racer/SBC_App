@@ -10,24 +10,17 @@
 #include <QElapsedTimer>
 #include "qam_decoder/signal_sweep.h"
 #include "qam_decoder/signal.h"
-//#include "qam_decoder/math_sweep.h"
 #include "qam_decoder/rt_nonfinite.h"
-
 #include "crc8.h"
 #include "crc16.h"
 #include "srp_mod_protocol.h"
-
 #include "rs_decoder.h"
-
 #include "qam_decoder/rtwtypes.h"
-//#include "omp.h"
-//#include <cstddef>
-//#include <cstdlib>
 
 /* Extern global variables */
 extern RingBuffer *m_ring;              // ring data buffer (ADC data) for QAM decoder
 extern QWaitCondition ringNotEmpty;
-extern QMutex m_mutex_ring;
+extern QMutex m_mutex_ring_wait;
 extern QElapsedTimer profiler_timer;
 /* Private variables */
 static double Signal[USB_MAX_DATA_SIZE];
@@ -69,78 +62,6 @@ qint64 elapsed_all_saved = 0;
 /* generator polynomial */
 unsigned char gs[nn-K1+1];
 
-//static void argInit_1x14040_real_T(double result[14040]);
-//static void argInit_1x33000_real_T(double result[33000]);
-//static void argInit_1x450000_real_T(double result[450000]);
-//static void argInit_1x57820_real_T(double result[57820]);
-//static double argInit_real_T();
-
-//// Function Definitions
-////
-//// Arguments    : double result[14040]
-//// Return Type  : void
-////
-//static void argInit_1x14040_real_T(double result[14040])
-//{
-//  // Loop over the array to initialize each element.
-//  for (int idx1 = 0; idx1 < 14040; idx1++) {
-//    // Set the value of the array element.
-//    // Change this value to the value that the application requires.
-//    result[idx1] = argInit_real_T();
-//  }
-//}
-
-////
-//// Arguments    : double result[33000]
-//// Return Type  : void
-////
-//static void argInit_1x33000_real_T(double result[33000])
-//{
-//  // Loop over the array to initialize each element.
-//  for (int idx1 = 0; idx1 < 33000; idx1++) {
-//    // Set the value of the array element.
-//    // Change this value to the value that the application requires.
-//    result[idx1] = argInit_real_T();
-//  }
-//}
-
-////
-//// Arguments    : double result[450000]
-//// Return Type  : void
-////
-//static void argInit_1x450000_real_T(double result[450000])
-//{
-//  // Loop over the array to initialize each element.
-//  for (int idx1 = 0; idx1 < 450000; idx1++) {
-//    // Set the value of the array element.
-//    // Change this value to the value that the application requires.
-//    result[idx1] = argInit_real_T();
-//  }
-//}
-
-////
-//// Arguments    : double result[57820]
-//// Return Type  : void
-////
-//static void argInit_1x57820_real_T(double result[57820])
-//{
-//  // Loop over the array to initialize each element.
-//  for (int idx1 = 0; idx1 < 57820; idx1++) {
-//    // Set the value of the array element.
-//    // Change this value to the value that the application requires.
-//    result[idx1] = argInit_real_T();
-//  }
-//}
-
-////
-//// Arguments    : void
-//// Return Type  : double
-////
-//static double argInit_real_T()
-//{
-//  return 0.0;
-//}
-
 QamThread::QamThread(QObject *parent) :
     QThread(parent)
 {
@@ -148,10 +69,10 @@ QamThread::QamThread(QObject *parent) :
 
 QamThread::~QamThread()
 {
-    m_mutex_ring.lock();
+    m_mutex_ring_wait.lock();
     m_quit = true;
     ringNotEmpty.wakeOne();
-    m_mutex_ring.unlock();
+    m_mutex_ring_wait.unlock();
     wait();
 }
 
@@ -166,10 +87,10 @@ void QamThread::run()
 
     while(!m_quit)
     {
-        m_mutex_ring.lock();
+        m_mutex_ring_wait.lock();
         if(!m_ring->DataAvailable())
-            ringNotEmpty.wait(&m_mutex_ring);    // Wait condition unlocks mutex before 'wait', and will lock it again just after 'wait' is complete
-        m_mutex_ring.unlock();
+            ringNotEmpty.wait(&m_mutex_ring_wait);    // Wait condition unlocks mutex before 'wait', and will lock it again just after 'wait' is complete
+        m_mutex_ring_wait.unlock();
 
         res = m_ring->GetDouble(Signal, &Length);
 
@@ -207,31 +128,16 @@ void QamThread::QAM_Decoder()
     int HS_EWL_FREQ_ACQ_error_status;
     int HS_EWL_DEMOD_QAM_error_status;
 
-    bool crc_error = false;
+    bool crc_error = true;
     bool last_frame_received = false;
     double *signal = (double*)&Signal;
     double len = Length;
 
-//    for(uint32_t i = 0; i < 50000; ++i)
-//        Signal[i] = i;
-
     peformance_timer.start();
-//    emxArray_real_T *data_qam256 = NULL;
-//    data_qam256 = emxCreateWrapper_real_T(signal, 1, len);
-//
-//    HS_EWL_FREQ_ACQ(data_qam256, len, Fs, f0, sps, mode, preamble_len,
-//                      message_len, QAM_order, preamble_QAM_symbol, &index_data, &len_data, (double *)&f_est_data,
-//                      *(int(*)[1]) & f_est_size, &warning_status);
 
     HS_EWL_FREQ_ACQ_error_status = HS_EWL_FREQ_ACQ(signal, len, Fs, f0, sps, mode, preamble_len,
                         message_len, data, &len_data, (double*)&f_est_data, &warning_status);
 
-//    if(warning_status != 4)
-//    {
-//        HS_EWL_DEMOD_QAM(data_qam256, index_data, len_data, f_est_data,
-//                     Fs, sps, preamble_QAM_symbol,
-//                     QAM_order, qam_symbols_data, &qam_symbols_size,
-//                     byte_data, &byte_data_size);
     if(HS_EWL_FREQ_ACQ_error_status == 0)
     {
         HS_EWL_DEMOD_QAM_error_status = HS_EWL_DEMOD_QAM(data, len_data, f_est_data, Fs, qam_symbols_real,

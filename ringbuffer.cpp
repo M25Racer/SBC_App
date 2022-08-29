@@ -3,7 +3,7 @@
 #include <ringbuffer.h>
 
 /* Extern global variables */
-extern QMutex m_mutex_ring;
+static QMutex m_mutex_ring;
 
 /* Private variables */
 static uint8_t RingBuf[N_ELEMENTS][USB_MAX_DATA_SIZE];
@@ -29,14 +29,14 @@ void RingBuffer::Clear()
 
 bool RingBuffer::DataAvailable()
 {
-//    m_mutex.lock();
+    m_mutex_ring.lock();
     if(tail == head)
     {
-//        m_mutex.unlock();
+        m_mutex_ring.unlock();
         return false;
     }
 
-//    m_mutex.unlock();
+    m_mutex_ring.unlock();
     return true;
 }
 
@@ -57,6 +57,7 @@ bool RingBuffer::Append(const uint8_t *p_data_in, const uint32_t data_length)
     }
 
     m_mutex_ring.lock();
+
     // Check if ring buffer disabled
     if(!m_isActive)
     {
@@ -67,7 +68,6 @@ bool RingBuffer::Append(const uint8_t *p_data_in, const uint32_t data_length)
     // Move 'head'
     uint32_t h = head;
     uint32_t t = tail;
-    m_mutex_ring.unlock();
 
     if(++h == N_ELEMENTS)
         h = 0;
@@ -76,6 +76,7 @@ bool RingBuffer::Append(const uint8_t *p_data_in, const uint32_t data_length)
     if(h == t)
     {
         emit consolePutData(QString("Error ring buffer append: head = tail"), 1);
+        m_mutex_ring.unlock();
         return false;
     }
 
@@ -88,10 +89,9 @@ bool RingBuffer::Append(const uint8_t *p_data_in, const uint32_t data_length)
     // Copy data length
     DataLength[h] = data_length;
 
-    m_mutex_ring.lock();
     head = h;
-    m_mutex_ring.unlock();
 
+    m_mutex_ring.unlock();
     return true;
 }
 
@@ -107,12 +107,12 @@ bool RingBuffer::Get(uint8_t *p_data_out, uint32_t *p_length)
     m_mutex_ring.lock();
     uint32_t h = head;
     uint32_t t = tail;
-    m_mutex_ring.unlock();
 
     // Check if there is no new elements in ring buffer
     if(t == h)
     {
         //emit consolePutData(QString("Error ring buffer get: no elements in ring buffer"), 1);
+        m_mutex_ring.unlock();
         return false;
     }
 
@@ -128,10 +128,9 @@ bool RingBuffer::Get(uint8_t *p_data_out, uint32_t *p_length)
         p_data_out[i] = RingBuf[t][i];
     }
 
-    m_mutex_ring.lock();
     tail = t;
-    m_mutex_ring.unlock();
 
+    m_mutex_ring.unlock();
     return true;
 }
 
@@ -147,12 +146,12 @@ bool RingBuffer::GetDouble(double *p_data_out, double *p_length)
     m_mutex_ring.lock();
     uint32_t h = head;
     uint32_t t = tail;
-    m_mutex_ring.unlock();
 
     // Check if there is no new elements in ring buffer
     if(t == h)
     {
         //emit consolePutData(QString("Error ring buffer get: no elements in ring buffer"), 1);
+        m_mutex_ring.unlock();
         return false;
     }
 
@@ -172,12 +171,15 @@ bool RingBuffer::GetDouble(double *p_data_out, double *p_length)
         p_data_out[j++] = double((int16_t)value);
     }
 
-    m_mutex_ring.lock();
     tail = t;
-    m_mutex_ring.unlock();
+
+    bool res = false;
 
     if(!DataLength[t])
-        return false;
+        res = false;
+    else
+        res = true;
 
-    return true;
+    m_mutex_ring.unlock();
+    return res;
 }

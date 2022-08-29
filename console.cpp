@@ -59,7 +59,7 @@
 Console::Console(QWidget *parent) :
     QPlainTextEdit(parent)
 {
-    document()->setMaximumBlockCount(1000);
+    document()->setMaximumBlockCount(100);
     QPalette p = palette();
 //    p.setColor(QPalette::Base, Qt::lightGray);
 //    p.setColor(QPalette::Text, Qt::black);
@@ -75,7 +75,7 @@ Console::Console(QWidget *parent) :
     // Open stream file writes
     out.setDevice(m_logFile.data());
 
-
+#ifdef QT_DEBUG
     // Set the adc data file
     for(uint8_t i = 0; i < 20; ++i)
     {
@@ -86,7 +86,7 @@ Console::Console(QWidget *parent) :
         // Open stream file writes
         outAdc[i].setDevice(m_adcFile[i].data());
     }
-
+#endif
     // Set the adc data file for frame errors
     m_frameErrorFile.reset(new QFile("Frame_errors_adc_data_" + QDateTime::currentDateTime().toString("yyyy-MM-dd_hh.mm.ss.zzz") + ".txt"));
     // Open the file logging

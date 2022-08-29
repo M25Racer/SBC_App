@@ -56,10 +56,9 @@
 #include <QApplication>
 
 /* Global variables */
-//MainWindow *p_w = nullptr;        // pointer to 'mainwindow'
 RingBuffer *m_ring = nullptr;       // ring data buffer (ADC data) for QAM decoder
 QWaitCondition ringNotEmpty;
-QMutex m_mutex_ring;
+QMutex m_mutex_ring_wait;
 
 QWaitCondition sinBufNotEmpty;
 QMutex m_mutex2;
@@ -87,7 +86,6 @@ int main(int argc, char *argv[])
 
     QApplication a(argc, argv);
     MainWindow w;
-    // p_w = &w;    // initialize pointer to 'mainwindow'
 
     w.show();
     return a.exec();

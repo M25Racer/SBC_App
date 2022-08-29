@@ -1036,7 +1036,8 @@ emit consolePutData(QString("USB elapsed %1\n").arg(profiler_timer.elapsed()), 1
                     }
                     break;
                 case AGC_INIT:        // Выполнена инициализация АРУ
-                    emit consolePutData("parseHsData(): AGC state = init\n", 1);
+                    if(agc_is_active)
+                        emit consolePutData("parseHsData(): AGC state = init\n", 1);
                     break;
                 case AGC_START:       // Запуск АРУ произведен
                     emit consolePutData("parseHsData(): AGC state = start\n", 1);
