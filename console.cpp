@@ -146,14 +146,6 @@ void Console::putDataAdc(const quint8 *p_data, quint32 size)
 void Console::putFrameErrorData(const qint16 *p_data, quint32 len)
 {
     QString data;
-//    data.append(QString("=================================== Frame #%1, len %2 ===================================\n").arg(n_frame++).arg(len));
-
-//    for(uint64_t i = 0; i < len; ++i)
-//    {
-//        data.append(QString("%1\n").arg((int16_t)p_data[i]));
-//    }
-
-//    data.append("\n");
 
     data.append(QString("%1 // =================================== Frame #%2, len %3 ===================================\n").arg((int16_t)p_data[0]).arg(n_frame++).arg(len));
 
@@ -194,11 +186,13 @@ void Console::Close()
     out.flush();                    // Clear the buffered data
     m_logFile->close();             // Close file
 
+#ifdef QT_DEBUG
     for(uint8_t i = 0; i < 20; ++i)
     {
         outAdc[i].flush();          // Clear the buffered data
         m_adcFile[i]->close();      // Close file
     }
+#endif
 
     outFrameErrorAdc.flush();       // Clear the buffered data
     m_frameErrorFile->close();      // Close file
