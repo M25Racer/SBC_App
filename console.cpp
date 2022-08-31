@@ -54,7 +54,7 @@
 #include <QScrollBar>
 #include <QDesktopServices>
 #include <QFileInfo>
-//#include <QDir>
+#include <QDir>
 
 Console::Console(QWidget *parent) :
     QPlainTextEdit(parent)
@@ -67,8 +67,29 @@ Console::Console(QWidget *parent) :
     p.setColor(QPalette::Text, QColor(255,99,71));
     setPalette(p);
 
+    // Check & create folder 'SBC_Logs'
+    if(!QDir("SBC_Logs").exists())
+        QDir().mkdir("SBC_Logs");
+
+    // Delete old log files
+    QStringList nameFilters;
+    nameFilters.append("*.txt");
+
+    QStringList file_list = QDir("SBC_Logs").entryList(nameFilters, QDir::Filter::NoFilter, QDir::SortFlag::Time);
+    if(file_list.size())
+    {
+        while(file_list.count() > n_MaxLogFiles)
+        {
+//            QFile f("SBC_Logs/" + file_list.last());
+//            f.remove();
+//            f.close();
+            QFile::remove("SBC_Logs/" + file_list.last());
+            file_list.removeLast();
+        }
+    }
+
     // Set the logging file
-    m_logFile.reset(new QFile("SBC_log_"+ QDateTime::currentDateTime().toString("yyyy-MM-dd_hh.mm.ss.zzz") + ".txt"));
+    m_logFile.reset(new QFile("SBC_Logs/SBC_log_"+ QDateTime::currentDateTime().toString("yyyy-MM-dd_hh.mm.ss.zzz") + ".txt"));
     // Open the file logging
     m_logFile.data()->open(QFile::Append | QFile::Text);
 
@@ -79,7 +100,7 @@ Console::Console(QWidget *parent) :
     // Set the adc data file
     for(uint8_t i = 0; i < 20; ++i)
     {
-        m_adcFile[i].reset(new QFile("SBC_adc_data" + QString::number(i) + "_" + QDateTime::currentDateTime().toString("yyyy-MM-dd_hh.mm.ss.zzz") + ".txt"));
+        m_adcFile[i].reset(new QFile("SBC_Logs/Adc_data" + QString::number(i) + "_" + QDateTime::currentDateTime().toString("yyyy-MM-dd_hh.mm.ss.zzz") + ".txt"));
         // Open the file logging
         m_adcFile[i].data()->open(QFile::Append | QFile::Text);
 
@@ -88,7 +109,7 @@ Console::Console(QWidget *parent) :
     }
 #endif
     // Set the adc data file for frame errors
-    m_frameErrorFile.reset(new QFile("Frame_errors_adc_data_" + QDateTime::currentDateTime().toString("yyyy-MM-dd_hh.mm.ss.zzz") + ".txt"));
+    m_frameErrorFile.reset(new QFile("SBC_Logs/Frame_errors_adc_data_" + QDateTime::currentDateTime().toString("yyyy-MM-dd_hh.mm.ss.zzz") + ".txt"));
     // Open the file logging
     m_frameErrorFile.data()->open(QFile::Append | QFile::Text);
 
@@ -134,7 +155,6 @@ void Console::putDataAdc(const quint8 *p_data, quint32 size)
     }
 
     // Choose adc data file to write to
-
     m_adcFile[n_file]->resize(0);   // Clear file
     outAdc[n_file] << data;
     outAdc[n_file].flush();    // Clear the buffered data
@@ -145,8 +165,10 @@ void Console::putDataAdc(const quint8 *p_data, quint32 size)
 
 void Console::putFrameErrorData(const qint16 *p_data, quint32 len)
 {
-    QString data;
+    if(m_frameErrorFile->size() > 100*1024*1024)     // 100 Mb
+        return;
 
+    QString data;
     data.append(QString("%1 // =================================== Frame #%2, len %3 ===================================\n").arg((int16_t)p_data[0]).arg(n_frame++).arg(len));
 
     for(uint64_t i = 1; i < len; ++i)
