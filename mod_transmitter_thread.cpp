@@ -262,7 +262,7 @@ void ModTransmitterThread::run()
                         break;
                     }
 
-                    emit consolePutData(":: Predistortion auto cfg :: AGC for 'SIN 35kHz' configured, state AGC_OK\n", 1);
+                    emit consolePutData(":: Predistortion auto cfg :: AGC for 'SWEEP' configured, state AGC_OK\n", 1);
                     setState(ADC_START_FOR_SWEEP);
                 }
                 /* fallthrough */
@@ -270,7 +270,7 @@ void ModTransmitterThread::run()
             case ADC_START_FOR_SWEEP:
                 {
                     // 3. Send 'ADC_START for SWEEP' to STM32
-                    emit consolePutData("Predistortion auto cfg: send 'ADC_START for SIN 600'\n", 1);
+                    emit consolePutData("Predistortion auto cfg: send 'ADC_START for 'SIN 35KHZ 600''\n", 1);
                     Set_Special_Command_Sweep(true);
 
                     uint32_t adc_data_length = 440000;
@@ -296,7 +296,7 @@ void ModTransmitterThread::run()
                     message.own_address = CMessageBox::MASTER_ADDR;
 
                     uint16_t tx_len = CMessageBox::message_header_to_array(&message, message_box_buffer_mod);
-                    emit consolePutData(QString(":: Predistortion auto cfg :: Send 'SEND_SIN_35KHZ_600Z' command to MOD\n"), 1);
+                    emit consolePutData(QString(":: Predistortion auto cfg :: Send 'SEND_SIN_35KHZ_600' command to MOD\n"), 1);
                     postDataToStm32H7(message_box_buffer_mod, tx_len);
 
                     // Wait for freq estimate
@@ -624,11 +624,13 @@ void ModTransmitterThread::timeoutAnswer()
             emit consolePutData(":: Predistortion auto cfg :: retry previous transfer\n", 1);
             retry = true;
         }
-
-        // Some HS data (probably broken) received
-        // Assume it is an answer from MOD
-        emit consolePutData(":: Predistortion auto cfg :: some HS data was received, assume it was a good answer from MOD\n", 1);
-        hs_data_received = false;
+        else
+        {
+            // Some HS data (probably broken) received
+            // Assume it is an answer from MOD
+            emit consolePutData(":: Predistortion auto cfg :: some HS data was received, assume it was a good answer from MOD\n", 1);
+            hs_data_received = false;
+        }
     }
 
     m_mutex_mod.unlock();
