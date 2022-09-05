@@ -20,6 +20,7 @@ extern int HS_EWL_FREQ_ACQ(const double data[14040], double len, double Fs,
 void HS_EWL_FREQ_ACQ_free();
 void HS_EWL_FREQ_ACQ_init();
 double absolute_min(double idx, const double FF[50]);
+void bounds_find(double *data, double len_data, int period_start, int period_end, int amount_start_pre, int amount_end_pre, double *bounds);
 
 #endif
 

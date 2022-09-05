@@ -146,7 +146,7 @@ int HS_EWL_DEMOD_QAM(const double data[14040], double len_data, double f_est,
                             * d * d) - a3 * d * d * d;
       }
 
-      // cos(2*pi*f_est(1)*time(1:samples_per_period))+sin(2*pi*f_est(1)*time(1:samples_per_period)); 
+      // cos(2*pi*f_est(1)*time(1:samples_per_period))+sin(2*pi*f_est(1)*time(1:samples_per_period));
       std::memset(&c1[0], 0, 209U * sizeof(double));
       for (k = 0; k < 105; k++) {
         ihi = 103 - k;
@@ -221,44 +221,45 @@ int HS_EWL_DEMOD_QAM(const double data[14040], double len_data, double f_est,
 
       rxFilter1.step(b_y1, z);
       dc = coder::qammod();
-      if (z[9].im == 0.0) {
+      creal_T del = z[static_cast<int>(round(resamp_len/52))];
+      if (del.im == 0.0) {
         if (dc.im == 0.0) {
-          del_re = dc.re / z[9].re;
+          del_re = dc.re / del.re;
           a3 = 0.0;
         } else if (dc.re == 0.0) {
           del_re = 0.0;
-          a3 = dc.im / z[9].re;
+          a3 = dc.im / del.re;
         } else {
-          del_re = dc.re / z[9].re;
-          a3 = dc.im / z[9].re;
+          del_re = dc.re / del.re;
+          a3 = dc.im / del.re;
         }
-      } else if (z[9].re == 0.0) {
+      } else if (del.re == 0.0) {
         if (dc.re == 0.0) {
-          del_re = dc.im / z[9].im;
+          del_re = dc.im / del.im;
           a3 = 0.0;
         } else if (dc.im == 0.0) {
           del_re = 0.0;
-          a3 = -(dc.re / z[9].im);
+          a3 = -(dc.re / del.im);
         } else {
-          del_re = dc.im / z[9].im;
-          a3 = -(dc.re / z[9].im);
+          del_re = dc.im / del.im;
+          a3 = -(dc.re / del.im);
         }
       } else {
-        a3_tmp = std::abs(z[9].re);
-        x = std::abs(z[9].im);
+        a3_tmp = std::abs(del.re);
+        x = std::abs(del.im);
         if (a3_tmp > x) {
-          x = z[9].im / z[9].re;
-          d = z[9].re + x * z[9].im;
+          x = del.im / del.re;
+          d = del.re + x * del.im;
           del_re = (dc.re + x * dc.im) / d;
           a3 = (dc.im - x * dc.re) / d;
         } else if (x == a3_tmp) {
-          if (z[9].re > 0.0) {
+          if (del.re > 0.0) {
             x = 0.5;
           } else {
             x = -0.5;
           }
 
-          if (z[9].im > 0.0) {
+          if (del.im > 0.0) {
             a3 = 0.5;
           } else {
             a3 = -0.5;
@@ -267,13 +268,19 @@ int HS_EWL_DEMOD_QAM(const double data[14040], double len_data, double f_est,
           del_re = (dc.re * x + dc.im * a3) / a3_tmp;
           a3 = (dc.im * x - dc.re * a3) / a3_tmp;
         } else {
-          x = z[9].re / z[9].im;
-          d = z[9].im + x * z[9].re;
+          x = del.re / del.im;
+          d = del.im + x * del.re;
           del_re = (x * dc.re + dc.im) / d;
           a3 = (x * dc.im - dc.re) / d;
         }
       }
+      //QString filename = "testData.txt";
+      //QFile file("testData.txt");
 
+//          QTextStream stream(&file);
+//          stream << "something" << endl;
+//      }
+      // posible start QAM-256 demodulate
       for (k = 0; k < 265; k++) {
         b_a3_tmp = z[k + 5].re;
         x = z[k + 5].im;
@@ -300,11 +307,11 @@ int HS_EWL_DEMOD_QAM(const double data[14040], double len_data, double f_est,
 
       for (b_i = 0; b_i < 256; b_i++) {
         mapping[b_i] = 0U;
-        symbolI[b_i] = static_cast<signed char>(b_i >> 4);
-        symbolQ[b_i] = static_cast<signed char>(b_i & 15);
+        symbolI[b_i] = static_cast<signed char>(b_i >> 4);//for qam64 (b_i >> 3)
+        symbolQ[b_i] = static_cast<signed char>(b_i & 15);//for qam64 (b_i & 7)
       }
 
-      for (b_i = 1; b_i < 4; b_i += b_i) {
+      for (b_i = 1; b_i < 4; b_i += b_i) {//for qam_64 b_i = 3
         for (ihi = 0; ihi < 256; ihi++) {
           k = symbolI[ihi];
           symbolI[ihi] = static_cast<signed char>(k ^ k >> b_i);
@@ -317,6 +324,7 @@ int HS_EWL_DEMOD_QAM(const double data[14040], double len_data, double f_est,
         mapping[(symbolI[b_i] << 4) + symbolQ[b_i]] = static_cast<unsigned char>
           (b_i);
       }
+      // end QAM-256 demodulate
 
       //      qam_symbols = zeros(273,1,'like',0.0000 + 0.0000i);
       for (b_i = 0; b_i < 265; b_i++) {

@@ -135,6 +135,12 @@ void QamThread::QAM_Decoder()
 
     peformance_timer.start();
 
+//    for(uint32_t i = 0; i < USB_MAX_DATA_SIZE; ++i)
+//    {
+//        Signal[i] = 1;
+//    }
+//    //Length =
+
     HS_EWL_FREQ_ACQ_error_status = HS_EWL_FREQ_ACQ(signal, len, Fs, f0, sps, mode, preamble_len,
                         message_len, data, &len_data, (double*)&f_est_data, &warning_status);
 

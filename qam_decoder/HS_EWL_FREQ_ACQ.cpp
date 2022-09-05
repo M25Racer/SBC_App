@@ -195,6 +195,11 @@ static double optimize_sin(double Fs, const double s2[14040], const double
 //                double *warningStatus
 // Return Type  : void
 //
+static double s[14044];
+static double testSignal[14040];
+//creal_T only_pream_filt[2392];
+//creal_T filt2pream[50];
+
 int HS_EWL_FREQ_ACQ(const double data[14040], double len, double Fs, double
                      f_opt, double sps, double mode, double Pl, double msg_len,
                      double s2[14040], double *len_data, double *f_est, double
@@ -707,8 +712,8 @@ int HS_EWL_FREQ_ACQ(const double data[14040], double len, double Fs, double
     48.0, 48.1, 48.2, 48.3, 48.4, 48.5, 48.6, 48.7, 48.8, 48.9, 49.0, 49.1, 49.2,
     49.3, 49.4, 49.5, 49.6, 49.7, 49.8, 49.9, 50.0 };
 
-  static double s[14044];
-  static double testSignal[14040];
+//  static double s[14044];
+//  static double testSignal[14040];
   creal_T only_pream_filt[2392];
   creal_T filt2pream[50];
   double position[4];
@@ -831,11 +836,15 @@ int HS_EWL_FREQ_ACQ(const double data[14040], double len, double Fs, double
 
       // len_cut_data = pre_to-pre_from;
       // get bounds for processing
-      *len_data = round(*len_data/52)*52;
+      //*len_data = round(*len_data/52)*52;
       sa = sps * ((Pl-10) - 2.0);
       bounds[0] = sps * ((Pl + 10) - 2.0);
       bounds[1] = * len_data - sa;
-      pre_from = bounds[1];
+      bounds_find(s2, *len_data, 50, 53, 40, 30, bounds);
+      //bounds[0] = bounds[0] + 1;
+      bounds[1] = round(bounds[1]/52)*52;
+      *len_data = bounds[1]+5*52;
+      //pre_from = bounds[1];
       //std::memset(&only_pream_filt[0], 0, 2132U * sizeof(creal_T));
 
       ////  function [y1] = multip_ref_sin_cos(data,bound1,bound2,ref_sin,ref_cos)
@@ -905,7 +914,7 @@ int HS_EWL_FREQ_ACQ(const double data[14040], double len, double Fs, double
 
       // stage 1 freq estimation
       if (mode == 1.0) {
-        bounds[0] = bounds[0]-52*3;
+        //bounds[0] = bounds[0]-52*3;
         //bounds[1] = bounds2new;
         f_opt = optimize_sin(Fs, s2, bounds, f_opt, *len_data);
       }
@@ -970,7 +979,7 @@ int HS_EWL_FREQ_ACQ(const double data[14040], double len, double Fs, double
         std::memset(&only_pream_filt[0], 0, 2392U * sizeof(creal_T));
         bounds1new = bounds[0];
         if(bounds[0]/52 + (*len_data - bounds[1])/52 <= Pl*2)
-            bounds2new = bounds[1] - 52 * 5;
+            bounds2new = bounds[1] - 52 * 10;
         else
             bounds2new = bounds[1] + ((bounds[0]/52 + (*len_data - bounds[1])/52) - Pl*2 - 5)*52;
         //if(*len_data - bounds2new + 10*52 > 936)
@@ -993,8 +1002,9 @@ int HS_EWL_FREQ_ACQ(const double data[14040], double len, double Fs, double
         for (i = 0; i < b_i; i++) {
           signal_max = (bounds2new + 1.0) + static_cast<double>(i);
           re_tmp = testSignal[static_cast<int>(signal_max) - 1];
-          flag_amp = static_cast<int>((bounds1new + signal_max) - bounds2new) -
-            1;
+          flag_amp = static_cast<int>((bounds1new + signal_max) - bounds2new) - 1;
+          if(flag_amp > 2392-1)   //todo fix
+              flag_amp = 2392-1;   //todo fix
           only_pream_filt[flag_amp].re = re_tmp * dv[count] * 2.0;
           only_pream_filt[flag_amp].im = dv1[count] * re_tmp * 2.0;
           count++;
@@ -1005,14 +1015,14 @@ int HS_EWL_FREQ_ACQ(const double data[14040], double len, double Fs, double
 
         //b_rxFilter1.release();
         b_rxFilter1.step(only_pream_filt, filt2pream);
-        P = rt_roundd_snf(bounds1new / (sps * 2.0));
-        endPream = (bounds1new / sps + 5.0) + rt_roundd_snf((x * sps - bounds2new) / (sps * 2.0));
-        for (int i = static_cast<int>(endPream); i < 45; i++) {
-            if ((filt2pream[i-1].re + filt2pream[i].re + filt2pream[i + 1].re)/3 <= filt2pream[i].re + 0.3 && (filt2pream[i - 1].re + filt2pream[i].re + filt2pream[i + 1].re)/3 >= filt2pream[i].re - 0.3) {
-                endPream = i;
-                break;
-            }
-        }
+        P = round(15/2);//rt_roundd_snf(bounds1new / (sps * 2.0));
+        endPream = 5+15+13;//(bounds1new / sps + 5.0) + rt_roundd_snf((x * sps - bounds2new) / (sps * 2.0));
+//        for (int i = static_cast<int>(endPream)-10; i < 49; i++) {
+//            if ((filt2pream[i-1].re + filt2pream[i].re + filt2pream[i + 1].re)/3 <= filt2pream[i].re + 0.3 && (filt2pream[i - 1].re + filt2pream[i].re + filt2pream[i + 1].re)/3 >= filt2pream[i].re - 0.3) {
+//                endPream = i;
+//                break;
+//            }
+//        }
         dc = coder::qammod();
         pre_from = filt2pream[static_cast<int>((P + 5.0) + 1.0) - 1].re;
         signal_max = filt2pream[static_cast<int>((P + 5.0) + 1.0) - 1].im;
@@ -1110,11 +1120,11 @@ int HS_EWL_FREQ_ACQ(const double data[14040], double len, double Fs, double
                 }
             }
             *f_est = f_opt - sa;
+        }
         if (*f_est < 33000.0 || *f_est > 37000.0)
             return 4; // error freq estimate(f < 34000Hz || f>37000Hz)
         else
             return 0;
-        }
       } else {
       return 3;//  incorrect input sample freq for lagrange_resamp func
       }
@@ -1124,7 +1134,7 @@ int HS_EWL_FREQ_ACQ(const double data[14040], double len, double Fs, double
   } else {
     return 1;// input data LEN <= 0
   }
-  return 99;
+  //return 88;
 }
 
 //
@@ -1159,6 +1169,57 @@ void HS_EWL_FREQ_ACQ_init()
 //                const double FF[50]
 // Return Type  : double
 //
+void bounds_find(double *data, double len_data, int period_start, int period_end, int amount_start_pre, int amount_end_pre, double *bounds){
+    int count = 0;
+    int count_preamble = 0;
+    double comp_data;
+    int one_flag = 1;
+
+    for(int i = 0; i < amount_start_pre*52; i++){
+        comp_data = data[i]/fabs(data[i]);
+        if(comp_data > 0.9 && one_flag == 1){
+            if(count >= period_start && count <= period_end){
+                count_preamble++;
+                if(count_preamble == 15){
+                    bounds[0] = i+1;
+                    break;
+                }
+            }
+            else
+                count_preamble = 0;
+            one_flag = 0;
+            count = 0;
+        }
+        if(comp_data < -0.9)
+            one_flag = 1;
+        count++;
+    }
+
+    one_flag = 1;
+    count_preamble = 0;
+    count = 0;
+
+    for(int i = 0; i < amount_end_pre*52; i++){
+        comp_data = data[static_cast<int>(len_data)-i-1]/fabs(data[static_cast<int>(len_data) - i - 1]);
+        if(comp_data > 0.9 && one_flag == 1){
+            if(count >= period_start && count <= period_end){
+                count_preamble++;
+                if(count_preamble == 5){
+                    bounds[1] = static_cast<int>(len_data)-i-1;
+                    break;
+                }
+            }
+            else
+                count_preamble = 0;
+            one_flag = 0;
+            count = 0;
+        }
+        if(comp_data < -0.9)
+            one_flag = 1;
+        count++;
+    }
+
+}
 double absolute_min(double idx, const double FF[50])
 {
   static const short iv1[9] = { 2304, 2401, 2500, 48, 49, 50, 1, 1, 1 };
