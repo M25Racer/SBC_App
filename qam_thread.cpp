@@ -23,6 +23,7 @@ extern QWaitCondition ringNotEmpty;
 extern QMutex m_mutex_ring_wait;
 extern QElapsedTimer profiler_timer;
 /* Private variables */
+
 static double Signal[USB_MAX_DATA_SIZE];
 static int16_t FrameErrorAdcBuffer[10][USB_MAX_DATA_SIZE];
 
@@ -133,13 +134,14 @@ void QamThread::QAM_Decoder()
     double *signal = (double*)&Signal;
     double len = Length;
 
-    peformance_timer.start();
-
-//    for(uint32_t i = 0; i < USB_MAX_DATA_SIZE; ++i)
+//    //test
+//    for(uint32_t i = 0; i < 13291; ++i)
 //    {
-//        Signal[i] = 1;
+//        Signal[i] = signal_test[i];
 //    }
-//    //Length =
+//    len = 13291;
+
+    peformance_timer.start();
 
     HS_EWL_FREQ_ACQ_error_status = HS_EWL_FREQ_ACQ(signal, len, Fs, f0, sps, mode, preamble_len,
                         message_len, data, &len_data, (double*)&f_est_data, &warning_status);

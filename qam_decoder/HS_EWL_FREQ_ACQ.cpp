@@ -195,11 +195,6 @@ static double optimize_sin(double Fs, const double s2[14040], const double
 //                double *warningStatus
 // Return Type  : void
 //
-static double s[14044];
-static double testSignal[14040];
-//creal_T only_pream_filt[2392];
-//creal_T filt2pream[50];
-
 int HS_EWL_FREQ_ACQ(const double data[14040], double len, double Fs, double
                      f_opt, double sps, double mode, double Pl, double msg_len,
                      double s2[14040], double *len_data, double *f_est, double
@@ -712,8 +707,8 @@ int HS_EWL_FREQ_ACQ(const double data[14040], double len, double Fs, double
     48.0, 48.1, 48.2, 48.3, 48.4, 48.5, 48.6, 48.7, 48.8, 48.9, 49.0, 49.1, 49.2,
     49.3, 49.4, 49.5, 49.6, 49.7, 49.8, 49.9, 50.0 };
 
-//  static double s[14044];
-//  static double testSignal[14040];
+  static double s[14044];
+  static double testSignal[14040];
   creal_T only_pream_filt[2392];
   creal_T filt2pream[50];
   double position[4];
@@ -724,7 +719,6 @@ int HS_EWL_FREQ_ACQ(const double data[14040], double len, double Fs, double
   if (!isInitialized_HS_EWL_DEMOD_QAM) {
     HS_EWL_DEMOD_QAM_initialize();
   }
-
   // qam symbol in preamble
   // qam order
   std::memset(&s2[0], 0, 14040U * sizeof(double));
@@ -837,8 +831,8 @@ int HS_EWL_FREQ_ACQ(const double data[14040], double len, double Fs, double
       // len_cut_data = pre_to-pre_from;
       // get bounds for processing
       //*len_data = round(*len_data/52)*52;
-      sa = sps * ((Pl-10) - 2.0);
-      bounds[0] = sps * ((Pl + 10) - 2.0);
+      sa = sps * (Pl-15);//sps * ((Pl-10) - 2.0);
+      bounds[0] = sps * (Pl - 5);//sps * ((Pl - 10) - 2.0);
       bounds[1] = * len_data - sa;
       bounds_find(s2, *len_data, 50, 53, 40, 30, bounds);
       //bounds[0] = bounds[0] + 1;
@@ -1002,7 +996,8 @@ int HS_EWL_FREQ_ACQ(const double data[14040], double len, double Fs, double
         for (i = 0; i < b_i; i++) {
           signal_max = (bounds2new + 1.0) + static_cast<double>(i);
           re_tmp = testSignal[static_cast<int>(signal_max) - 1];
-          flag_amp = static_cast<int>((bounds1new + signal_max) - bounds2new) - 1;
+          flag_amp = static_cast<int>((bounds1new + signal_max) - bounds2new) -
+            1;
           if(flag_amp > 2392-1)   //todo fix
               flag_amp = 2392-1;   //todo fix
           only_pream_filt[flag_amp].re = re_tmp * dv[count] * 2.0;
@@ -1134,7 +1129,6 @@ int HS_EWL_FREQ_ACQ(const double data[14040], double len, double Fs, double
   } else {
     return 1;// input data LEN <= 0
   }
-  //return 88;
 }
 
 //
@@ -1176,7 +1170,10 @@ void bounds_find(double *data, double len_data, int period_start, int period_end
     int one_flag = 1;
 
     for(int i = 0; i < amount_start_pre*52; i++){
-        comp_data = data[i]/fabs(data[i]);
+        if(data[i] < 0.000001 && data[i] > -0.000001)
+            comp_data = 0;//data[i];
+        else
+            comp_data = data[i]/fabs(data[i]);
         if(comp_data > 0.9 && one_flag == 1){
             if(count >= period_start && count <= period_end){
                 count_preamble++;
@@ -1200,7 +1197,10 @@ void bounds_find(double *data, double len_data, int period_start, int period_end
     count = 0;
 
     for(int i = 0; i < amount_end_pre*52; i++){
-        comp_data = data[static_cast<int>(len_data)-i-1]/fabs(data[static_cast<int>(len_data) - i - 1]);
+        if(data[static_cast<int>(len_data)-i-1] < 0.000001 && data[static_cast<int>(len_data)-i-1] > -0.000001)
+            comp_data = 0;//data[static_cast<int>(len_data)-i-1];
+        else
+            comp_data = data[static_cast<int>(len_data)-i-1]/fabs(data[static_cast<int>(len_data) - i - 1]);
         if(comp_data > 0.9 && one_flag == 1){
             if(count >= period_start && count <= period_end){
                 count_preamble++;
