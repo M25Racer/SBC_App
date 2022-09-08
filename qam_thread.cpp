@@ -204,7 +204,7 @@ void QamThread::QAM_Decoder()
                 {
                     // Copy decoded frame to data_decoded buffer
                     for(uint8_t i = 0; i < data_size_not_last_frame; ++i)
-                        data_decoded[tail->frame_id * data_size_not_last_frame + i] = (uint8_t)byte_data[TxPacketRsCodesSize + i];
+                        data_decoded[tail->frame_id * data_size_not_last_frame + i] = (uint8_t)frame_decoded[TxPacketRsCodesSize + i];
                 }
             }
             // Last frame
@@ -235,7 +235,7 @@ void QamThread::QAM_Decoder()
                         // Length is ok
                         // Copy decoded frame to data_decoded buffer (just copy everything, do not calculate data length in last frame)
                         for(uint8_t i = 0; i < data_size_last_frame; ++i)
-                            data_decoded[tail->frame_id * data_size_not_last_frame + i] = (uint8_t)byte_data[TxPacketRsCodesSize + i];
+                            data_decoded[tail->frame_id * data_size_not_last_frame + i] = (uint8_t)frame_decoded[TxPacketRsCodesSize + i];
 
                         // TODO - transmit later, when all QAM threads will be ready
                         // Transmit decoded data to PC
