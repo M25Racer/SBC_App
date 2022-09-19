@@ -50,9 +50,11 @@ double qam_symbols_real[275];
 double qam_symbols_imag[275];
 double start_inf_data;
 
-static uint8_t data_decoded[128*1024];      // data decoded from all qam packet
-static uint8_t serial_data_buf[20][128*1024];
-static uint8_t n_serial_buf = 0;
+#define DATA_DECODED_SIZE           (128*1024)
+#define N_DATA_DECODED_BUFFERS      20
+
+static uint8_t data_decoded[N_DATA_DECODED_BUFFERS][DATA_DECODED_SIZE];      // data decoded from all qam packet
+static uint8_t n_data_buf = 0;
 
 double ref_cos[] = {1, 9.927089e-01, 9.709418e-01, 9.350162e-01, 8.854560e-01, 8.229839e-01, 7.485107e-01, 6.631227e-01, 5.680647e-01, 4.647232e-01, 3.546049e-01, 2.393157e-01, 1.205367e-01, 6.123234e-17, -1.205367e-01, -2.393157e-01, -3.546049e-01, -4.647232e-01, -5.680647e-01, -6.631227e-01, -7.485107e-01, -8.229839e-01, -8.854560e-01, -9.350162e-01, -9.709418e-01, -9.927089e-01, -1, -9.927089e-01, -9.709418e-01, -9.350162e-01, -8.854560e-01, -8.229839e-01, -7.485107e-01, -6.631227e-01, -5.680647e-01, -4.647232e-01, -3.546049e-01, -2.393157e-01, -1.205367e-01, -1.836970e-16, 1.205367e-01, 2.393157e-01, 3.546049e-01, 4.647232e-01, 5.680647e-01, 6.631227e-01, 7.485107e-01, 8.229839e-01, 8.854560e-01, 9.350162e-01, 9.709418e-01, 9.927089e-01};
 double ref_sin[] = {0, 1.205367e-01, 2.393157e-01, 3.546049e-01, 4.647232e-01, 5.680647e-01, 6.631227e-01, 7.485107e-01, 8.229839e-01, 8.854560e-01, 9.350162e-01, 9.709418e-01, 9.927089e-01, 1, 9.927089e-01, 9.709418e-01, 9.350162e-01, 8.854560e-01, 8.229839e-01, 7.485107e-01, 6.631227e-01, 5.680647e-01, 4.647232e-01, 3.546049e-01, 2.393157e-01, 1.205367e-01, 1.224647e-16, -1.205367e-01, -2.393157e-01, -3.546049e-01, -4.647232e-01, -5.680647e-01, -6.631227e-01, -7.485107e-01, -8.229839e-01, -8.854560e-01, -9.350162e-01, -9.709418e-01, -9.927089e-01, -1, -9.927089e-01, -9.709418e-01, -9.350162e-01, -8.854560e-01, -8.229839e-01, -7.485107e-01, -6.631227e-01, -5.680647e-01, -4.647232e-01, -3.546049e-01, -2.393157e-01, -1.205367e-01};
@@ -198,7 +200,7 @@ void QamThread::QAM_Decoder()
             {
                 //emit consolePutData(QString("Not last frame #%1, continue receive\n").arg(tail->frame_id), 1);
 
-                if(sizeof(data_decoded) < tail->frame_id * data_size_not_last_frame + data_size_not_last_frame)
+                if(DATA_DECODED_SIZE < tail->frame_id * data_size_not_last_frame + data_size_not_last_frame)
                 {
                     emit consolePutData(QString("Error wrong frame number %1 or too too long continuous data receive\n").arg(tail->frame_id), 1);
                 }
@@ -206,7 +208,7 @@ void QamThread::QAM_Decoder()
                 {
                     // Copy decoded frame to data_decoded buffer
                     for(uint8_t i = 0; i < data_size_not_last_frame; ++i)
-                        data_decoded[tail->frame_id * data_size_not_last_frame + i] = (uint8_t)frame_decoded[TxPacketRsCodesSize + i];
+                        data_decoded[n_data_buf][tail->frame_id * data_size_not_last_frame + i] = (uint8_t)frame_decoded[TxPacketRsCodesSize + i];
                 }
             }
             // Last frame
@@ -215,7 +217,7 @@ void QamThread::QAM_Decoder()
                 last_frame_received = true;
                 frame_tail_last_t *tail_last = (frame_tail_last_t*)&frame_decoded[TxPacketRsCodesSize + TxPacketDataSize - sizeof(frame_tail_last_t)];
 
-                if(sizeof(data_decoded) < tail->frame_id * data_size_not_last_frame + data_size_last_frame)
+                if(DATA_DECODED_SIZE < tail->frame_id * data_size_not_last_frame + data_size_last_frame)
                 {
                     emit consolePutData(QString("Error wrong frame number %1 or too too long continuous data receive\n").arg(tail->frame_id), 1);
                 }
@@ -237,21 +239,12 @@ void QamThread::QAM_Decoder()
                         // Length is ok
                         // Copy decoded frame to data_decoded buffer (just copy everything, do not calculate data length in last frame)
                         for(uint8_t i = 0; i < data_size_last_frame; ++i)
-                            data_decoded[tail->frame_id * data_size_not_last_frame + i] = (uint8_t)frame_decoded[TxPacketRsCodesSize + i];
+                            data_decoded[n_data_buf][tail->frame_id * data_size_not_last_frame + i] = (uint8_t)frame_decoded[TxPacketRsCodesSize + i];
 
-                        // TODO - transmit later, when all QAM threads will be ready
                         // Transmit decoded data to PC
-
-                        // Todo test intermediate buffer for serial port
-                        for(uint32_t i = 0; i < uint32_t(tail_last->len - MASTER_ADDR_SIZE); ++i)
-                        {
-                            serial_data_buf[n_serial_buf][i] = data_decoded[MASTER_ADDR_SIZE+i];
-                        }
-                        emit postTxDataToSerialPort((uint8_t*)&serial_data_buf[n_serial_buf][0], tail_last->len - MASTER_ADDR_SIZE);
-                        //emit postTxDataToSerialPort((uint8_t*)&data_decoded[MASTER_ADDR_SIZE], tail_last->len - MASTER_ADDR_SIZE);
-
-                        if(++n_serial_buf == 20)
-                            n_serial_buf = 0;
+                        emit postTxDataToSerialPort((uint8_t*)&data_decoded[n_data_buf][MASTER_ADDR_SIZE], tail_last->len - MASTER_ADDR_SIZE);
+                        if(++n_data_buf == N_DATA_DECODED_BUFFERS)
+                            n_data_buf = 0;
 
                         emit consolePutData(QString("Last frame #%1, data length %2\n").arg(tail_last->tail.frame_id).arg(tail_last->len), 1);
                     }
