@@ -4,6 +4,7 @@
 #include "agc_algorithm.h"
 #include "global_vars.h"
 #include "synchro_watcher.h"
+#include "indigo_base_protocol.h"
 
 /* Private variables */
 #ifdef QT_DEBUG
@@ -23,6 +24,7 @@ extern uint8_t SweepDataBuffer[USB_MAX_DATA_SIZE];
 extern uint32_t FreqSweepDataLength;
 extern uint32_t SweepDataLength;
 extern QElapsedTimer profiler_timer;
+extern bool m_qamDecodedDataAvailable;
 
 /* Global variables */
 uint8_t UserRxBuffer[USB_MAX_DATA_SIZE];
@@ -1065,6 +1067,18 @@ emit consolePutData(QString("USB elapsed %1\n").arg(profiler_timer.elapsed()), 1
             emit consolePutData(QString("SYNCHRO_START, suspended time %1\n").arg(SuspendedTime), 0);
             syncSetSuspendedTimeInProgress(true, SuspendedTime);
             synchro_measure_timer.restart();
+
+            // If some data available at QAM Thread
+            if(m_qamDecodedDataAvailable)
+            {
+                emit consolePutData("Sync suspended time is in progress and qam data available, answer with 'CmdWaitRead'\n", 1);
+
+                // Answer with 'wait' (indigo base protocol answer)
+                emit postWaitToSerialPort();
+//                command_sync_wait_creator(SuspendedTime, EnumCmdWaitRead);
+                // transmit data to PC
+                //emit postTxDataToSerialPort(UserRxBuffer + pStartData + sizeof(USBheader_t), header->packet_length - sizeof(USBheader_t));
+            }
         }
             break;
 

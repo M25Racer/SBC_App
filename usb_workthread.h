@@ -18,6 +18,7 @@ signals:
     void consolePutData(const QString &data, quint8 priority);
     void consoleAdcFile(const quint8 *adc_data, quint32 size);
     void postTxDataToSerialPort(const uint8_t *p_data, int len);
+    void postWaitToSerialPort();
     void postDataToStm32H7(const uint8_t *p_data, const int length);
     void usbInitTimeoutStart(int timeout_ms);
     void hsDataReceived();

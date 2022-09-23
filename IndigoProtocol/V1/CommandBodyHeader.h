@@ -629,9 +629,20 @@ typedef enum : uint8_t
  */
 typedef uint16_t CmdRebootTimeDelayMS;
 
+////////////////////////////
+/// CMD_WAIT
+////////////////////////////
+
+typedef enum : uint8_t
+{
+    EnumCmdWaitAgainSend = 1,
+    EnumCmdWaitRead = 2
+} EnumCmdWait;
+
 #pragma pack(push, 1)
 struct CmdWait
 {
-    uint16_t ms;
+    uint8_t type;   // command type
+    uint16_t ms;    // time in ms
 };
 #pragma pack(pop)

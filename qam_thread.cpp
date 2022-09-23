@@ -17,6 +17,9 @@
 #include "rs_decoder.h"
 #include "qam_decoder/rtwtypes.h"
 
+/* Global variables todo QAtomicInt() */
+bool m_qamDecodedDataAvailable = false;
+
 /* Extern global variables */
 extern RingBuffer *m_ring;              // ring data buffer (ADC data) for QAM decoder
 extern QWaitCondition ringNotEmpty;
@@ -210,10 +213,15 @@ void QamThread::QAM_Decoder()
                     for(uint8_t i = 0; i < data_size_not_last_frame; ++i)
                         data_decoded[n_data_buf][tail->frame_id * data_size_not_last_frame + i] = (uint8_t)frame_decoded[TxPacketRsCodesSize + i];
                 }
+
+                // Some data available in data_decoded[]
+                m_qamDecodedDataAvailable = true;
             }
             // Last frame
             else // tail->frame_flag == ENUM_FRAME_LAST
             {
+                // Last frame received, data is going to be transmitted to serial port
+                m_qamDecodedDataAvailable = false;
                 last_frame_received = true;
                 frame_tail_last_t *tail_last = (frame_tail_last_t*)&frame_decoded[TxPacketRsCodesSize + TxPacketDataSize - sizeof(frame_tail_last_t)];
 

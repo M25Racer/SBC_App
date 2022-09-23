@@ -102,6 +102,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(m_message_box, &CMessageBox::postDataToStm32H7, this, &MainWindow::postTxDataSTM);
     connect(m_message_box, &CMessageBox::calculatePredistortionTablesStart, this, &MainWindow::calculatePredistortionTablesStart);
     connect(&m_usb_thread, &UsbWorkThread::postTxDataToSerialPort, this, &MainWindow::transmitDataSerialPort, Qt::ConnectionType::QueuedConnection);
+    connect(&m_usb_thread, &UsbWorkThread::postWaitToSerialPort, this, &MainWindow::transmitWaitToSerialPort, Qt::ConnectionType::QueuedConnection);
     connect(&m_usb_thread, &UsbWorkThread::consolePutData, this, &MainWindow::consolePutData, Qt::ConnectionType::QueuedConnection);
     connect(&m_usb_thread, &UsbWorkThread::usbInitTimeoutStart, this, &MainWindow::usbInitTimeoutStart, Qt::ConnectionType::QueuedConnection);
     connect(&m_usb_thread, &UsbWorkThread::consoleAdcFile, this, &MainWindow::consoleAdcData, Qt::ConnectionType::QueuedConnection);
@@ -329,6 +330,8 @@ void MainWindow::readDataSerialPort()
     // Drop any USB received data to prevent old packets been transmitted to serial port (to PC)
     if(!m_mod_tx_thread.m_AutoConfigurationMode)
     {
+        //todo
+        //if(!syncIsSuspendedTimeInProgress())
         m_usb_thread.usb_receiver_drop = true;
         m_qam_thread.data_drop = true;
     }
@@ -441,10 +444,10 @@ void MainWindow::parseDataSerialPort()
         uint16_t suspended_time_left = syncGetTime();
         if(suspended_time_left)
         {
-            m_console->putData("Sync suspended time is in progress: answer with 'wait'\n", 1);
+            m_console->putData("Sync suspended time is in progress: answer with 'CmdWaitAgainSend'\n", 1);
 
             // Answer with 'wait' (indigo base protocol answer)
-            command_sync_wait_creator(suspended_time_left);
+            command_sync_wait_creator(suspended_time_left, EnumCmdWaitAgainSend);
 
             // Unlock USB receiver
             m_usb_thread.usb_receiver_drop = false;
@@ -573,6 +576,15 @@ void MainWindow::postTxDataSTM(const uint8_t *p_data, const int length)
 
     m_console->putData("Transmit to H7 " + QString::number(m_usb_thread.UserTxBuffer_len) + " bytes\n", 0);
     m_usb_thread.start_transmit = true;
+}
+
+void MainWindow::transmitWaitToSerialPort()
+{
+    uint16_t suspended_time_left = syncGetTime();
+    if(suspended_time_left)
+    {
+        command_sync_wait_creator(suspended_time_left, EnumCmdWaitRead);
+    }
 }
 
 // Actions

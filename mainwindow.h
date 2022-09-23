@@ -98,6 +98,7 @@ private slots:
     void sendPredistortionTables();         // commands to MOD
     void readDataSerialPort();
     void transmitDataSerialPort(const uint8_t *p_data, int length);
+    void transmitWaitToSerialPort();
     void postTxDataSTM(const uint8_t *p_data, const int length);
     void calculatePredistortionTablesStart();
     void handleError(QSerialPort::SerialPortError error);

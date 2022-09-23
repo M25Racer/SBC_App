@@ -10,6 +10,6 @@
 
 #include "IndigoProtocol/constants.h"
 
-void command_sync_wait_creator(uint16_t time);
+void command_sync_wait_creator(uint16_t time, EnumCmdWait type); //void command_sync_wait_creator(uint16_t time);
 
 #endif // INDIGO_BASE_PROTOCOL_H
