@@ -17,8 +17,8 @@
 #include "rs_decoder.h"
 #include "qam_decoder/rtwtypes.h"
 
-/* Global variables todo QAtomicInt() */
-bool m_qamDecodedDataAvailable = false;
+/* Global atomic variables */
+QAtomicInteger<bool> m_qamDecodedDataAvailable = false;
 
 /* Extern global variables */
 extern RingBuffer *m_ring;              // ring data buffer (ADC data) for QAM decoder

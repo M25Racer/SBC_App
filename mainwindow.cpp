@@ -444,7 +444,7 @@ void MainWindow::parseDataSerialPort()
         uint16_t suspended_time_left = syncGetTime();
         if(suspended_time_left)
         {
-            m_console->putData("Sync suspended time is in progress: answer with 'CmdWaitAgainSend'\n", 1);
+            m_console->putData(QString("Sync: suspended time is in progress: answer with 'CmdWaitAgainSend' susp.time left %1\n").arg(suspended_time_left), 1);
 
             // Answer with 'wait' (indigo base protocol answer)
             command_sync_wait_creator(suspended_time_left, EnumCmdWaitAgainSend);
@@ -585,6 +585,7 @@ void MainWindow::transmitWaitToSerialPort()
     {
         command_sync_wait_creator(suspended_time_left, EnumCmdWaitRead);
     }
+    m_console->putData(QString("Sync: suspended time is in progress and qam data available, send 'CmdWaitRead' susp.time left %1 ms\n").arg(suspended_time_left), 1);
 }
 
 // Actions

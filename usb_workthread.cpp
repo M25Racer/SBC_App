@@ -24,7 +24,7 @@ extern uint8_t SweepDataBuffer[USB_MAX_DATA_SIZE];
 extern uint32_t FreqSweepDataLength;
 extern uint32_t SweepDataLength;
 extern QElapsedTimer profiler_timer;
-extern bool m_qamDecodedDataAvailable;
+extern QAtomicInteger<bool> m_qamDecodedDataAvailable;
 
 /* Global variables */
 uint8_t UserRxBuffer[USB_MAX_DATA_SIZE];
@@ -1071,13 +1071,9 @@ emit consolePutData(QString("USB elapsed %1\n").arg(profiler_timer.elapsed()), 1
             // If some data available at QAM Thread
             if(m_qamDecodedDataAvailable)
             {
-                emit consolePutData("Sync suspended time is in progress and qam data available, answer with 'CmdWaitRead'\n", 1);
-
                 // Answer with 'wait' (indigo base protocol answer)
                 emit postWaitToSerialPort();
-//                command_sync_wait_creator(SuspendedTime, EnumCmdWaitRead);
-                // transmit data to PC
-                //emit postTxDataToSerialPort(UserRxBuffer + pStartData + sizeof(USBheader_t), header->packet_length - sizeof(USBheader_t));
+                //emit consolePutData("Sync suspended time is in progress and qam data available, answer with 'CmdWaitRead'\n", 1);
             }
         }
             break;
