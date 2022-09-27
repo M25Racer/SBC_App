@@ -965,6 +965,7 @@ void UsbWorkThread::parseHsData()
 emit consolePutData(QString("USB elapsed %1\n").arg(profiler_timer.elapsed()), 1);
 
                 bool res = m_ring->Append(UserRxBuffer + sizeof(USBheader_t), header->packet_length - sizeof(USBheader_t));
+
                 if(res)
                 {
                     // Wake threads waiting for 'wait condiion'
@@ -1065,15 +1066,18 @@ emit consolePutData(QString("USB elapsed %1\n").arg(profiler_timer.elapsed()), 1
         {
             uint16_t SuspendedTime = (uint16_t(*(p_data + 1)) << 8) | *p_data;
             emit consolePutData(QString("SYNCHRO_START, suspended time %1\n").arg(SuspendedTime), 0);
-            syncSetSuspendedTimeInProgress(true, SuspendedTime);
-            synchro_measure_timer.restart();
 
-            // If some data available at QAM Thread
-            if(m_qamDecodedDataAvailable)
+            if(SuspendedTime)
             {
-                // Answer with 'wait' (indigo base protocol answer)
-                emit postWaitToSerialPort();
-                //emit consolePutData("Sync suspended time is in progress and qam data available, answer with 'CmdWaitRead'\n", 1);
+                syncSetSuspendedTimeInProgress(true, SuspendedTime);
+                synchro_measure_timer.restart();
+
+                // If some data is available (before qam decoding or after qam decoding)
+                if(m_qamDecodedDataAvailable || m_ring->DataAvailable())
+                {
+                    // Answer with 'wait' (indigo base protocol answer)
+                    emit postWaitToSerialPort();
+                }
             }
         }
             break;

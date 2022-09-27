@@ -25,8 +25,8 @@ extern RingBuffer *m_ring;              // ring data buffer (ADC data) for QAM d
 extern QWaitCondition ringNotEmpty;
 extern QMutex m_mutex_ring_wait;
 extern QElapsedTimer profiler_timer;
-/* Private variables */
 
+/* Private variables */
 static double Signal[USB_MAX_DATA_SIZE];
 static int16_t FrameErrorAdcBuffer[10][USB_MAX_DATA_SIZE];
 
