@@ -327,14 +327,14 @@ void MainWindow::readDataSerialPort()
     // Serial port data received (from PC)
     profiler_timer.start();
 
-    // Drop any USB received data to prevent old packets been transmitted to serial port (to PC)
-    if(!m_mod_tx_thread.m_AutoConfigurationMode)
-    {
-        //todo
-        //if(!syncIsSuspendedTimeInProgress())
-        m_usb_thread.usb_receiver_drop = true;
-        m_qam_thread.data_drop = true;
-    }
+//    // Drop any USB received data to prevent old packets been transmitted to serial port (to PC)
+//    if(!m_mod_tx_thread.m_AutoConfigurationMode)
+//    {
+//        //todo
+//        //if(!syncIsSuspendedTimeInProgress())
+//        m_usb_thread.usb_receiver_drop = true;
+//        m_qam_thread.data_drop = true;
+//    }
 
     timerSpRxTimeout->stop();
 
@@ -397,7 +397,7 @@ void MainWindow::parseDataSerialPort()
             // Unlock USB receiver
             m_usb_thread.usb_receiver_drop = false;
             m_qam_thread.data_drop = false;
-            m_ring->Clear();
+            //m_ring->Clear();
             return;
         }
 
@@ -413,7 +413,7 @@ void MainWindow::parseDataSerialPort()
             // Unlock USB receiver
             m_usb_thread.usb_receiver_drop = false;
             m_qam_thread.data_drop = false;
-            m_ring->Clear();
+            //m_ring->Clear();
             return;
         }
 
@@ -423,13 +423,13 @@ void MainWindow::parseDataSerialPort()
             // Unlock USB receiver
             m_usb_thread.usb_receiver_drop = false;
             m_qam_thread.data_drop = false;
-            m_ring->Clear();
+            //m_ring->Clear();
         }
         else
         {
             // data is being transmitted to STM32H7, usb_receiver_drop flag will be reset after the transfer
             m_qam_thread.data_drop = false;
-            m_ring->Clear();
+            //m_ring->Clear();
         }
 
         serialPortRxCleanup();
@@ -452,7 +452,10 @@ void MainWindow::parseDataSerialPort()
             // Unlock USB receiver
             m_usb_thread.usb_receiver_drop = false;
             m_qam_thread.data_drop = false;
-            m_ring->Clear();
+            //m_ring->Clear();
+
+            // Clean serial port rx buffer
+            serialPortRxCleanup();
             return;
         }
         else
@@ -470,7 +473,7 @@ void MainWindow::parseDataSerialPort()
     }
 
     m_qam_thread.data_drop = false;
-    m_ring->Clear();
+    //m_ring->Clear();
 
     // Transmit to STM32H7
     postTxDataSTM((uint8_t*)TtyUserRxBuffer.data(), int(TtyUserRxBuffer_len));

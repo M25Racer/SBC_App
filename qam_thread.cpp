@@ -108,11 +108,11 @@ void QamThread::run()
             continue;
         }
 
-        if(data_drop)
-        {
-            emit consolePutData("Dropping received QAM data\n", 1);
-            continue;
-        }
+//        if(data_drop)
+//        {
+//            emit consolePutData("Dropping received QAM data\n", 1);
+//            continue;
+//        }
 
         QAM_Decoder();
     }
