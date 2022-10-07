@@ -100,6 +100,8 @@ void QamThread::run()
             ringNotEmpty.wait(&m_mutex_ring_wait);    // Wait condition unlocks mutex before 'wait', and will lock it again just after 'wait' is complete
         m_mutex_ring_wait.unlock();
 
+        m_qamDecodedDataAvailable = true;             // Some data available for QAM decoder
+
         res = m_ring->GetDouble(Signal, &Length);
 
         if(!res)
@@ -213,15 +215,10 @@ void QamThread::QAM_Decoder()
                     for(uint8_t i = 0; i < data_size_not_last_frame; ++i)
                         data_decoded[n_data_buf][tail->frame_id * data_size_not_last_frame + i] = (uint8_t)frame_decoded[TxPacketRsCodesSize + i];
                 }
-
-                // Some data available in data_decoded[]
-                m_qamDecodedDataAvailable = true;
             }
             // Last frame
             else // tail->frame_flag == ENUM_FRAME_LAST
             {
-                // Last frame received, data is going to be transmitted to serial port
-                m_qamDecodedDataAvailable = false;
                 last_frame_received = true;
                 frame_tail_last_t *tail_last = (frame_tail_last_t*)&frame_decoded[TxPacketRsCodesSize + TxPacketDataSize - sizeof(frame_tail_last_t)];
 
@@ -251,6 +248,7 @@ void QamThread::QAM_Decoder()
 
                         // Transmit decoded data to PC
                         emit postTxDataToSerialPort((uint8_t*)&data_decoded[n_data_buf][MASTER_ADDR_SIZE], tail_last->len - MASTER_ADDR_SIZE);
+                        m_qamDecodedDataAvailable = false;  // No data for QAM decoder
                         if(++n_data_buf == N_DATA_DECODED_BUFFERS)
                             n_data_buf = 0;
 

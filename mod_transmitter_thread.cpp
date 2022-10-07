@@ -119,7 +119,7 @@ void ModTransmitterThread::run()
                         message.packet_adr = 0;
                         message.data_len = 0;
                         message.message_id = 3;//0;
-                        message.master_address = CMessageBox::MOD_ADDR;
+                        message.master_address = CMessageBox::MOD2_ADDR;
                         message.own_address = CMessageBox::MASTER_ADDR;
 
                         uint16_t tx_len = CMessageBox::message_header_to_array(&message, message_box_buffer_mod);
@@ -170,7 +170,7 @@ void ModTransmitterThread::run()
                 message.packet_adr = 0;
                 message.data_len = 0;
                 message.message_id = 0;
-                message.master_address = CMessageBox::MOD_ADDR;
+                message.master_address = CMessageBox::MOD2_ADDR;
                 message.own_address = CMessageBox::MASTER_ADDR;
 
                 uint16_t tx_len = CMessageBox::message_header_to_array(&message, message_box_buffer_mod);
@@ -250,7 +250,7 @@ void ModTransmitterThread::run()
                         message.packet_adr = 0;
                         message.data_len = 0;
                         message.message_id = 0;
-                        message.master_address = CMessageBox::MOD_ADDR;
+                        message.master_address = CMessageBox::MOD2_ADDR;
                         message.own_address = CMessageBox::MASTER_ADDR;
 
                         uint16_t tx_len = CMessageBox::message_header_to_array(&message, message_box_buffer_mod);
@@ -292,7 +292,7 @@ void ModTransmitterThread::run()
                     message.packet_adr = 0;
                     message.data_len = 0;
                     message.message_id = 0;
-                    message.master_address = CMessageBox::MOD_ADDR;
+                    message.master_address = CMessageBox::MOD2_ADDR;
                     message.own_address = CMessageBox::MASTER_ADDR;
 
                     uint16_t tx_len = CMessageBox::message_header_to_array(&message, message_box_buffer_mod);
@@ -360,7 +360,7 @@ void ModTransmitterThread::run()
                 // Start tranmitting predistortion tables to MOD
                 message.command = CMessageBox::SET_PHASE_TABLE;
                 message.message_id = 0;
-                message.master_address = CMessageBox::MOD_ADDR;
+                message.master_address = CMessageBox::MOD2_ADDR;
                 message.own_address = CMessageBox::MASTER_ADDR;
                 message.data_len = 256;
 
@@ -410,7 +410,7 @@ void ModTransmitterThread::run()
                         message.packet_adr = 0;
                         message.data_len = 0;
                         message.message_id = 0;
-                        message.master_address = CMessageBox::MOD_ADDR;
+                        message.master_address = CMessageBox::MOD2_ADDR;
                         message.own_address = CMessageBox::MASTER_ADDR;
 
                         uint16_t tx_len = CMessageBox::message_header_to_array(&message, message_box_buffer_mod);
@@ -714,9 +714,9 @@ bool ModTransmitterThread::ModAnswerReceived(const uint8_t *p_data, int length)
 //    // p_data[4] [5] : data_len
 //    // p_data[6] [7] [8] [9] - channel/packet_addr
 
-//    if(p_data[0] != MessageBox::MOD_ADDR)
+//    if(p_data[0] != MessageBox::MOD2_ADDR)
 //    {
-//        emit consolePutData(QString("ModAnswerReceived warning, answer addr != MOD_ADDR\n"), 1);
+//        emit consolePutData(QString("ModAnswerReceived warning, answer addr != MOD2_ADDR\n"), 1);
 //        return false;
 //    }
 

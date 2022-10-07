@@ -116,7 +116,7 @@ bool CMessageBox::message_box_srp(uint8_t* Buf, uint16_t len, uint8_t master_add
 
         case SET_TIME:
             // TODO save time for SBC needs and retransmit it to STM32H7
-//            //messege_box_buffer[0] = MOD_ADDR;
+//            //messege_box_buffer[0] = MOD2_ADDR;
 //            //post_tx_data(messege_box_buffer, tx_len, ami, line, get_global_baudrate());
 
 ////            protocol_time.time_s = messege_box_buffer[11]
@@ -135,7 +135,7 @@ bool CMessageBox::message_box_srp(uint8_t* Buf, uint16_t len, uint8_t master_add
             break;
 
 //        case GET_TIME:
-//            //messege_box_buffer[0] = MOD_ADDR;
+//            //messege_box_buffer[0] = MOD2_ADDR;
 //            //post_tx_data(messege_box_buffer, tx_len, ami, line, get_global_baudrate());
 
 ////            protocol_time = get_time();
@@ -507,7 +507,7 @@ uint16_t CMessageBox::message_header_to_array(const message_header* message, uin
 //        }
 //        tool_status_reg[1] = status;
 //    }
-//    else if (device_id == MOD_ADDR)
+//    else if (device_id == MOD2_ADDR)
 //    {
 //        tool_status_reg[2] = status;
 //    }
@@ -539,7 +539,7 @@ uint16_t CMessageBox::message_header_to_array(const message_header* message, uin
 //    synchro_buffer[17] = 0; //current_time.time_s >> 48;
 //    synchro_buffer[18] = 0; //current_time.time_s >> 56;
 
-//    message.master_address = MOD_ADDR;
+//    message.master_address = MOD2_ADDR;
 //    message.own_address = SRP2_ADDR;
 //    message.data_len = 8;
 //    message.command = SYNCRO;

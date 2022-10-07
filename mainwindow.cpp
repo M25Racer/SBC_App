@@ -125,11 +125,6 @@ MainWindow::MainWindow(QWidget *parent) :
     TtyUserRxBuffer.clear();
 
     // Timers
-    // Serial port rx timeout timer
-    timerSpRxTimeout = new QTimer();
-    timerSpRxTimeout->setSingleShot(true);
-    connect(timerSpRxTimeout, SIGNAL(timeout()), this, SLOT(timeoutSerialPortRx()));
-
     // Reconnect to serial port in case of error
     timerSpReconnect = new QTimer();
     timerSpReconnect->setSingleShot(true);
@@ -179,7 +174,6 @@ MainWindow::~MainWindow()
 {
     timerUsbInit->stop();
     timerSpReconnect->stop();
-    timerSpRxTimeout->stop();
 
     closeSerialPort();
     m_usb_thread.USB_Deinit();
@@ -310,12 +304,6 @@ void MainWindow::timeoutSerialPortReconnect()
     }
 }
 
-void MainWindow::timeoutSerialPortRx()
-{
-    m_console->putData("SP receive timeout\n", 0);
-    parseDataSerialPort();
-}
-
 void MainWindow::serialPortRxCleanup()
 {
     TtyUserRxBuffer_len = 0;
@@ -336,31 +324,38 @@ void MainWindow::readDataSerialPort()
 //        m_qam_thread.data_drop = true;
 //    }
 
-    timerSpRxTimeout->stop();
-
     qint64 length_rx = m_serial->bytesAvailable();
 
-    while(length_rx)
-    {
-        if(TtyUserRxBuffer_len)
-            m_console->putData("SP Received " + QString::number(TtyUserRxBuffer_len) + " + " + QString::number(length_rx) + " bytes\n", 0);
-        else
+    do {
+        while(length_rx)
         {
-            m_console->putData("SP Received " + QString::number(length_rx) + " bytes\n", 0);
-//            if(length_rx == 269)
-//            {
-//                timerSpRxTimeout->stop();   // debug remove
-//            }
+            if(TtyUserRxBuffer_len)
+                m_console->putData("SP Received " + QString::number(TtyUserRxBuffer_len) + " + " + QString::number(length_rx) + " bytes\n", 0);
+            else
+            {
+                m_console->putData("SP Received " + QString::number(length_rx) + " bytes\n", 0);
+            }
+
+            TtyUserRxBuffer.append(m_serial->readAll());
+            TtyUserRxBuffer_len += length_rx;
+            length_rx = m_serial->bytesAvailable();
+
+            // Protection from infinite loop
+            if(TtyUserRxBuffer_len > 65536) // 64 KBytes of data in single packet
+            {
+                m_console->putData("Error: serial port buffer overflow detected, drop data\n", 1);
+                serialPortRxCleanup();
+                return;
+            }
         }
 
-        TtyUserRxBuffer.append(m_serial->readAll());
-        TtyUserRxBuffer_len += length_rx;
+        // Continue receive
+        QThread::usleep(100);
         length_rx = m_serial->bytesAvailable();
-    }
 
-    // Continue receive
-    // Start receive timeout
-    timerSpRxTimeout->start(timeoutSerialPortRx_ms);
+    } while(length_rx);
+
+    parseDataSerialPort();
 }
 
 void MainWindow::parseDataSerialPort()

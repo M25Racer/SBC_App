@@ -105,7 +105,6 @@ private slots:
     void consolePutData(const QString &data, quint8 priority);
     void consoleAdcData(const quint8 *p_data, quint32 size);
     void consoleFrameErrorData(const qint16 *p_data, quint32 len);
-    void timeoutSerialPortRx();
     void timeoutSerialPortReconnect();
     void timeoutUsbInitCallback();
     void usbHsDataReceived();
@@ -148,7 +147,7 @@ private:
     QTimer *timerUsbInit;
     QTimer *timerModAnswerTimeout;
 
-    const int timeoutSerialPortRx_ms = 0;               // timeout for serial port receiver (max time between rx packets)
+    //const int timeoutSerialPortRx_ms = 0;               // timeout for serial port receiver (max time between rx packets)
     const int timeoutSerialPortReconnect_ms = 1000;     // timeout between serial port reconnection attempts (in case of error)
 
     uint8_t quick_answer[2] = {0x00, 0x1d};
