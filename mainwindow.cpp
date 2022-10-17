@@ -483,14 +483,18 @@ void MainWindow::parseDataSerialPort()
 
 void MainWindow::handleError(QSerialPort::SerialPortError error)
 {
-    // TODO other errors?
-    if (error == QSerialPort::ResourceError)
+    switch(error)
     {
-        m_console->putData("SP Critical Error: " + m_serial->errorString() + "\n", 1);
-        closeSerialPort();
+        case QSerialPort::NoError:
+            break;
 
-        // Start timer to periodically try to reconnect
-        timerSpReconnect->start(timeoutSerialPortReconnect_ms);
+        default:
+            m_console->putData("Serial port error: " + m_serial->errorString() + "\n", 1);
+            closeSerialPort();
+
+            // Start timer to periodically try to reconnect
+            timerSpReconnect->start(timeoutSerialPortReconnect_ms);
+            break;
     }
 }
 
