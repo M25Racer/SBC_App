@@ -109,9 +109,11 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(&m_usb_thread, &UsbWorkThread::hsDataReceived, this, &MainWindow::usbHsDataReceived, Qt::ConnectionType::QueuedConnection);
     //connect(&m_usb_thread, &UsbWorkThread::postDataToStm32H7, this, &MainWindow::postTxDataSTM);
     connect(&m_qam_thread, &QamThread::consolePutData, this, &MainWindow::consolePutData, Qt::ConnectionType::QueuedConnection);
-    connect(&m_qam_thread, &QamThread::consoleFrameErrorFile, this, &MainWindow::consoleFrameErrorData, Qt::ConnectionType::QueuedConnection);
+    connect(&m_qam_thread, &QamThread::consoleFrameErrorFile, this, &MainWindow::consoleDataAdcSpecial, Qt::ConnectionType::QueuedConnection);
     connect(&m_qam_thread, &QamThread::postTxDataToSerialPort, this, &MainWindow::transmitDataSerialPort, Qt::ConnectionType::QueuedConnection);
     connect(&m_freq_sweep_thread, &FreqSweepThread::consolePutData, this, &MainWindow::consolePutData, Qt::ConnectionType::QueuedConnection);
+    connect(&m_freq_sweep_thread, &FreqSweepThread::consolePutAdcDataSpecial, this, &MainWindow::consoleDataAdcSpecial, Qt::ConnectionType::QueuedConnection);
+
     connect(&m_mod_tx_thread, &ModTransmitterThread::consolePutData, this, &MainWindow::consolePutData, Qt::ConnectionType::QueuedConnection);
     connect(&m_mod_tx_thread, &ModTransmitterThread::postDataToStm32H7, this, &MainWindow::postTxDataSTM, Qt::ConnectionType::QueuedConnection);
     connect(&m_mod_tx_thread, &ModTransmitterThread::sendCommandToSTM32, this, &MainWindow::sendCommandToSTM32, Qt::ConnectionType::QueuedConnection);
@@ -198,12 +200,12 @@ void MainWindow::consoleAdcData(const quint8 *p_data, quint32 size)
     m_console->putDataAdc(p_data, size);
 }
 
-void MainWindow::consoleFrameErrorData(const qint16 *p_data, quint32 len)
+void MainWindow::consoleDataAdcSpecial(const qint16 *p_data, quint32 len, quint8 type)
 {
     if(m_console == nullptr)
         return;
 
-    m_console->putFrameErrorData(p_data, len);
+    m_console->putDataAdcSpecial(p_data, len, type);
 }
 
 bool MainWindow::openSerialPort()
@@ -225,7 +227,7 @@ bool MainWindow::openSerialPort()
 
     Settings settings;
     settings.name = "ttyGS0";
-    settings.baudRate = 460800;
+    settings.baudRate = 10000000;//460800;
     settings.stringBaudRate = "460800";
     //settings.baudRate = 9600;
     //settings.stringBaudRate = "9600";
@@ -252,10 +254,6 @@ bool MainWindow::openSerialPort()
     {
         m_console->setEnabled(true);
         //m_console->setLocalEchoEnabled(p.localEchoEnabled);
-        m_ui->actionConnect->setEnabled(false);
-        m_ui->actionDisconnect->setEnabled(true);
-        m_ui->actionConfigure->setEnabled(false);
-
         m_console->putData(tr("Connected to %1 : %2, %3, %4, %5, %6\n")
                            .arg(p.name).arg(p.stringBaudRate).arg(p.stringDataBits)
                            .arg(p.stringParity).arg(p.stringStopBits).arg(p.stringFlowControl), 1);
@@ -277,9 +275,6 @@ void MainWindow::closeSerialPort()
     if (m_serial->isOpen())
         m_serial->close();
     m_console->setEnabled(false);
-    m_ui->actionConnect->setEnabled(true);
-    m_ui->actionDisconnect->setEnabled(false);
-    m_ui->actionConfigure->setEnabled(true);
     //showStatusMessage(tr("Disconnected"));
     m_console->putData("Serial port disconnected\n", 1);
 }
@@ -350,7 +345,7 @@ void MainWindow::readDataSerialPort()
         }
 
         // Continue receive
-        QThread::usleep(100);
+        QThread::msleep(1);
         length_rx = m_serial->bytesAvailable();
 
     } while(length_rx);
@@ -500,8 +495,6 @@ void MainWindow::handleError(QSerialPort::SerialPortError error)
 
 void MainWindow::initActionsConnections()
 {
-    connect(m_ui->actionAbout, &QAction::triggered, this, &MainWindow::about);
-    connect(m_ui->actionAboutQt, &QAction::triggered, qApp, &QApplication::aboutQt);
     connect(m_ui->actionLogsFlush, &QAction::triggered, this, &MainWindow::logFileFlush);
     connect(m_ui->actionLogsOpenFile, &QAction::triggered, this, &MainWindow::logFileOpen);
     connect(m_ui->actionSend_HS_command_GET_STATUS, &QAction::triggered, this, &MainWindow::sendHsCommandGetStatus);

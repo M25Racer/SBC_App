@@ -29,6 +29,7 @@ extern QMutex m_mutex3;
 /* Private variables */
 static double SignalSin[USB_MAX_DATA_SIZE];
 static double SignalSweep[USB_MAX_DATA_SIZE];
+static int16_t SignalBuffer[2][USB_MAX_DATA_SIZE];
 
 // output var HS_EWL_TR_FUN_EST
 double gain_data[2048];
@@ -88,7 +89,15 @@ void FreqSweepThread::run()
         m_mutex2.unlock();
 
         if(res)
+        {
+            for(uint32_t i = 0; i < LengthSin; ++i)
+            {
+                double val = SignalSin[i];
+                SignalBuffer[0][i] = (int16_t)val;
+            }
+            emit consolePutAdcDataSpecial(SignalBuffer[0], LengthSin, 1);
             FreqEstimateForSweep();
+        }
 
         m_mutex3.lock();
         sweepBufNotEmpty.wait(&m_mutex3); // Wait condition unlocks mutex before 'wait', and will lock it again just after 'wait' is complete
@@ -97,7 +106,15 @@ void FreqSweepThread::run()
         m_mutex3.unlock();
 
         if(res)
-            Sweep();       
+        {
+            for(uint32_t i = 0; i < LengthSweep; ++i)
+            {
+                double val = SignalSweep[i];
+                SignalBuffer[1][i] = (int16_t)val;
+            }
+            emit consolePutAdcDataSpecial(SignalBuffer[1], LengthSweep, 2);
+            Sweep();
+        }
     }
 }
 

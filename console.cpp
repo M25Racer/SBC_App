@@ -60,11 +60,13 @@ Console::Console(QWidget *parent) :
     QPlainTextEdit(parent)
 {
     document()->setMaximumBlockCount(100);
+
+    QFont font("Ubuntu", 10, QFont::Normal);
+    document()->setDefaultFont(font);
+
     QPalette p = palette();
-//    p.setColor(QPalette::Base, Qt::lightGray);
-//    p.setColor(QPalette::Text, Qt::black);
-    p.setColor(QPalette::Base, Qt::GlobalColor::black);
-    p.setColor(QPalette::Text, QColor(255,99,71));
+    p.setColor(QPalette::Base, Qt::GlobalColor::white);
+    p.setColor(QPalette::Text, Qt::GlobalColor::blue);
     setPalette(p);
 
     // Check & create folder 'SBC_Logs'
@@ -80,9 +82,6 @@ Console::Console(QWidget *parent) :
     {
         while(file_list.count() > n_MaxLogFiles)
         {
-//            QFile f("SBC_Logs/" + file_list.last());
-//            f.remove();
-//            f.close();
             QFile::remove("SBC_Logs/" + file_list.last());
             file_list.removeLast();
         }
@@ -110,11 +109,17 @@ Console::Console(QWidget *parent) :
 #endif
     // Set the adc data file for frame errors
     m_frameErrorFile.reset(new QFile("SBC_Logs/Frame_errors_adc_data_" + QDateTime::currentDateTime().toString("yyyy-MM-dd_hh.mm.ss.zzz") + ".txt"));
+    m_sweepFile.reset(new QFile("SBC_Logs/Sweep_adc_data_" + QDateTime::currentDateTime().toString("yyyy-MM-dd_hh.mm.ss.zzz") + ".txt"));
+    m_sin600File.reset(new QFile("SBC_Logs/Sin600_adc_data_" + QDateTime::currentDateTime().toString("yyyy-MM-dd_hh.mm.ss.zzz") + ".txt"));
     // Open the file logging
     m_frameErrorFile.data()->open(QFile::Append | QFile::Text);
+    m_sweepFile.data()->open(QFile::Append | QFile::Text);
+    m_sin600File.data()->open(QFile::Append | QFile::Text);
 
     // Open stream file writes
     outFrameErrorAdc.setDevice(m_frameErrorFile.data());
+    outSweep.setDevice(m_sweepFile.data());
+    outSin600.setDevice(m_sin600File.data());
 }
 
 void Console::putData(const QString &data, uint8_t priority)
@@ -163,22 +168,50 @@ void Console::putDataAdc(const quint8 *p_data, quint32 size)
         n_file = 0;
 }
 
-void Console::putFrameErrorData(const qint16 *p_data, quint32 len)
+void Console::putDataAdcSpecial(const qint16 *p_data, quint32 len, uint8_t type)
 {
-    if(m_frameErrorFile->size() > 100*1024*1024)     // 100 Mb
-        return;
-
+    QScopedPointer<QFile> *f;
+    QTextStream *out;
     QString data;
-    data.append(QString("%1 // =================================== Frame #%2, len %3 ===================================\n").arg((int16_t)p_data[0]).arg(n_frame++).arg(len));
 
-    for(uint64_t i = 1; i < len; ++i)
+    switch(type)
     {
-        data.append(QString("%1\n").arg((int16_t)p_data[i]));
+        default:
+        case 0:
+            f = &m_frameErrorFile;
+
+            if((*f)->size() > 100*1024*1024)    // 100 Mb
+                return;
+
+            out = &outFrameErrorAdc;
+
+            data.append(QString("%1 // =================================== Frame #%2, len %3 ===================================\n").arg((int16_t)p_data[0]).arg(n_frame++).arg(len));
+            break;
+
+        case 1:
+            f = &m_sin600File;
+            if((*f)->size() > 10*1024*1024)     // 10 Mb
+                return;
+            out = &outSin600;
+
+            data.append(QString("// =================================== SIN 600, len %3 ===================================\n").arg(len));
+            break;
+
+        case 2:
+            f = &m_sweepFile;
+            if((*f)->size() > 10*1024*1024)     // 10 Mb
+                return;
+            out = &outSweep;
+
+            data.append(QString("// =================================== Sweep, len %3 ===================================\n").arg(len));
+            break;
     }
 
-    //m_frameErrorFile->resize(0);    // Clear file
-    outFrameErrorAdc << data;
-    outFrameErrorAdc.flush();       // Clear the buffered data
+    for(uint64_t i = 1; i < len; ++i)
+        data.append(QString("%1\n").arg((int16_t)p_data[i]));
+
+    *out << data;
+    (*out).flush();       // Clear the buffered data
 }
 
 void Console::fileFlush()
@@ -218,4 +251,10 @@ void Console::Close()
 
     outFrameErrorAdc.flush();       // Clear the buffered data
     m_frameErrorFile->close();      // Close file
+
+    outSweep.flush();
+    m_sweepFile->close();
+
+    outSin600.flush();
+    m_sin600File->close();
 }

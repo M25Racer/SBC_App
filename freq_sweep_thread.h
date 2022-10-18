@@ -12,6 +12,7 @@ class FreqSweepThread : public QThread
 
 signals:
     void consolePutData(const QString &data, quint8 priority);
+    void consolePutAdcDataSpecial(const qint16 *p_data, quint32 len, quint8 type);
 
 public slots:
 

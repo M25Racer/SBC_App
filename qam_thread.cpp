@@ -332,7 +332,7 @@ void QamThread::QAM_Decoder()
             FrameErrorAdcBuffer[n_error_frame][i] = (int16_t)val;
         }
 
-        emit consoleFrameErrorFile(FrameErrorAdcBuffer[n_error_frame], Length);
+        emit consoleFrameErrorFile(FrameErrorAdcBuffer[n_error_frame], Length, 0);
 
         if(++n_error_frame == 10)
             n_error_frame = 0;

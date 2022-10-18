@@ -49,11 +49,6 @@
         <string>Console</string>
        </attribute>
       </widget>
-      <widget class="QWidget" name="tab_2">
-       <attribute name="title">
-        <string>ADC data</string>
-       </attribute>
-      </widget>
      </widget>
     </item>
    </layout>
@@ -91,100 +86,15 @@
    <addaction name="menuTest"/>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
-  <action name="actionAbout">
-   <property name="text">
-    <string>&amp;About</string>
-   </property>
-   <property name="toolTip">
-    <string>About program</string>
-   </property>
-   <property name="shortcut">
-    <string>Alt+A</string>
-   </property>
-  </action>
-  <action name="actionAboutQt">
-   <property name="text">
-    <string>About Qt</string>
-   </property>
-  </action>
-  <action name="actionConnect">
-   <property name="icon">
-    <iconset resource="SBC_App_v2.qrc">
-     <normaloff>:/images/connect.png</normaloff>:/images/connect.png</iconset>
-   </property>
-   <property name="text">
-    <string>C&amp;onnect</string>
-   </property>
-   <property name="toolTip">
-    <string>Connect to serial port</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+O</string>
-   </property>
-  </action>
-  <action name="actionDisconnect">
-   <property name="icon">
-    <iconset resource="SBC_App_v2.qrc">
-     <normaloff>:/images/disconnect.png</normaloff>:/images/disconnect.png</iconset>
-   </property>
-   <property name="text">
-    <string>&amp;Disconnect</string>
-   </property>
-   <property name="toolTip">
-    <string>Disconnect from serial port</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+D</string>
-   </property>
-  </action>
-  <action name="actionConfigure">
-   <property name="icon">
-    <iconset resource="SBC_App_v2.qrc">
-     <normaloff>:/images/settings.png</normaloff>:/images/settings.png</iconset>
-   </property>
-   <property name="text">
-    <string>&amp;Configure</string>
-   </property>
-   <property name="toolTip">
-    <string>Configure serial port</string>
-   </property>
-   <property name="shortcut">
-    <string>Alt+C</string>
-   </property>
-  </action>
-  <action name="actionClear">
-   <property name="icon">
-    <iconset resource="SBC_App_v2.qrc">
-     <normaloff>:/images/clear.png</normaloff>:/images/clear.png</iconset>
-   </property>
-   <property name="text">
-    <string>C&amp;lear</string>
-   </property>
-   <property name="toolTip">
-    <string>Clear data</string>
-   </property>
-   <property name="shortcut">
-    <string>Alt+L</string>
-   </property>
-  </action>
-  <action name="actionQuit">
-   <property name="icon">
-    <iconset resource="SBC_App_v2.qrc">
-     <normaloff>:/images/application-exit.png</normaloff>:/images/application-exit.png</iconset>
-   </property>
-   <property name="text">
-    <string>&amp;Quit</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+Q</string>
-   </property>
-  </action>
   <action name="actionLogsFlush">
    <property name="text">
     <string>Flush</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+F</string>
+   </property>
+   <property name="priority">
+    <enum>QAction::NormalPriority</enum>
    </property>
   </action>
   <action name="actionLogsOpenFile">
@@ -240,8 +150,6 @@
   </action>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
- <resources>
-  <include location="SBC_App_v2.qrc"/>
- </resources>
+ <resources/>
  <connections/>
 </ui>

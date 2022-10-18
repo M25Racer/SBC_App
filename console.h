@@ -69,21 +69,14 @@ public:
 
     void putData(const QString &data, uint8_t priority);
     void putDataAdc(const quint8 *p_data, quint32 size);
-    void putFrameErrorData(const qint16 *p_data, quint32 len);
-    //void setLocalEchoEnabled(bool set);
+    void putDataAdcSpecial(const qint16 *p_data, quint32 len, uint8_t type);
     void Close();
     void fileFlush();
     void fileOpen();
 
 protected:
-    //void keyPressEvent(QKeyEvent *e) override;
-    //void mousePressEvent(QMouseEvent *e) override;
-    //void mouseDoubleClickEvent(QMouseEvent *e) override;
-    //void contextMenuEvent(QContextMenuEvent *e) override;
 
 private:
-    //bool m_localEchoEnabled = false;
-
     void mousePressEvent(QMouseEvent *e) override
     {
         Q_UNUSED(e);
@@ -96,10 +89,14 @@ private:
     QScopedPointer<QFile> m_logFile;        // Smart pointer to log file
     QScopedPointer<QFile> m_adcFile[20];    // Smart pointer to received adc data file
     QScopedPointer<QFile> m_frameErrorFile; // Smart pointer to received adc data file (special for frame errors)
+    QScopedPointer<QFile> m_sweepFile;      // Smart pointer to 'sweep' signal adc data file
+    QScopedPointer<QFile> m_sin600File;     // Smart pointer to 'sin 600 periods' signal adc data file
 
     QTextStream out;
     QTextStream outAdc[20];
     QTextStream outFrameErrorAdc;
+    QTextStream outSweep;
+    QTextStream outSin600;
 
     uint8_t n_file = 0;                     // ADC data file switcher
     uint32_t n_frame = 0;                   // Number of frame for 'frame error adc data file'
