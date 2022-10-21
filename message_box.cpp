@@ -5,6 +5,7 @@
 #include "statistics.h"
 #include <crc16.h>
 //#include "mainwindow.h"
+#include "global_vars.h"
 
 //using namespace Ui;
 //class MainWindow;
@@ -102,10 +103,10 @@ bool CMessageBox::message_box_srp(uint8_t* Buf, uint16_t len, uint8_t master_add
     message.message_id = message_id;
     message.data_len = message.packet_adr = 0;
 
-    packet_number = messege_box_buffer[8]
-                | uint32_t(messege_box_buffer[9]) << 8
-                | uint32_t(messege_box_buffer[10]) << 16
-                | uint32_t(messege_box_buffer[11]) << 24;
+    packet_number = messege_box_buffer[7]
+                | uint32_t(messege_box_buffer[8]) << 8
+                | uint32_t(messege_box_buffer[9]) << 16
+                | uint32_t(messege_box_buffer[10]) << 24;
 
     switch (command)
     {
@@ -378,7 +379,7 @@ bool CMessageBox::message_box_srp(uint8_t* Buf, uint16_t len, uint8_t master_add
 //            break;
 
         case AUTO_CFG_PREDISTORTION:
-            emit calculatePredistortionTablesStart();
+            emit commandCalculatePredistortionTablesStart();
             tx_len = message_header_to_array(&message, messege_box_buffer);
             emit postData(messege_box_buffer + 1, tx_len - 1);
             break;
@@ -390,6 +391,31 @@ bool CMessageBox::message_box_srp(uint8_t* Buf, uint16_t len, uint8_t master_add
             mutex.unlock();
             tx_len = message_header_to_array(&message, messege_box_buffer);
             emit postData(messege_box_buffer + 1, tx_len - 1);
+            break;
+
+        case AGC_CONFIGURATION:
+        {
+            EnumAgcConfigCommand type = (EnumAgcConfigCommand)messege_box_buffer[11];
+            if(type == EnumAgcConfigCommand::AGC_Start)
+            {
+                emit commandAgcStart();
+            }
+            else if(type == EnumAgcConfigCommand::AGC_GetStatus)
+            {
+                message.data_len = 1;
+                messege_box_buffer[11] = Get_AGC_State();
+                tx_len = message_header_to_array(&message, messege_box_buffer);
+                emit postData(messege_box_buffer + 1, tx_len - 1);
+                break;
+            }
+            else
+            {
+                // Error, wrong command
+                return false;
+            }
+            tx_len = message_header_to_array(&message, messege_box_buffer);
+            emit postData(messege_box_buffer + 1, tx_len - 1);
+        }
             break;
 
         default:

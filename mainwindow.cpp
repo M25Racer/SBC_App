@@ -100,7 +100,8 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(m_serial, &QSerialPort::readyRead, this, &MainWindow::readDataSerialPort);
     connect(m_message_box, &CMessageBox::postData, this, &MainWindow::transmitDataSerialPort);
     connect(m_message_box, &CMessageBox::postDataToStm32H7, this, &MainWindow::postTxDataSTM);
-    connect(m_message_box, &CMessageBox::calculatePredistortionTablesStart, this, &MainWindow::calculatePredistortionTablesStart);
+    connect(m_message_box, &CMessageBox::commandCalculatePredistortionTablesStart, this, &MainWindow::commandCalculatePredistortionTablesStart);
+    connect(m_message_box, &CMessageBox::commandAgcStart, this, &MainWindow::commandAgcStart);
     connect(&m_usb_thread, &UsbWorkThread::postTxDataToSerialPort, this, &MainWindow::transmitDataSerialPort, Qt::ConnectionType::QueuedConnection);
     connect(&m_usb_thread, &UsbWorkThread::postWaitToSerialPort, this, &MainWindow::transmitWaitToSerialPort, Qt::ConnectionType::QueuedConnection);
     connect(&m_usb_thread, &UsbWorkThread::consolePutData, this, &MainWindow::consolePutData, Qt::ConnectionType::QueuedConnection);
@@ -674,9 +675,14 @@ void MainWindow::sendPredistortionTables()
     m_mod_tx_thread.ModStartTransmitPhaseGain();
 }
 
-void MainWindow::calculatePredistortionTablesStart()
+void MainWindow::commandCalculatePredistortionTablesStart()
 {
     m_mod_tx_thread.calculatePredistortionTablesStart();
+}
+
+void MainWindow::commandAgcStart()
+{
+    m_mod_tx_thread.separateAgcStart();
 }
 
 void MainWindow::qamDecoderReset()

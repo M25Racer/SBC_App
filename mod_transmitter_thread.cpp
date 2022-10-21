@@ -66,7 +66,6 @@ void ModTransmitterThread::run()
                 continue;
 
             case AUTOCFG_START:
-
                 // Disable ring buffer for QAM decoder (disable QAM decoder)
                 emit consolePutData(":: Predistortion auto cfg :: disable QAM decoder ring buffer'\n", 1);
                 m_ring->SetActive(false);
@@ -377,6 +376,13 @@ void ModTransmitterThread::run()
                 transmitPredistortionTables();
                 break;
 
+            case AGCCFG_START:
+                // Disable ring buffer for QAM decoder (disable QAM decoder)
+                emit consolePutData(":: Automatic Gain Control (AGC) configuration started'\n", 1);
+                emit consolePutData(":: Disable QAM decoder ring buffer'\n", 1);
+                m_ring->SetActive(false);
+                /* fallthrough */
+
             case AGC_START_FOR_MOD_STAT:
                 // Send 'AGC start' to STM32
                 emit consolePutData(":: Predistortion auto cfg :: send 'AGC start'\n", 1);
@@ -654,15 +660,31 @@ void ModTransmitterThread::calculatePredistortionTablesStart()
     modTransmitWakeUp.wakeOne();
 }
 
+void ModTransmitterThread::separateAgcStart()
+{
+    m_AutoConfigurationMode = true;
+
+    emit consolePutData("==================================================\n"
+                        "Starting AGC configuration sequence\n"
+                        "==================================================\n", 1);
+    m_mutex_mod.lock();
+    setState(AGCCFG_START);
+    StatePredistTx = TX_IDLE;
+    m_mutex_mod.unlock();
+    modTransmitWakeUp.wakeOne();
+}
+
 // Private
 void ModTransmitterThread::calculatePredistortionTablesStop()
 {
     // Check AGC state, stop AGC if needed
     uint8_t n_retrys = 2;
+    uint8_t StateAGC;
 
     while(1)
     {
-        if(Get_AGC_State() == AGC_OK)
+        StateAGC = Get_AGC_State();
+        if(StateAGC == AGC_OK || StateAGC == AGC_STOP)
             break;
 
         if(!n_retrys)

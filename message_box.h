@@ -34,7 +34,8 @@ public:
 signals:
     void postData(const uint8_t *p_data, int length);
     void postDataToStm32H7(const uint8_t *p_data, const int length);
-    void calculatePredistortionTablesStart();
+    void commandCalculatePredistortionTablesStart();
+    void commandAgcStart();
 
 public:
     bool message_box_srp(uint8_t* Buf, uint16_t len, uint8_t master_address, uint8_t own_address);
@@ -131,10 +132,18 @@ private:
 
     static const uint8_t AUTO_CFG_PREDISTORTION = 0xCD;  // Start auto configuration 'predistortion tables'
     static const uint8_t GET_AUTO_CFG_STATUS    = 0xCE;  // Get current state\status for auto configuration 'predistortion tables'
+    static const uint8_t AGC_CONFIGURATION    = 0xCF;  // AGC configuraton start, stop, or get status AGC config status
+
+    // AGC_CONFIGURATION
+    typedef enum : uint8_t
+    {
+        AGC_Start = 1,
+        AGC_GetStatus = 2
+    } EnumAgcConfigCommand;
 
     uint8_t m_statusAutoCfgPredistortion = 0x00;
 
-    QMutex mutex;
+    QMutex mutex;   
 };
 
 #endif // MESSAGE_BOX_H

@@ -33,6 +33,7 @@ public:
 
     void ModAnswerDataReceived();
     void calculatePredistortionTablesStart();
+    void separateAgcStart();
 
     bool m_AutoConfigurationMode = false;                   // Set true if auto configuration is active (in progress)
 
@@ -69,6 +70,9 @@ private:
         AGC_START_FOR_MOD_STAT = 15,                // 'Predistortion tables' calculation complete. Starting AGC (automatic gain configuration) for 'MOD get status' signal
         STAT_MOD_COMMANDS_FOR_AGC = 16,             // AGC (automatic gain configuration) for 'MOD get status' signal is in progress
 
+        AGCCFG_START = 100,                         // AGC auto configuration (separately from 'Auto configuration') started
+
+        ERROR_ANSWER_TIMEOUT = 248,                 // Reserved for MAXIM/Indigo Suite DLL: no answer from SRP2
         ERROR_PREDISTORTION_TABLES_TX_FAILED = 249,     // Errors todo
         ERROR_AGC_MODSTAT = 250,
         ERROR_SWEEP_TIMEOUT = 251,
