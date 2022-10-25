@@ -1,4 +1,4 @@
-#include "freq_sweep_thread.h"
+#include "sin_freq_sweep_thread.h"
 #include "usb_global.h"
 #include "qam_common.h"
 #include "qam_decoder/qam_decoder.h"
@@ -14,17 +14,13 @@
 
 #include "crc16.h"
 #include "srp_mod_protocol.h"
-#include "global_vars.h"
-
-//#include "qam_decoder/signal_sweep.h"
+#include "atomic_vars.h"
 
 using namespace QAM_Common;
 
 /* Extern global variables */
-extern QWaitCondition sinBufNotEmpty;
+extern QWaitCondition sinFreqSweepBufNotEmpty;
 extern QMutex m_mutex2;
-extern QWaitCondition sweepBufNotEmpty;
-extern QMutex m_mutex3;
 
 /* Private variables */
 static double SignalSin[USB_MAX_DATA_SIZE];
@@ -36,8 +32,6 @@ double gain_data[2048];
 double phase_data[2048];
 float gain_data_float[2048];
 float phase_data_float[2048];
-//static int gain_size[2];
-//static int phase_size[2];
 static double sweep_warning_status;
 static double shift_for_qam_data;
 uint16_t shift_for_qam_data_int;
@@ -48,77 +42,88 @@ static double ph_opt;
 static double sweep_freq_warning_status;
 
 /* Global variables */
-uint8_t FreqSweepDataBuffer[USB_MAX_DATA_SIZE];
+uint8_t SinFreqEstDataBuffer[USB_MAX_DATA_SIZE];
 uint8_t SweepDataBuffer[USB_MAX_DATA_SIZE];
-uint32_t FreqSweepDataLength = 0;
+uint32_t SinFreqEstDataLength = 0;
 uint32_t SweepDataLength = 0;
 
-FreqSweepThread::FreqSweepThread(QObject *parent) :
+SinFreqSweepThread::SinFreqSweepThread(QObject *parent) :
     QThread(parent)
 {
 }
 
-FreqSweepThread::~FreqSweepThread()
+SinFreqSweepThread::~SinFreqSweepThread()
 {
     m_mutex2.lock();
     m_quit = true;
-    FreqSweepDataLength = 0;
-    sinBufNotEmpty.wakeOne();
-    m_mutex2.unlock();
-
-    wait(100);  // 100 ms wait
-
-    m_mutex3.lock();
+    SinFreqEstDataLength = 0;
     SweepDataLength = 0;
-    sweepBufNotEmpty.wakeOne();
-    m_mutex3.unlock();
+    sinFreqSweepBufNotEmpty.wakeOne();
+    m_mutex2.unlock();
 
     wait();
 }
 
-void FreqSweepThread::run()
+void SinFreqSweepThread::run()
 {
     bool res = false;
+    bool flagCalcSinFreq = false;
+    bool flagCalcSweep = false;
 
     while(!m_quit)
     {
         m_mutex2.lock();
-        sinBufNotEmpty.wait(&m_mutex2); // Wait condition unlocks mutex before 'wait', and will lock it again just after 'wait' is complete
-        res = ConvertToDouble(FreqSweepDataBuffer, FreqSweepDataLength, SignalSin, &LengthSin);
-        FreqSweepDataLength = 0;
-        m_mutex2.unlock();
+        sinFreqSweepBufNotEmpty.wait(&m_mutex2); // Wait condition unlocks mutex before 'wait', and will lock it again just after 'wait' is complete
 
-        if(res)
+        if(SinFreqEstDataLength)
         {
-            for(uint32_t i = 0; i < LengthSin; ++i)
-            {
-                double val = SignalSin[i];
-                SignalBuffer[0][i] = (int16_t)val;
-            }
-            emit consolePutAdcDataSpecial(SignalBuffer[0], LengthSin, 1);
-            FreqEstimateForSweep();
+            res = ConvertToDouble(SinFreqEstDataBuffer, SinFreqEstDataLength, SignalSin, &LengthSin);
+            SinFreqEstDataLength = 0;
+            flagCalcSinFreq = true;
         }
 
-        m_mutex3.lock();
-        sweepBufNotEmpty.wait(&m_mutex3); // Wait condition unlocks mutex before 'wait', and will lock it again just after 'wait' is complete
-        res = ConvertToDouble(SweepDataBuffer, SweepDataLength, SignalSweep, &LengthSweep);
-        SweepDataLength = 0;
-        m_mutex3.unlock();
-
-        if(res)
+        if(SweepDataLength)
         {
-            for(uint32_t i = 0; i < LengthSweep; ++i)
+            res = ConvertToDouble(SweepDataBuffer, SweepDataLength, SignalSweep, &LengthSweep);
+            SweepDataLength = 0;
+            flagCalcSweep = true;
+        }
+
+        m_mutex2.unlock();
+
+        if(flagCalcSinFreq)
+        {
+            flagCalcSinFreq = false;
+            if(res)
             {
-                double val = SignalSweep[i];
-                SignalBuffer[1][i] = (int16_t)val;
+                for(uint32_t i = 0; i < LengthSin; ++i)
+                {
+                    double val = SignalSin[i];
+                    SignalBuffer[0][i] = (int16_t)val;
+                 }
+                emit consolePutAdcDataSpecial(SignalBuffer[0], LengthSin, 1);
+                FreqEstimateForSweep();
             }
-            emit consolePutAdcDataSpecial(SignalBuffer[1], LengthSweep, 2);
-            Sweep();
+        }
+
+        if(flagCalcSweep)
+        {
+            flagCalcSweep = false;
+            if(res)
+            {
+                for(uint32_t i = 0; i < LengthSweep; ++i)
+                {
+                    double val = SignalSweep[i];
+                    SignalBuffer[1][i] = (int16_t)val;
+                }
+                emit consolePutAdcDataSpecial(SignalBuffer[1], LengthSweep, 2);
+                Sweep();
+            }
         }
     }
 }
 
-bool FreqSweepThread::ConvertToDouble(uint8_t *p_data_in, uint32_t length_in, double *p_data_out, double *p_length)
+bool SinFreqSweepThread::ConvertToDouble(uint8_t *p_data_in, uint32_t length_in, double *p_data_out, double *p_length)
 {
     // Check pointers
     if(p_data_out == nullptr || p_length == nullptr)
@@ -145,22 +150,16 @@ bool FreqSweepThread::ConvertToDouble(uint8_t *p_data_in, uint32_t length_in, do
     return true;
 }
 
-void FreqSweepThread::FreqEstimateForSweep()
+void SinFreqSweepThread::FreqEstimateForSweep()
 {
-    emit consolePutData(QString("QAM frequency estimate for sweep starting, length %1\n").arg(LengthSin), 1);
+    emit consolePutData(QString("QAM sin frequency estimate for sweep starting, length %1\n").arg(LengthSin), 1);
 
-    Set_FreqEstState(FREQ_EST_WORK_IN_PROGRESS);
+    FreqEstState = TFreqEstState::FREQ_EST_WORK_IN_PROGRESS;
 
     double *sine = (double*)&SignalSin;
     double sine_len = LengthSin;
 
     peformance_timer.start();
-
-//    emxArray_real_T *sine_data = NULL;
-//    sine_data = emxCreateWrapper_real_T(sine, 1, sine_len);
-//
-//    HS_EWL_FREQ_EST_FOR_SWEEP(sine_data, sine_len, Fs, f_sine, period_amount, sine_sps,
-//                     &f_opt, &ph_opt, &sweep_freq_warning_status);
 
     HS_EWL_FREQ_EST_FOR_SWEEP(sine, sine_len, Fs, f_sine, period_amount, sine_sps,
                     &f_opt, &ph_opt, &sweep_freq_warning_status);
@@ -184,30 +183,16 @@ void FreqSweepThread::FreqEstimateForSweep()
     }
 
     emit consolePutData(QString("Sweep freq f_opt = %1, elapsed time = %2 ms\n").arg(f_opt).arg(peformance_timer.elapsed()), 1);
-    Set_FreqEstState(FREQ_EST_COMPLETE);
+    FreqEstState = TFreqEstState::FREQ_EST_COMPLETE;
 }
 
-void FreqSweepThread::Sweep()
+void SinFreqSweepThread::Sweep()
 {
     emit consolePutData(QString("QAM sweep starting, length %1\n").arg(LengthSweep), 1);
 
-    Set_SweepState(SWEEP_WORK_IN_PROGRESS);
+    SweepState = TSweepState::SWEEP_WORK_IN_PROGRESS;
 
     peformance_timer.start();
-
-//    double len_math_sweep = MATH_SWEEP_LEN;
-//    emxArray_real_T *sweep_math = NULL;
-//    sweep_math = emxCreateWrapper_real_T(math_sweep, 1, len_math_sweep);
-//
-//    double *sweep = (double*)&SignalSweep;
-//    //double len_sweep = SWEEP_LEN;
-//    double len_sweep = LengthSweep;
-//    emxArray_real_T *sweep_data = NULL;
-//    sweep_data = emxCreateWrapper_real_T(sweep, 1, len_sweep);
-//
-//    HS_EWL_TR_FUN_EST(sweep_data, sweep_math, Fs, f_opt, f_sine, pream_sps,
-//                     gain_data, gain_size, phase_data, phase_size, &shift_for_qam_data,
-//                     &sweep_warning_status);
 
     double *sweep = (double*)&SignalSweep;
 
@@ -255,5 +240,5 @@ void FreqSweepThread::Sweep()
     emit consolePutData(QString("Sweep elapsed time = %1 ms\n").arg(peformance_timer.elapsed()), 1);
     emit consolePutData(QString("Sweep shift_for_qam_data = %1\n").arg(shift_for_qam_data_int), 1);
 
-    Set_SweepState(SWEEP_COMPLETE);
+    SweepState = TSweepState::SWEEP_COMPLETE;
 }

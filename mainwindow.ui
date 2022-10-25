@@ -2,6 +2,9 @@
 <ui version="4.0">
  <class>MainWindow</class>
  <widget class="QMainWindow" name="MainWindow">
+  <property name="enabled">
+   <bool>true</bool>
+  </property>
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -80,12 +83,15 @@
     <addaction name="actionSend_AGC_Start"/>
     <addaction name="actionADC_START_for_SIN_600"/>
     <addaction name="actionADC_START_for_Sweep"/>
-    <addaction name="actionTx_phase_gain_tables_to_MOD"/>
    </widget>
    <addaction name="menuLogs"/>
    <addaction name="menuTest"/>
   </widget>
-  <widget class="QStatusBar" name="statusBar"/>
+  <widget class="QStatusBar" name="statusBar">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+  </widget>
   <action name="actionLogsFlush">
    <property name="text">
     <string>Flush</string>
@@ -141,11 +147,6 @@
   <action name="actionADC_START_for_Sweep">
    <property name="text">
     <string>ADC_START for 'Sweep'</string>
-   </property>
-  </action>
-  <action name="actionTx_phase_gain_tables_to_MOD">
-   <property name="text">
-    <string>Tx phase gain to MOD</string>
    </property>
   </action>
  </widget>

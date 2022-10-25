@@ -19,7 +19,6 @@ signals:
     void stopAnswerTimeoutTimer();
     void sendCommandToSTM32(quint8 command, const quint8 *p_data, quint32 data_size);
     void qamDecoderReset();
-    void setStatus(quint8 status);
 
 public slots:
     void timeoutAnswer();
@@ -28,7 +27,6 @@ public:
     explicit ModTransmitterThread(QObject *parent = nullptr);
     ~ModTransmitterThread();
 
-    bool ModAnswerReceived(const uint8_t *p_data, int length);
     void ModStartTransmitPhaseGain();
 
     void ModAnswerDataReceived();

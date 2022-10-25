@@ -52,6 +52,7 @@
 #include "mainwindow.h"
 #include "message_box.h"
 #include "ringbuffer.h"
+#include "atomic_vars.h"
 
 #include <QApplication>
 
@@ -60,20 +61,13 @@ RingBuffer *m_ring = nullptr;       // ring data buffer (ADC data) for QAM decod
 QWaitCondition ringNotEmpty;
 QMutex m_mutex_ring_wait;
 
-QWaitCondition sinBufNotEmpty;
+QWaitCondition sinFreqSweepBufNotEmpty;
 QMutex m_mutex2;
-
-QWaitCondition sweepBufNotEmpty;
-QMutex m_mutex3;
 
 QWaitCondition modTransmitWakeUp;
 QMutex m_mutex_mod;
 
 QElapsedTimer profiler_timer;       // debug timer for time measurements
-
-/* Exported variables */
-extern uint8_t mod_status_reg;
-
 
 int main(int argc, char *argv[])
 {

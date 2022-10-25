@@ -40,7 +40,6 @@ signals:
 public:
     bool message_box_srp(uint8_t* Buf, uint16_t len, uint8_t master_address, uint8_t own_address);
     static uint16_t message_header_to_array(const message_header* message, uint8_t* Buf);
-    void setStatusAutoCfgPredistortion(uint8_t status);
 
     static const uint8_t SRP_ADDR  = 0x53;
     static const uint8_t SRP2_ADDR  = 0x97;
@@ -140,10 +139,6 @@ private:
         AGC_Start = 1,
         AGC_GetStatus = 2
     } EnumAgcConfigCommand;
-
-    uint8_t m_statusAutoCfgPredistortion = 0x00;
-
-    QMutex mutex;   
 };
 
 #endif // MESSAGE_BOX_H

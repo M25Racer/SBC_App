@@ -5,9 +5,9 @@ TARGET = SBC_App_v2
 TEMPLATE = app
 
 SOURCES += \
+    atomic_vars.cpp \
     crc16.cpp \
     crc8.cpp \
-    freq_sweep_thread.cpp \
     indigo_base_protocol.cpp \
     main.cpp \
     mainwindow.cpp \
@@ -45,12 +45,11 @@ SOURCES += \
     qam_thread.cpp \
     ringbuffer.cpp \
     rs_decoder.cpp \
-    settingsdialog.cpp \
     console.cpp \
+    sin_freq_sweep_thread.cpp \
     statistics.cpp \
     synchro_watcher.cpp \
     usb_workthread.cpp \
-    global_vars.cpp \
     IndigoProtocol/SharedData/sample_flags_handler.cpp \
     IndigoProtocol/V1/CRC8.cpp \
     IndigoProtocol/V1/CRC16.cpp \
@@ -120,9 +119,9 @@ HEADERS += \
     ../SRP_HS_USB_PROTOCOL/SRP_HS_USB_Protocol.h \
     IndigoProtocol/constants.h \
     agc_algorithm.h \
+    atomic_vars.h \
     crc16.h \
     crc8.h \
-    freq_sweep_thread.h \
     indigo_base_protocol.h \
     mainwindow.h \
     message_box.h \
@@ -168,12 +167,12 @@ HEADERS += \
     rs_decoder.h \
     settingsdialog.h \
     console.h \
+    sin_freq_sweep_thread.h \
     srp_mod_protocol.h \
     statistics.h \
     synchro_watcher.h \
     usb_global.h \
     usb_workthread.h \
-    global_vars.h \
     IndigoProtocol/IndigoBaseTypes.h \
     IndigoProtocol/SharedData/mem_packet_sh.h \
     IndigoProtocol/SharedData/sample_flags_handler.h \

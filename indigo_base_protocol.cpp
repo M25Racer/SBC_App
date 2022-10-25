@@ -28,7 +28,7 @@ void init_error_header(CmdTypeErrorHeaderV1 *hdr, uint16_t frame_num, uint8_t cm
 void command_sync_wait_creator(uint16_t time, EnumCmdWait type)
 {
     CmdWait cmd_wait;
-    cmd_wait.type = type;//EnumCmdWaitAgainSend;
+    cmd_wait.type = type;
     cmd_wait.ms = time;
 
     //Fill Command Structures

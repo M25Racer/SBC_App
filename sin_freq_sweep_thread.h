@@ -6,7 +6,7 @@
 #include <QWaitCondition>
 #include <QElapsedTimer>
 
-class FreqSweepThread : public QThread
+class SinFreqSweepThread : public QThread
 {
     Q_OBJECT
 
@@ -17,8 +17,8 @@ signals:
 public slots:
 
 public:
-    explicit FreqSweepThread(QObject *parent = nullptr);
-    ~FreqSweepThread();
+    explicit SinFreqSweepThread(QObject *parent = nullptr);
+    ~SinFreqSweepThread();
 
 private:
     void run() override;

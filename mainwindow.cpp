@@ -59,7 +59,7 @@
 #include <QTimer>
 #include <QThread>
 #include "crc16.h"
-#include "global_vars.h"
+#include "atomic_vars.h"
 #include "synchro_watcher.h"
 #include "indigo_base_protocol.h"
 
@@ -87,11 +87,6 @@ MainWindow::MainWindow(QWidget *parent) :
     layout->addWidget(m_console);
     m_ui->tab_1->setLayout(layout);
 
-    //m_ui->actionConnect->setEnabled(true);
-    //m_ui->actionDisconnect->setEnabled(false);
-    //m_ui->actionQuit->setEnabled(true);
-    //m_ui->actionConfigure->setEnabled(true);
-
     m_ui->statusBar->addWidget(m_status);
 
     initActionsConnections();
@@ -108,18 +103,16 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(&m_usb_thread, &UsbWorkThread::usbInitTimeoutStart, this, &MainWindow::usbInitTimeoutStart, Qt::ConnectionType::QueuedConnection);
     connect(&m_usb_thread, &UsbWorkThread::consoleAdcFile, this, &MainWindow::consoleAdcData, Qt::ConnectionType::QueuedConnection);
     connect(&m_usb_thread, &UsbWorkThread::hsDataReceived, this, &MainWindow::usbHsDataReceived, Qt::ConnectionType::QueuedConnection);
-    //connect(&m_usb_thread, &UsbWorkThread::postDataToStm32H7, this, &MainWindow::postTxDataSTM);
     connect(&m_qam_thread, &QamThread::consolePutData, this, &MainWindow::consolePutData, Qt::ConnectionType::QueuedConnection);
     connect(&m_qam_thread, &QamThread::consoleFrameErrorFile, this, &MainWindow::consoleDataAdcSpecial, Qt::ConnectionType::QueuedConnection);
     connect(&m_qam_thread, &QamThread::postTxDataToSerialPort, this, &MainWindow::transmitDataSerialPort, Qt::ConnectionType::QueuedConnection);
-    connect(&m_freq_sweep_thread, &FreqSweepThread::consolePutData, this, &MainWindow::consolePutData, Qt::ConnectionType::QueuedConnection);
-    connect(&m_freq_sweep_thread, &FreqSweepThread::consolePutAdcDataSpecial, this, &MainWindow::consoleDataAdcSpecial, Qt::ConnectionType::QueuedConnection);
+    connect(&m_freq_sweep_thread, &SinFreqSweepThread::consolePutData, this, &MainWindow::consolePutData, Qt::ConnectionType::QueuedConnection);
+    connect(&m_freq_sweep_thread, &SinFreqSweepThread::consolePutAdcDataSpecial, this, &MainWindow::consoleDataAdcSpecial, Qt::ConnectionType::QueuedConnection);
 
     connect(&m_mod_tx_thread, &ModTransmitterThread::consolePutData, this, &MainWindow::consolePutData, Qt::ConnectionType::QueuedConnection);
     connect(&m_mod_tx_thread, &ModTransmitterThread::postDataToStm32H7, this, &MainWindow::postTxDataSTM, Qt::ConnectionType::QueuedConnection);
     connect(&m_mod_tx_thread, &ModTransmitterThread::sendCommandToSTM32, this, &MainWindow::sendCommandToSTM32, Qt::ConnectionType::QueuedConnection);
     connect(&m_mod_tx_thread, &ModTransmitterThread::qamDecoderReset, this, &MainWindow::qamDecoderReset, Qt::ConnectionType::QueuedConnection);
-    connect(&m_mod_tx_thread, &ModTransmitterThread::setStatus, this, &MainWindow::setAutoCfgStatus, Qt::ConnectionType::QueuedConnection);
 
     m_console->putData("SBC Application\n", 1);
     m_console->putData("Opening serial port...\n", 1);
@@ -230,8 +223,6 @@ bool MainWindow::openSerialPort()
     settings.name = "ttyGS0";
     settings.baudRate = 10000000;//460800;
     settings.stringBaudRate = "460800";
-    //settings.baudRate = 9600;
-    //settings.stringBaudRate = "9600";
     settings.dataBits = QSerialPort::Data8;
     settings.flowControl = QSerialPort::NoFlowControl;
     ///settings.localEchoEnabled = true;
@@ -254,7 +245,6 @@ bool MainWindow::openSerialPort()
     if (m_serial->open(QIODevice::ReadWrite))
     {
         m_console->setEnabled(true);
-        //m_console->setLocalEchoEnabled(p.localEchoEnabled);
         m_console->putData(tr("Connected to %1 : %2, %3, %4, %5, %6\n")
                            .arg(p.name).arg(p.stringBaudRate).arg(p.stringDataBits)
                            .arg(p.stringParity).arg(p.stringStopBits).arg(p.stringFlowControl), 1);
@@ -311,15 +301,6 @@ void MainWindow::readDataSerialPort()
     // Serial port data received (from PC)
     profiler_timer.start();
 
-//    // Drop any USB received data to prevent old packets been transmitted to serial port (to PC)
-//    if(!m_mod_tx_thread.m_AutoConfigurationMode)
-//    {
-//        //todo
-//        //if(!syncIsSuspendedTimeInProgress())
-//        m_usb_thread.usb_receiver_drop = true;
-//        m_qam_thread.data_drop = true;
-//    }
-
     qint64 length_rx = m_serial->bytesAvailable();
 
     do {
@@ -359,6 +340,7 @@ void MainWindow::parseDataSerialPort()
 //    profiler_timer.start();
     uint8_t addr = TtyUserRxBuffer.at(0);
 
+#ifdef QUICK_ANSWERS_ENABLED
     // If package for listed tools, response with 'quick answer'
     if (addr == m_message_box->PT_ADDR ||
         addr == m_message_box->SILS_ADDR ||
@@ -372,8 +354,9 @@ void MainWindow::parseDataSerialPort()
         quick_answer[0] = addr;
         transmit_quick_answer = true;
     }
+#endif
     // If package for SRP2
-    else if (addr == m_message_box->SRP2_ADDR)
+    if (addr == m_message_box->SRP2_ADDR)
     {
         // Check length
         if(TtyUserRxBuffer_len >= TtyUserRxBuffer_MaxSize)
@@ -384,11 +367,6 @@ void MainWindow::parseDataSerialPort()
         {
             m_console->putData("SP Broken packet from PC to SRP: length is too short\n", 1);
             serialPortRxCleanup();
-
-            // Unlock USB receiver
-            m_usb_thread.usb_receiver_drop = false;
-            m_qam_thread.data_drop = false;
-            //m_ring->Clear();
             return;
         }
 
@@ -400,27 +378,16 @@ void MainWindow::parseDataSerialPort()
         {
             m_console->putData("SP Broken packet from PC to SRP: crc error\n", 1);
             serialPortRxCleanup();
-
-            // Unlock USB receiver
-            m_usb_thread.usb_receiver_drop = false;
-            m_qam_thread.data_drop = false;
-            //m_ring->Clear();
             return;
         }
 
         // Crc ok, continue to message box
         if(m_message_box->message_box_srp((uint8_t*)TtyUserRxBuffer.data(), uint16_t(TtyUserRxBuffer_len), m_message_box->MASTER_ADDR, m_message_box->SRP2_ADDR))
         {
-            // Unlock USB receiver
-            m_usb_thread.usb_receiver_drop = false;
-            m_qam_thread.data_drop = false;
-            //m_ring->Clear();
         }
         else
         {
             // data is being transmitted to STM32H7, usb_receiver_drop flag will be reset after the transfer
-            m_qam_thread.data_drop = false;
-            //m_ring->Clear();
         }
 
         serialPortRxCleanup();
@@ -440,11 +407,6 @@ void MainWindow::parseDataSerialPort()
             // Answer with 'wait' (indigo base protocol answer)
             command_sync_wait_creator(suspended_time_left, EnumCmdWaitAgainSend);
 
-            // Unlock USB receiver
-            m_usb_thread.usb_receiver_drop = false;
-            m_qam_thread.data_drop = false;
-            //m_ring->Clear();
-
             // Clean serial port rx buffer
             serialPortRxCleanup();
             return;
@@ -463,18 +425,17 @@ void MainWindow::parseDataSerialPort()
         m_console->putData("SP Warning: received length is too big\n", 1);
     }
 
-    m_qam_thread.data_drop = false;
-    //m_ring->Clear();
-
     // Transmit to STM32H7
     postTxDataSTM((uint8_t*)TtyUserRxBuffer.data(), int(TtyUserRxBuffer_len));
     serialPortRxCleanup();
 
+#ifdef QUICK_ANSWERS_ENABLED
     if(transmit_quick_answer)
     {
         transmit_quick_answer = false;
         transmitDataSerialPort(quick_answer, sizeof(quick_answer));
     }
+#endif
 }
 
 void MainWindow::handleError(QSerialPort::SerialPortError error)
@@ -500,12 +461,10 @@ void MainWindow::initActionsConnections()
     connect(m_ui->actionLogsOpenFile, &QAction::triggered, this, &MainWindow::logFileOpen);
     connect(m_ui->actionSend_HS_command_GET_STATUS, &QAction::triggered, this, &MainWindow::sendHsCommandGetStatus);
     connect(m_ui->actionSend_HS_command_GET_DATA, &QAction::triggered, this, &MainWindow::sendHsCommandGetData);
-    connect(m_ui->actionGET_DATA_SIZE, &QAction::triggered, this, &MainWindow::sendHsCommandGetDataSize);
     connect(m_ui->actionADC_START, &QAction::triggered, this, &MainWindow::sendHsCommandAdcStart);
     connect(m_ui->actionSend_AGC_Start, &QAction::triggered, this, &MainWindow::sendHsCommandAgcStart);
     connect(m_ui->actionADC_START_for_SIN_600, &QAction::triggered, this, &MainWindow::sendHsCommandAdcStart2);
     connect(m_ui->actionADC_START_for_Sweep, &QAction::triggered, this, &MainWindow::sendHsCommandAdcStart3);
-    connect(m_ui->actionTx_phase_gain_tables_to_MOD, &QAction::triggered, this, &MainWindow::sendPredistortionTables);
 }
 
 void MainWindow::showStatusMessage(const QString &message)
@@ -526,11 +485,7 @@ void MainWindow::transmitDataSerialPort(const uint8_t *p_data, int length)
 #endif
 
     qint64 pt_elapsed = profiler_timer.elapsed();
-    m_console->putData(QString("Profiler timer elapsed %1 # transmit to sp end, without qam %2\n").arg(pt_elapsed).arg(pt_elapsed - elapsed_all_saved), 1);
-
-    // todo - change slot from 'transmitDataSerialPort' to 'ModAnswerReceived' ?
-    // Transmit data to 'm_mod_tx_thread' (MOD transmit & receive commands sequence)
-    m_mod_tx_thread.ModAnswerReceived(p_data, length);
+    m_console->putData(QString("Profiler timer elapsed %1 # transmit to sp end, without qam %2\n").arg(pt_elapsed).arg(pt_elapsed - elapsed_all_saved), 0);
 }
 
 // USB to STM32H7 board
@@ -585,14 +540,6 @@ void MainWindow::transmitWaitToSerialPort()
 }
 
 // Actions
-void MainWindow::about()
-{
-    QMessageBox::about(this, tr("About SBC Application"),
-                       tr("The <b>SBC Application</b> example demonstrates how to "
-                          "use the Qt Serial Port module in modern GUI applications "
-                          "using Qt, with a menu bar, toolbars, and a status bar."));
-}
-
 void MainWindow::logFileFlush()
 {
     m_console->fileFlush();
@@ -626,7 +573,7 @@ void MainWindow::usbHsDataReceived()
 // Debug HS command from GUI
 void MainWindow::sendHsCommandGetStatus()
 {
-    // Get status
+    m_console->putData(QString("Send HS command USB_CMD_GET_STATUS\n"), 1);
     m_usb_thread.sendHsCommand(USB_CMD_GET_STATUS, 0, nullptr);
 }
 
@@ -636,43 +583,37 @@ void MainWindow::sendHsCommandGetData()
     m_usb_thread.sendHsCommand(USB_CMD_GET_DATA, 4, (uint8_t*)&m_usb_thread.stm32_ready_data_size);
 }
 
-void MainWindow::sendHsCommandGetDataSize()
-{
-    m_usb_thread.sendHsCommand(USB_CMD_GET_DATA_SIZE, 0, nullptr);
-}
-
 void MainWindow::sendHsCommandAdcStart()
 {
     uint32_t adc_data_length = 440000;
+    m_console->putData(QString("Send HS command USB_CMD_ADC_START, adc_data_length %1\n").arg(adc_data_length), 1);
     m_usb_thread.sendHsCommand(USB_CMD_ADC_START, 4, (uint8_t*)&adc_data_length);
 }
 
 void MainWindow::sendHsCommandAdcStart2()
 {
-    Set_Special_Command_SIN600(true);
+    sin600_command = true;
+    common_special_command = true;
 
     uint32_t adc_data_length = 31400;
+    m_console->putData(QString("Send HS command USB_CMD_ADC_START, adc_data_length %1\n").arg(adc_data_length), 1);
     m_usb_thread.sendHsCommand(USB_CMD_ADC_START, 4, (uint8_t*)&adc_data_length);
 }
 
 void MainWindow::sendHsCommandAdcStart3()
 {
-    Set_Special_Command_Sweep(true);
+    sweep_command = true;
+    common_special_command = true;
 
     uint32_t adc_data_length = 440000;
+    m_console->putData(QString("Send HS command USB_CMD_ADC_START, adc_data_length %1\n").arg(adc_data_length), 1);
     m_usb_thread.sendHsCommand(USB_CMD_ADC_START, 4, (uint8_t*)&adc_data_length);
 }
 
 void MainWindow::sendHsCommandAgcStart()
 {
+    m_console->putData(QString("Send HS command USB_CMD_AGC_START\n"), 1);
     sendCommandToSTM32(USB_CMD_AGC_START, nullptr, 0);
-}
-
-void MainWindow::sendPredistortionTables()
-{
-    m_console->putData("Starting of transmit phase & gain tables to MOD\n", 1);
-
-    m_mod_tx_thread.ModStartTransmitPhaseGain();
 }
 
 void MainWindow::commandCalculatePredistortionTablesStart()
@@ -690,11 +631,7 @@ void MainWindow::qamDecoderReset()
     m_qam_thread.SetFirstPassFlag();
 }
 
-void MainWindow::setAutoCfgStatus(quint8 status)
-{
-    m_message_box->setStatusAutoCfgPredistortion(status);
-}
-
+// Indigo Base Protocol callback
 bool MainWindow::frame_builded_cb(const void *param, const uint8_t *buffer, uint32_t size)
 {
     MainWindow *self = (MainWindow*)param;

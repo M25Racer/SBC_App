@@ -2,9 +2,9 @@
 #include <message_box.h>
 #include "../SRP_HS_USB_PROTOCOL/SRP_HS_USB_Protocol.h"
 #include "agc_algorithm.h"
-#include "global_vars.h"
 #include "synchro_watcher.h"
 #include "indigo_base_protocol.h"
+#include "atomic_vars.h"
 
 /* Private variables */
 #ifdef QT_DEBUG
@@ -14,17 +14,14 @@ static uint8_t AdcDataBuffer[20][USB_MAX_DATA_SIZE];
 /* Extern global variables */
 extern RingBuffer *m_ring;              // ring data buffer (ADC data) for QAM decoder
 extern QWaitCondition ringNotEmpty;
-extern QWaitCondition sinBufNotEmpty;
-extern QWaitCondition sweepBufNotEmpty;
+extern QWaitCondition sinFreqSweepBufNotEmpty;
 extern QMutex m_mutex2;
-extern QMutex m_mutex3;
 extern QElapsedTimer profiler_timer;
-extern uint8_t FreqSweepDataBuffer[USB_MAX_DATA_SIZE];
+extern uint8_t SinFreqEstDataBuffer[USB_MAX_DATA_SIZE];
 extern uint8_t SweepDataBuffer[USB_MAX_DATA_SIZE];
-extern uint32_t FreqSweepDataLength;
+extern uint32_t SinFreqEstDataLength;
 extern uint32_t SweepDataLength;
 extern QElapsedTimer profiler_timer;
-extern QAtomicInteger<bool> m_qamDecodedDataAvailable;
 
 /* Global variables */
 uint8_t UserRxBuffer[USB_MAX_DATA_SIZE];
@@ -933,36 +930,10 @@ void UsbWorkThread::parseHsData()
         case USB_CMD_GET_DATA:
         {
 //            emit consolePutData(QString("parseHsData(): USB_CMD_GET_DATA\n"), 0);
-            if(Get_Common_Special_Command())
+
+            if(!common_special_command)
             {
-                if(Get_Special_Command_SIN600())
-                {
-                    Set_Special_Command_SIN600(false);
-
-                    m_mutex2.lock();
-                    FreqSweepDataLength = header->packet_length - sizeof(USBheader_t);
-                    memcpy(FreqSweepDataBuffer, UserRxBuffer + pStartData + sizeof(USBheader_t), FreqSweepDataLength);
-                    m_mutex2.unlock();
-
-                    // Wake threads waiting for 'wait condiion'
-                    sinBufNotEmpty.wakeAll();
-                }
-                else if(Get_Special_Command_Sweep())
-                {
-                    Set_Special_Command_Sweep(false);
-
-                    m_mutex3.lock();
-                    SweepDataLength = header->packet_length - sizeof(USBheader_t);
-                    memcpy(SweepDataBuffer, UserRxBuffer + pStartData + sizeof(USBheader_t), SweepDataLength);
-                    m_mutex3.unlock();
-
-                    // Wake threads waiting for 'wait condiion'
-                    sweepBufNotEmpty.wakeAll();
-                }
-            }
-            else
-            {
-emit consolePutData(QString("USB elapsed %1\n").arg(profiler_timer.elapsed()), 1);
+                //emit consolePutData(QString("USB elapsed %1\n").arg(profiler_timer.elapsed()), 1);
 
                 bool res = m_ring->Append(UserRxBuffer + sizeof(USBheader_t), header->packet_length - sizeof(USBheader_t));
 
@@ -975,6 +946,35 @@ emit consolePutData(QString("USB elapsed %1\n").arg(profiler_timer.elapsed()), 1
                 {
                     // Error: can't add new data to ring buffer
                     emit consolePutData("Unable to add new adc data to ring buffer\n", 1);
+                }
+            }
+            else
+            {
+                common_special_command = false;
+
+                if(sin600_command)
+                {
+                    sin600_command = false;
+
+                    m_mutex2.lock();
+                    SinFreqEstDataLength = header->packet_length - sizeof(USBheader_t);
+                    memcpy(SinFreqEstDataBuffer, UserRxBuffer + pStartData + sizeof(USBheader_t), SinFreqEstDataLength);
+                    m_mutex2.unlock();
+
+                    // Wake threads waiting for 'wait condiion'
+                    sinFreqSweepBufNotEmpty.wakeAll();
+                }
+                else if(sweep_command)
+                {
+                    sweep_command = false;
+
+                    m_mutex2.lock();
+                    SweepDataLength = header->packet_length - sizeof(USBheader_t);
+                    memcpy(SweepDataBuffer, UserRxBuffer + pStartData + sizeof(USBheader_t), SweepDataLength);
+                    m_mutex2.unlock();
+
+                    // Wake threads waiting for 'wait condiion'
+                    sinFreqSweepBufNotEmpty.wakeAll();
                 }
             }
 
@@ -1027,7 +1027,7 @@ emit consolePutData(QString("USB elapsed %1\n").arg(profiler_timer.elapsed()), 1
                 emit consolePutData("parseHsData(): ADC status = busy\n", 0);
             }
 
-            Set_AGC_State(AgcState);
+            AgcStateGlobal = AgcState;
 
             switch(AgcState)
             {

@@ -16,9 +16,7 @@
 #include "srp_mod_protocol.h"
 #include "rs_decoder.h"
 #include "qam_decoder/rtwtypes.h"
-
-/* Global atomic variables */
-QAtomicInteger<bool> m_qamDecodedDataAvailable = false;
+#include "atomic_vars.h"
 
 /* Extern global variables */
 extern RingBuffer *m_ring;              // ring data buffer (ADC data) for QAM decoder
@@ -110,12 +108,6 @@ void QamThread::run()
             continue;
         }
 
-//        if(data_drop)
-//        {
-//            emit consolePutData("Dropping received QAM data\n", 1);
-//            continue;
-//        }
-
         QAM_Decoder();
     }
 }
@@ -159,6 +151,18 @@ void QamThread::QAM_Decoder()
     {
         HS_EWL_DEMOD_QAM_error_status = HS_EWL_DEMOD_QAM(data, len_data, f_est_data, Fs, qam_symbols_real,
                                                         qam_symbols_imag, byte_data, &start_inf_data);
+        switch(HS_EWL_DEMOD_QAM_error_status)
+        {
+            case 1: // input data LEN <= 0
+                emit consolePutData("HS_EWL_DEMOD_QAM_error_status: input data LEN <= 0\n", 1);
+                break;
+            case 2: // incorrect input sample freq for lagrange_resamp func
+                emit consolePutData("HS_EWL_DEMOD_QAM_error_status: incorrect input sample freq for lagrange_resamp func\n", 1);
+                break;
+            default:
+            case 0: // OK
+                break;
+        }
 
         // Data parsing
         // Convert decoded data from 'double' to 'uint8', copy to data_decoded[] buffer
@@ -351,14 +355,6 @@ void QamThread::QAM_Decoder()
         elapsed_all_saved = elapsed_all;
         elapsed_all = 0;
     }
-
-//    QString s;
-//    for(int i = 0; i < byte_data_size; i++)
-//    {
-//        s.append(QString("%1 ").arg(byte_data[i] - byte_array[i]));
-//    }
-//    s.append("\n");
-//    emit consolePutData(s, 0);
 
 //    HS_EWL_DEMOD_QAM_terminate();
 }

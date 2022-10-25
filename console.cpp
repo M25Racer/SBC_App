@@ -173,17 +173,17 @@ void Console::putDataAdcSpecial(const qint16 *p_data, quint32 len, uint8_t type)
     QScopedPointer<QFile> *f;
     QTextStream *out;
     QString data;
+    bool flush_data_after_write = true;
 
     switch(type)
     {
         default:
         case 0:
             f = &m_frameErrorFile;
-
             if((*f)->size() > 100*1024*1024)    // 100 Mb
                 return;
-
             out = &outFrameErrorAdc;
+            flush_data_after_write = false;     // do not flush data for frame errors
 
             data.append(QString("%1 // =================================== Frame #%2, len %3 ===================================\n").arg((int16_t)p_data[0]).arg(n_frame++).arg(len));
             break;
@@ -211,7 +211,10 @@ void Console::putDataAdcSpecial(const qint16 *p_data, quint32 len, uint8_t type)
         data.append(QString("%1\n").arg((int16_t)p_data[i]));
 
     *out << data;
-    (*out).flush();       // Clear the buffered data
+    if(flush_data_after_write)
+    {
+        (*out).flush();       // Clear the buffered data
+    }
 }
 
 void Console::fileFlush()

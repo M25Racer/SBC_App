@@ -57,7 +57,7 @@
 #include <message_box.h>
 #include <usb_workthread.h>
 #include <qam_thread.h>
-#include <freq_sweep_thread.h>
+#include <sin_freq_sweep_thread.h>
 #include <mod_transmitter_thread.h>
 
 QT_BEGIN_NAMESPACE
@@ -85,17 +85,14 @@ public:
 private slots:
     bool openSerialPort();
     void closeSerialPort();
-    void about();
     void logFileFlush();
     void logFileOpen();
     void sendHsCommandGetStatus();      // command to STM32
     void sendHsCommandGetData();        // command to STM32
-    void sendHsCommandGetDataSize();    // command to STM32
     void sendHsCommandAdcStart();       // command to STM32
     void sendHsCommandAdcStart2();      // command to STM32
     void sendHsCommandAdcStart3();      // command to STM32
     void sendHsCommandAgcStart();       // command to STM32
-    void sendPredistortionTables();         // commands to MOD
     void readDataSerialPort();
     void transmitDataSerialPort(const uint8_t *p_data, int length);
     void transmitWaitToSerialPort();
@@ -114,7 +111,6 @@ private slots:
     void usbHsDataReceived();
     void sendCommandToSTM32(quint8 command, const quint8 *p_data, quint32 data_size);
     void qamDecoderReset();
-    void setAutoCfgStatus(quint8 status);
 
     void usbInitTimeoutStart(int timeout_ms);
     //void modAnswerTimeoutStart(int timeout_ms);
@@ -137,7 +133,7 @@ private:
     CMessageBox *m_message_box = nullptr;
     UsbWorkThread m_usb_thread;
     QamThread m_qam_thread;
-    FreqSweepThread m_freq_sweep_thread;
+    SinFreqSweepThread m_freq_sweep_thread;
     ModTransmitterThread m_mod_tx_thread;
 
     QByteArray TtyUserRxBuffer;
@@ -151,11 +147,12 @@ private:
     QTimer *timerUsbInit;
     QTimer *timerModAnswerTimeout;
 
-    //const int timeoutSerialPortRx_ms = 0;               // timeout for serial port receiver (max time between rx packets)
     const int timeoutSerialPortReconnect_ms = 1000;     // timeout between serial port reconnection attempts (in case of error)
 
+#ifdef QUICK_ANSWERS_ENABLED
     uint8_t quick_answer[2] = {0x00, 0x1d};
     bool transmit_quick_answer = false;
+#endif
 
     struct timeval tv = {0, 0};
 };

@@ -5,8 +5,9 @@
 #include "crc16.h"
 #include "srp_mod_protocol.h"
 #include "../SRP_HS_USB_PROTOCOL/SRP_HS_USB_Protocol.h"
-#include "global_vars.h"
 #include "ringbuffer.h"
+#include "atomic_vars.h"
+#include "agc_algorithm.h"
 
 /* Extern global variables */
 extern QWaitCondition modTransmitWakeUp;
@@ -17,10 +18,6 @@ extern float phase_data_float[2048];
 extern uint16_t shift_for_qam_data_int;
 
 extern RingBuffer *m_ring;
-
-/* Private variables */
-
-/* Global variables */
 
 ModTransmitterThread::ModTransmitterThread(QObject *parent) :
     QThread(parent)
@@ -41,7 +38,7 @@ void ModTransmitterThread::setState(TState state)
 {
     State = state;
     emit consolePutData(QString(":: Predistortion auto cfg :: State #%1\n").arg(State), 1);
-    emit setStatus(State);
+    m_statusAutoCfgPredistortion = (quint8)state;
 }
 
 void ModTransmitterThread::run()
@@ -79,14 +76,14 @@ void ModTransmitterThread::run()
 
                 setState(SIN35KHZ_MOD_COMMANDS_FOR_AGC);
                 n_commands = 0;
-                Set_AGC_State(AGC_START);
+                AgcStateGlobal = AGC_START;
                 /* fallthrough */
 
             case SIN35KHZ_MOD_COMMANDS_FOR_AGC:
             case SIN35KHZ_MOD_COMMANDS_FOR_AGC_2:
                 {
                     // Send 'SEND_SIN_35KHZ' command to MOD
-                    uint8_t AGCState = Get_AGC_State();
+                    uint8_t AGCState = AgcStateGlobal;
 
                     // Check for continuous AGC errors
                     if(AGCState == AGC_ERROR)
@@ -147,7 +144,8 @@ void ModTransmitterThread::run()
             {
                 // Send 'ADC_START for SIN 600' to STM32
                 emit consolePutData(":: Predistortion auto cfg :: send 'ADC_START for SIN 600'\n", 1);
-                Set_Special_Command_SIN600(true);
+                sin600_command = true;
+                common_special_command = true;
 
                 uint32_t adc_data_length = 31400;
                 emit sendCommandToSTM32(USB_CMD_ADC_START, (uint8_t*)&adc_data_length, 4);
@@ -163,7 +161,7 @@ void ModTransmitterThread::run()
             case SIN600_MOD_COMMAND:
             {
                 emit consolePutData(QString(":: Predistortion auto cfg :: Send 'SEND_SIN_35KHZ_600' command to MOD\n"), 1);
-                Set_FreqEstState(FREQ_EST_START);
+                FreqEstState = TFreqEstState::FREQ_EST_START;
 
                 message.command = CMessageBox::SEND_SIN_35KHZ_600;
                 message.packet_adr = 0;
@@ -193,7 +191,8 @@ void ModTransmitterThread::run()
                 {
                     ++Timeout;
 
-                    TFreqEstState s = Get_FreqEstState();
+                    quint8 tmp = FreqEstState;
+                    TFreqEstState s = TFreqEstState(tmp);
 
                     if(s == FREQ_EST_COMPLETE)
                     {
@@ -226,13 +225,13 @@ void ModTransmitterThread::run()
 
                 setState(SWEEP_MOD_COMMANDS_FOR_AGC);
                 n_commands = 0;
-                Set_AGC_State(AGC_START);
+                AgcStateGlobal = AGC_START;
                 /* fallthrough */
 
             case SWEEP_MOD_COMMANDS_FOR_AGC:
                 {
                     // 2. Send 'SWEEP' command to MOD
-                    uint8_t AGCState = Get_AGC_State();
+                    uint8_t AGCState = AgcStateGlobal;
 
                     // At least one 'SWEEP' must be transmitted and AGCState = AGC_OK
                     if(AGCState != AGC_OK || !n_commands)
@@ -270,7 +269,8 @@ void ModTransmitterThread::run()
                 {
                     // 3. Send 'ADC_START for SWEEP' to STM32
                     emit consolePutData("Predistortion auto cfg: send 'ADC_START for 'SIN 35KHZ 600''\n", 1);
-                    Set_Special_Command_Sweep(true);
+                    sweep_command = true;
+                    common_special_command = true;
 
                     uint32_t adc_data_length = 440000;
                     emit sendCommandToSTM32(USB_CMD_ADC_START, (uint8_t*)&adc_data_length, 4);
@@ -285,7 +285,7 @@ void ModTransmitterThread::run()
 
             case SWEEP_MOD_COMMAND:
                 {
-                    Set_SweepState(SWEEP_START);    //todo
+                    SweepState = TSweepState::SWEEP_START;
 
                     message.command = CMessageBox::SEND_SWEEP_SIGNAL;
                     message.packet_adr = 0;
@@ -315,8 +315,8 @@ void ModTransmitterThread::run()
             case SWEEP_FUNC_WAIT:
                 {
                     ++Timeout;
-
-                    TSweepState s = Get_SweepState();
+                    uint8_t tmp = SweepState;
+                    TSweepState s = TSweepState(tmp);
 
                     if(s == SWEEP_COMPLETE)
                     {
@@ -349,7 +349,7 @@ void ModTransmitterThread::run()
 
                 setState(SIN35KHZ_MOD_COMMANDS_FOR_AGC_2);
                 n_commands = 0;
-                Set_AGC_State(AGC_START);
+                AgcStateGlobal = AGC_START;
 
                 // Start timeout before sending commands to MOD
                 emit startAnswerTimeoutTimer(100);
@@ -393,13 +393,13 @@ void ModTransmitterThread::run()
 
                 setState(STAT_MOD_COMMANDS_FOR_AGC);
                 n_commands = 0;
-                Set_AGC_State(AGC_START);
+                AgcStateGlobal = AGC_START;
                 /* fallthrough */
 
              case STAT_MOD_COMMANDS_FOR_AGC:
                 {
                     // Send 'GET_STATUS' command to MOD
-                    uint8_t AGCState = Get_AGC_State();
+                    uint8_t AGCState = AgcStateGlobal;
 
                     // At least one 'GET STATUS' must be transmitted and AGCState = AGC_OK
                     if(AGCState != AGC_OK || !n_commands)
@@ -683,7 +683,7 @@ void ModTransmitterThread::calculatePredistortionTablesStop()
 
     while(1)
     {
-        StateAGC = Get_AGC_State();
+        StateAGC = AgcStateGlobal;
         if(StateAGC == AGC_OK || StateAGC == AGC_STOP)
             break;
 
@@ -712,93 +712,4 @@ void ModTransmitterThread::calculatePredistortionTablesStop()
     emit qamDecoderReset();
 
     m_AutoConfigurationMode = false;
-}
-
-// Parse received data from MOD, for future use
-bool ModTransmitterThread::ModAnswerReceived(const uint8_t *p_data, int length)
-{
-    Q_UNUSED(p_data);
-    Q_UNUSED(length);
-
-//    if(State == IDLE)
-//        return false;
-
-//    if(length < 12)
-//    {
-//        emit consolePutData(QString("ModAnswerReceived error length is too short %1\n").arg(length), 1);
-//        return false;
-//    }
-
-//    // p_data[0] : addr
-//    // p_data[1] : command
-//    // p_data[2] : message_id
-//    // p_data[3] : 0x01
-//    // p_data[4] [5] : data_len
-//    // p_data[6] [7] [8] [9] - channel/packet_addr
-
-//    if(p_data[0] != MessageBox::MOD2_ADDR)
-//    {
-//        emit consolePutData(QString("ModAnswerReceived warning, answer addr != MOD2_ADDR\n"), 1);
-//        return false;
-//    }
-
-//    // Check crc
-//    uint16_t crc = ((uint16_t)p_data[length - 1] << 8)
-//                   | (uint16_t)p_data[length - 2];
-
-//    bool res = check_crc16(p_data, length - 2, crc);
-
-//    if(!res)
-//    {
-//        emit consolePutData("ModAnswerReceived crc error\n", 1);
-//        return false;
-//    }
-
-//    switch(State)
-//    {
-//        default:
-//            emit consolePutData("ModAnswerReceived warning wrong state\n", 1);
-//            break;
-
-//        case TX_PHASE_TABLE_1:
-//            if(p_data[1] == MessageBox::SET_PHASE_TABLE)
-//            {
-//                emit stopAnswerTimeoutTimer();
-//                modTransmitWakeUp.wakeOne();
-//            }
-//            else
-//            {
-//                emit consolePutData("ModAnswerReceived answer wrong command\n", 1);
-//                return false;
-//            }
-//            break;
-
-//        case TX_GAIN_TABLE_2:
-//            if(p_data[1] == MessageBox::SET_GAIN_TABLE)
-//            {
-//                emit stopAnswerTimeoutTimer();
-//                modTransmitWakeUp.wakeOne();
-//            }
-//            else
-//            {
-//                emit consolePutData("ModAnswerReceived answer wrong command\n", 1);
-//                return false;
-//            }
-//            break;
-
-//        case TX_SHIFT_3:
-//            if(p_data[1] == MessageBox::SET_SHIFT_QAM_DATA)
-//            {
-//                emit stopAnswerTimeoutTimer();
-//                modTransmitWakeUp.wakeOne();
-//            }
-//            else
-//            {
-//                emit consolePutData("ModAnswerReceived answer wrong command\n", 1);
-//                return false;
-//            }
-//            break;
-//    }
-
-    return true;
 }
