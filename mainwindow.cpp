@@ -63,6 +63,13 @@
 #include "synchro_watcher.h"
 #include "indigo_base_protocol.h"
 
+//#include "linux/reboot.h"
+//#include "sys/syscall.h"
+//#include "sys/reboot.h"
+//#include "unistd.h"
+#include <QtDBus/QDBusInterface>
+#include <QtDBus/QDBusPendingReply>
+
 // Extern variables
 extern QElapsedTimer profiler_timer;
 extern RingBuffer *m_ring;
@@ -75,7 +82,8 @@ MainWindow::MainWindow(QWidget *parent) :
     m_status(new QLabel),
     m_console(new Console),
     m_serial(new QSerialPort(this)),
-    m_message_box(new CMessageBox)
+    m_message_box(new CMessageBox),
+    m_gpio_tracker(new GpioTracker(26, this))
 {
     m_ui->setupUi(this);
 
@@ -97,6 +105,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(m_message_box, &CMessageBox::postDataToStm32H7, this, &MainWindow::postTxDataSTM);
     connect(m_message_box, &CMessageBox::commandCalculatePredistortionTablesStart, this, &MainWindow::commandCalculatePredistortionTablesStart);
     connect(m_message_box, &CMessageBox::commandAgcStart, this, &MainWindow::commandAgcStart);
+    connect(m_gpio_tracker, &GpioTracker::consolePutData, this, &MainWindow::consolePutData);
     connect(&m_usb_thread, &UsbWorkThread::postTxDataToSerialPort, this, &MainWindow::transmitDataSerialPort, Qt::ConnectionType::QueuedConnection);
     connect(&m_usb_thread, &UsbWorkThread::postWaitToSerialPort, this, &MainWindow::transmitWaitToSerialPort, Qt::ConnectionType::QueuedConnection);
     connect(&m_usb_thread, &UsbWorkThread::consolePutData, this, &MainWindow::consolePutData, Qt::ConnectionType::QueuedConnection);
@@ -131,6 +140,10 @@ MainWindow::MainWindow(QWidget *parent) :
     timerUsbInit->setSingleShot(true);
     connect(timerUsbInit, SIGNAL(timeout()), this, SLOT(timeoutUsbInitCallback()));
 
+    // Gpio tracking tmer
+    timerGpioTracking = new QTimer();
+    connect(timerGpioTracking, SIGNAL(timeout()), this, SLOT(timeoutGpioCallback()));
+
     // Indigo base protocol initialization
     g_frame_builder.Initialize();
     g_frame_builder.SetNotify(frame_builded_cb, this);
@@ -164,12 +177,22 @@ MainWindow::MainWindow(QWidget *parent) :
     timerModAnswerTimeout->connect(&m_mod_tx_thread, SIGNAL(stopAnswerTimeoutTimer()), SLOT(stop()), Qt::ConnectionType::QueuedConnection);
 
     m_mod_tx_thread.connect(timerModAnswerTimeout, SIGNAL(timeout()), SLOT(timeoutAnswer()));
+
+    // Init & start GPIO monitoring
+    if(m_gpio_tracker->Init())
+    {
+        m_console->putData("GPIO initialization successfull\n", 1);
+        timerGpioTracking->start(timeoutGpioTrackingPeriod_ms);
+    }
+    else
+        m_console->putData("Error: GPIO initialization failed\n", 1);
 }
 
 MainWindow::~MainWindow()
 {
     timerUsbInit->stop();
     timerSpReconnect->stop();
+    timerGpioTracking->stop();
 
     closeSerialPort();
     m_usb_thread.USB_Deinit();
@@ -273,6 +296,77 @@ void MainWindow::closeSerialPort()
 void MainWindow::timeoutUsbInitCallback()
 {
     m_usb_thread.USB_Init();
+}
+
+void MainWindow::timeoutGpioCallback()
+{
+    if(m_gpio_tracker->readValue())
+    {
+        // Shutdown pin is set
+        ++ShutdownTime;
+        m_console->putData(QString("Shutdown pin is set for %1 sec\n").arg(ShutdownTime), 1);
+    }
+    else
+    {
+        // Shutdown pin is reset
+        ShutdownTime = 0;
+    }
+
+    if(ShutdownTime > 3)
+    {
+        m_console->putData(QString("Shutdown in progress...\n"), 1);
+
+        timerUsbInit->stop();
+        timerSpReconnect->stop();
+        timerGpioTracking->stop();
+
+        m_console->Close();
+
+        shutdownProcedure();
+
+        // In case shutdown failed, close application
+        MainWindow::close();
+    }
+}
+
+int MainWindow::shutdownProcedure()
+{
+    QDBusInterface logind{"org.freedesktop.login1", "/org/freedesktop/login1", "org.freedesktop.login1.Manager", QDBusConnection::systemBus()};
+    const auto message = logind.callWithArgumentList(QDBus::Block, "CanPowerOff", {});
+    QDBusPendingReply<QString> canPowerOff = message;
+    Q_ASSERT(canPowerOff.isFinished());
+
+    if(canPowerOff.isError())
+    {
+        const auto error = canPowerOff.error();
+        qWarning().noquote()
+                << QDBusInterface::tr("Asynchronous call finished with error: %1 (%2)")
+                   .arg(error.name(), error.message());
+        return EXIT_FAILURE;
+    }
+
+    if (canPowerOff.value() == "yes")
+    {
+        QDBusPendingReply<> powerOff = logind.callWithArgumentList(QDBus::Block, "PowerOff", {true, });
+        Q_ASSERT(powerOff.isFinished());
+        if(powerOff.isError())
+        {
+            const auto error = powerOff.error();
+            qWarning().noquote()
+                    << QDBusInterface::tr("Asynchronous call finished with error: %1 (%2)")
+                       .arg(error.name(), error.message());
+            return EXIT_FAILURE;
+        }
+    }
+    else
+    {
+        qCritical().noquote()
+                << QCoreApplication::translate("poweroff", "Can't power off: CanPowerOff() result is %1")
+                   .arg(canPowerOff.value());
+        return EXIT_FAILURE;
+    }
+
+    return EXIT_SUCCESS;
 }
 
 void MainWindow::usbInitTimeoutStart(int timeout_ms)

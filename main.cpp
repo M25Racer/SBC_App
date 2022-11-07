@@ -62,7 +62,7 @@ QWaitCondition ringNotEmpty;
 QMutex m_mutex_ring_wait;
 
 QWaitCondition sinFreqSweepBufNotEmpty;
-QMutex m_mutex2;
+QMutex m_mutex_sweep_thread;
 
 QWaitCondition modTransmitWakeUp;
 QMutex m_mutex_mod;

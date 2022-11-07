@@ -20,7 +20,7 @@ using namespace QAM_Common;
 
 /* Extern global variables */
 extern QWaitCondition sinFreqSweepBufNotEmpty;
-extern QMutex m_mutex2;
+extern QMutex m_mutex_sweep_thread;
 
 /* Private variables */
 static double SignalSin[USB_MAX_DATA_SIZE];
@@ -54,12 +54,12 @@ SinFreqSweepThread::SinFreqSweepThread(QObject *parent) :
 
 SinFreqSweepThread::~SinFreqSweepThread()
 {
-    m_mutex2.lock();
+    m_mutex_sweep_thread.lock();
     m_quit = true;
     SinFreqEstDataLength = 0;
     SweepDataLength = 0;
     sinFreqSweepBufNotEmpty.wakeOne();
-    m_mutex2.unlock();
+    m_mutex_sweep_thread.unlock();
 
     wait();
 }
@@ -72,8 +72,8 @@ void SinFreqSweepThread::run()
 
     while(!m_quit)
     {
-        m_mutex2.lock();
-        sinFreqSweepBufNotEmpty.wait(&m_mutex2); // Wait condition unlocks mutex before 'wait', and will lock it again just after 'wait' is complete
+        m_mutex_sweep_thread.lock();
+        sinFreqSweepBufNotEmpty.wait(&m_mutex_sweep_thread); // Wait condition unlocks mutex before 'wait', and will lock it again just after 'wait' is complete
 
         if(SinFreqEstDataLength)
         {
@@ -89,7 +89,7 @@ void SinFreqSweepThread::run()
             flagCalcSweep = true;
         }
 
-        m_mutex2.unlock();
+        m_mutex_sweep_thread.unlock();
 
         if(flagCalcSinFreq)
         {

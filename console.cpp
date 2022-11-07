@@ -124,6 +124,9 @@ Console::Console(QWidget *parent) :
 
 void Console::putData(const QString &data, uint8_t priority)
 {
+    if(!m_logFile->isOpen())
+        return;
+
 #ifdef QT_DEBUG
     ++priority;
 #endif
@@ -142,12 +145,14 @@ void Console::putData(const QString &data, uint8_t priority)
     out << QDateTime::currentDateTime().toString("hh:mm:ss.zzz ");
 
     // Write to the output category of the message and the message itself
-    out << data;// << endl;
-    //out.flush();    // Clear the buffered data
+    out << data;
 }
 
 void Console::putDataAdc(const quint8 *p_data, quint32 size)
 {
+    if(!m_adcFile[n_file]->isOpen())
+        return;
+
     QString data;
     uint16_t value;
 
@@ -180,6 +185,10 @@ void Console::putDataAdcSpecial(const qint16 *p_data, quint32 len, uint8_t type)
         default:
         case 0:
             f = &m_frameErrorFile;
+
+            if(!(*f)->isOpen())
+                return;
+
             if((*f)->size() > 100*1024*1024)    // 100 Mb
                 return;
             out = &outFrameErrorAdc;
@@ -190,6 +199,10 @@ void Console::putDataAdcSpecial(const qint16 *p_data, quint32 len, uint8_t type)
 
         case 1:
             f = &m_sin600File;
+
+            if(!(*f)->isOpen())
+                return;
+
             if((*f)->size() > 10*1024*1024)     // 10 Mb
                 return;
             out = &outSin600;
@@ -199,6 +212,10 @@ void Console::putDataAdcSpecial(const qint16 *p_data, quint32 len, uint8_t type)
 
         case 2:
             f = &m_sweepFile;
+
+            if(!(*f)->isOpen())
+                return;
+
             if((*f)->size() > 10*1024*1024)     // 10 Mb
                 return;
             out = &outSweep;

@@ -1,4 +1,4 @@
-QT += widgets serialport
+QT += widgets serialport dbus
 requires(qtConfig(combobox))
 
 TARGET = SBC_App_v2
@@ -8,6 +8,7 @@ SOURCES += \
     atomic_vars.cpp \
     crc16.cpp \
     crc8.cpp \
+    gpio_tracker.cpp \
     indigo_base_protocol.cpp \
     main.cpp \
     mainwindow.cpp \
@@ -122,6 +123,7 @@ HEADERS += \
     atomic_vars.h \
     crc16.h \
     crc8.h \
+    gpio_tracker.h \
     indigo_base_protocol.h \
     mainwindow.h \
     message_box.h \

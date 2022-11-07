@@ -59,6 +59,7 @@
 #include <qam_thread.h>
 #include <sin_freq_sweep_thread.h>
 #include <mod_transmitter_thread.h>
+#include <gpio_tracker.h>
 
 QT_BEGIN_NAMESPACE
 
@@ -73,6 +74,7 @@ QT_END_NAMESPACE
 class Console;
 class SettingsDialog;
 class MessageBox;
+class GpioTracker;
 
 class MainWindow : public QMainWindow
 {
@@ -108,6 +110,7 @@ private slots:
     void consoleDataAdcSpecial(const qint16 *p_data, quint32 len, quint8 type);
     void timeoutSerialPortReconnect();
     void timeoutUsbInitCallback();
+    void timeoutGpioCallback();
     void usbHsDataReceived();
     void sendCommandToSTM32(quint8 command, const quint8 *p_data, quint32 data_size);
     void qamDecoderReset();
@@ -122,6 +125,7 @@ private:
     void showStatusMessage(const QString &message);
     void parseDataSerialPort();
     void serialPortRxCleanup();
+    int shutdownProcedure();
 
     static bool frame_builded_cb(const void *param, const uint8_t *buffer, uint32_t size);
 
@@ -135,26 +139,29 @@ private:
     QamThread m_qam_thread;
     SinFreqSweepThread m_freq_sweep_thread;
     ModTransmitterThread m_mod_tx_thread;
+    GpioTracker *m_gpio_tracker = nullptr;
+
 
     QByteArray TtyUserRxBuffer;
 
     quint64 TtyUserRxBuffer_MaxSize = 4096;
     quint64 TtyUserRxBuffer_len = 0;
 
-    QTimer *timerSpRxTimeout;
     QTimer *timerSpReconnect;
     QTimer *timerUsbPoll;
     QTimer *timerUsbInit;
     QTimer *timerModAnswerTimeout;
+    QTimer *timerGpioTracking;
 
     const int timeoutSerialPortReconnect_ms = 1000;     // timeout between serial port reconnection attempts (in case of error)
+    const int timeoutGpioTrackingPeriod_ms = 1000;      // period for checking GPIO state
+
+    uint8_t ShutdownTime = 0;
 
 #ifdef QUICK_ANSWERS_ENABLED
     uint8_t quick_answer[2] = {0x00, 0x1d};
     bool transmit_quick_answer = false;
 #endif
-
-    struct timeval tv = {0, 0};
 };
 
 #endif // MAINWINDOW_H
