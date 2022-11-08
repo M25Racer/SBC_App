@@ -139,7 +139,8 @@ private:
     QamThread m_qam_thread;
     SinFreqSweepThread m_freq_sweep_thread;
     ModTransmitterThread m_mod_tx_thread;
-    GpioTracker *m_gpio_tracker = nullptr;
+    GpioTracker *m_gpio_shutdown = nullptr;
+    GpioTracker *m_gpio_output = nullptr;
 
 
     QByteArray TtyUserRxBuffer;

@@ -1,9 +1,10 @@
 #include "gpio_tracker.h"
 
-GpioTracker::GpioTracker(int gpio_n, QObject *parent)
+GpioTracker::GpioTracker(int gpio_n, bool dir, QObject *parent)
    : QObject(parent)
 {
     gpio_number = gpio_n;
+    gpio_direction = TGpioDirection(dir);
 }
 
 GpioTracker::~GpioTracker()
@@ -38,22 +39,35 @@ bool GpioTracker::Init()
 
     QThread::sleep(1);
 
-    // Set gpio direction to 'input'
+    // Set gpio direction
     // echo in > /sys/class/gpio/gpio26/direction
+    // echo out > /sys/class/gpio/gpio26/direction
     QFile directionFile(QString("/sys/class/gpio/gpio%1/direction").arg(gpio_number));
     if(!directionFile.open(QIODevice::WriteOnly))
     {
         emit consolePutData("GPIO direction file open failed\n", 1);
         res = false;
     }
-    if(directionFile.write("in") == -1)
+    switch(gpio_direction)
     {
-        emit consolePutData("GPIO direction file write failed\n", 1);
-        res = false;
+        case DirectionIn:
+            if(directionFile.write("in") == -1)
+            {
+                emit consolePutData("GPIO direction file write failed\n", 1);
+                res = false;
+            }
+            break;
+        case DirectionOut:
+            if(directionFile.write("out") == -1)
+            {
+                emit consolePutData("GPIO direction file write failed\n", 1);
+                res = false;
+            }
+            break;
     }
     directionFile.close();
 
-    // Setup file to read gpio value
+    // Setup file to read\write gpio value
     file.reset(new QFile());
     auto pathname = QStringLiteral("/sys/class/gpio/gpio%1/value").arg(gpio_number);
     file->setFileName(pathname);
@@ -73,7 +87,7 @@ bool GpioTracker::Init()
         return res;
     }
 
-    emit consolePutData("GPIO read: " + file->peek(1) + "\n", 0);
+    emit consolePutData(QString("GPIO %1 read: ").arg(gpio_number) + file->peek(1) + "\n", 1);
     file->close();
 
     return res;
@@ -97,6 +111,25 @@ bool GpioTracker::readValue()
             }
         }
     }
+
+    file->close();
+    return false;
+}
+
+bool GpioTracker::writeValue(quint8 value)
+{
+    if(file == nullptr)
+        return false;
+
+    if(file->open(QIODevice::ReadWrite))
+    {
+        if(value)
+            file->write("1");
+        else
+            file->write("0");
+    }
+
+    emit consolePutData(QString("GPIO %1 write: %2\n").arg(gpio_number).arg(value), 1);
 
     file->close();
     return false;

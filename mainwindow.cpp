@@ -83,7 +83,9 @@ MainWindow::MainWindow(QWidget *parent) :
     m_console(new Console),
     m_serial(new QSerialPort(this)),
     m_message_box(new CMessageBox),
-    m_gpio_tracker(new GpioTracker(26, this))
+    m_gpio_shutdown(new GpioTracker(26, 0, this)),
+    m_gpio_output(new GpioTracker(20, 1, this))
+
 {
     m_ui->setupUi(this);
 
@@ -105,7 +107,8 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(m_message_box, &CMessageBox::postDataToStm32H7, this, &MainWindow::postTxDataSTM);
     connect(m_message_box, &CMessageBox::commandCalculatePredistortionTablesStart, this, &MainWindow::commandCalculatePredistortionTablesStart);
     connect(m_message_box, &CMessageBox::commandAgcStart, this, &MainWindow::commandAgcStart);
-    connect(m_gpio_tracker, &GpioTracker::consolePutData, this, &MainWindow::consolePutData);
+    connect(m_gpio_shutdown, &GpioTracker::consolePutData, this, &MainWindow::consolePutData);
+    connect(m_gpio_output, &GpioTracker::consolePutData, this, &MainWindow::consolePutData);
     connect(&m_usb_thread, &UsbWorkThread::postTxDataToSerialPort, this, &MainWindow::transmitDataSerialPort, Qt::ConnectionType::QueuedConnection);
     connect(&m_usb_thread, &UsbWorkThread::postWaitToSerialPort, this, &MainWindow::transmitWaitToSerialPort, Qt::ConnectionType::QueuedConnection);
     connect(&m_usb_thread, &UsbWorkThread::consolePutData, this, &MainWindow::consolePutData, Qt::ConnectionType::QueuedConnection);
@@ -179,13 +182,18 @@ MainWindow::MainWindow(QWidget *parent) :
     m_mod_tx_thread.connect(timerModAnswerTimeout, SIGNAL(timeout()), SLOT(timeoutAnswer()));
 
     // Init & start GPIO monitoring
-    if(m_gpio_tracker->Init())
+    if(m_gpio_shutdown->Init() && m_gpio_output->Init())
     {
         m_console->putData("GPIO initialization successfull\n", 1);
+
+        // Start input (m_gpio_shutdown) monitoring
         timerGpioTracking->start(timeoutGpioTrackingPeriod_ms);
     }
     else
         m_console->putData("Error: GPIO initialization failed\n", 1);
+
+    // Set gpio output (m_gpio_output) to 1
+    m_gpio_output->writeValue(1);
 }
 
 MainWindow::~MainWindow()
@@ -300,7 +308,7 @@ void MainWindow::timeoutUsbInitCallback()
 
 void MainWindow::timeoutGpioCallback()
 {
-    if(m_gpio_tracker->readValue())
+    if(m_gpio_shutdown->readValue())
     {
         // Shutdown pin is set
         ++ShutdownTime;
