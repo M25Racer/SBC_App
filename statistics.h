@@ -3,27 +3,17 @@
 
 #include <QCoreApplication>
 
-#define MAX_STATISTICS 100
-
-#pragma pack(push, 1)
-
-typedef struct {
-    uint16_t good_synhro;
-    uint16_t good_crc;
-} data_quality;
-
-#pragma pack(pop)
+#define CRC_MAX_STATISTICS 100
+#define RS_STATISTICS_QUEUE_SIZE 100
 
 void statisics_reset();
 
-void good_synchro_received();
+void crc_statistics_good_crc_received();
+void crc_statistics_bad_crc_received();
 
-void good_crc_received();
+void rs_statistics_add_correction();
+void rs_statistics_add_no_correction();
 
-void bad_synchro_received();
-
-void bad_crc_received();
-
-data_quality get_data_statistics();
+uint8_t rs_calculate_statistics();
 
 #endif // STATISTICS_H

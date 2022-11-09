@@ -133,6 +133,24 @@ bool CMessageBox::message_box_srp(uint8_t* Buf, uint16_t len, uint8_t master_add
         }
             break;
 
+        case GET_SBC_STATISTICS:
+        {
+            uint8_t statistics = m_rxHighSpeedStatistics;
+            uint8_t statistics2 = rs_calculate_statistics();
+            uint16_t statistics3 = m_ReedSolomonCorrections;
+
+            messege_box_buffer[11] = uint8_t(statistics);
+            messege_box_buffer[12] = uint8_t(statistics2);
+
+            messege_box_buffer[13] = uint8_t(statistics3);
+            messege_box_buffer[14] = statistics3 >> 8;
+
+            message.data_len = 4;
+            tx_len = message_header_to_array(&message, messege_box_buffer);
+            emit postData(messege_box_buffer + 1, tx_len - 1);
+        }
+            break;
+
         default:
             // Unknown command for SBC, retransmit it to STM32H7 board
             emit postDataToStm32H7(messege_box_buffer, len);

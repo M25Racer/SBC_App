@@ -1,62 +1,80 @@
 /*
  * statistics.c
- *
- *  Created on: 21 окт. 2016 г.
- *      Author: gleb.maslennikov
  */
 
 #include "statistics.h"
+#include "atomic_vars.h"
 
-static data_quality received_data_quality = { 0, 0 };
+static QByteArray rs_statistics_queue(RS_STATISTICS_QUEUE_SIZE, 0);     // Queue for RS statistics, consists of 'RS_STATISTICS_QUEUE_SIZE' elements.
+                                                                        // Queue element = 1 means successful RS correction, 0 - no correction was needed (frame with good crc)
+static uint8_t rs_cnt = 0;
 
+/*
+ * @brief Reset statistics
+*/
 void statisics_reset()
 {
-    received_data_quality.good_crc = 0;
-    received_data_quality.good_synhro = 0;
+    m_rxHighSpeedStatistics = 0;
+    m_ReedSolomonCorrections = 0;
+
+    for(uint8_t i = 0; i < RS_STATISTICS_QUEUE_SIZE; ++i)
+        rs_statistics_queue[i] = 0;
 }
 
-void good_synchro_received()
+/*
+ * @brief Increments m_rxHighSpeedStatistics when good crc packet (QAM frame) is received
+*/
+void crc_statistics_good_crc_received()
 {
-    if (received_data_quality.good_synhro < MAX_STATISTICS)
+    if (m_rxHighSpeedStatistics < CRC_MAX_STATISTICS)
     {
-        received_data_quality.good_synhro++;
+        ++m_rxHighSpeedStatistics;
     }
 }
 
-void good_crc_received()
+/*
+ * @brief Decrements m_rxHighSpeedStatistics when bad crc packet (QAM frame) is received
+*/
+void crc_statistics_bad_crc_received()
 {
-    if (received_data_quality.good_crc < MAX_STATISTICS)
+    if (m_rxHighSpeedStatistics > 0)
     {
-        received_data_quality.good_crc++;
+        --m_rxHighSpeedStatistics;
     }
 }
 
-void bad_synchro_received()
+/*
+ * @brief Counts successful RS corrections
+*/
+void rs_statistics_add_correction()
 {
-    if (received_data_quality.good_synhro > 0)
-    {
-        received_data_quality.good_synhro--;
-    }
+    ++m_ReedSolomonCorrections;
 
-    if (received_data_quality.good_crc > 0)
-    {
-        received_data_quality.good_crc--;
-    }
+    rs_statistics_queue[rs_cnt] = 1;
+    if(++rs_cnt == RS_STATISTICS_QUEUE_SIZE)
+        rs_cnt = 0;
 }
 
-void bad_crc_received()
+/*
+ * @brief Counts good packets (QAM frames) with no RS corrections needed
+*/
+void rs_statistics_add_no_correction()
 {
-    if (received_data_quality.good_crc > 0)
-    {
-        received_data_quality.good_crc--;
-    }
+    rs_statistics_queue[rs_cnt] = 0;
+    if(++rs_cnt == RS_STATISTICS_QUEUE_SIZE)
+        rs_cnt = 0;
 }
 
-data_quality get_data_statistics()
+/*
+ * @brief Calculates RS statistics: how many successful corrections were made
+ * in the last 'RS_STATISTICS_QUEUE_SIZE' packets (QAM frames)
+*/
+uint8_t rs_calculate_statistics()
 {
-    data_quality l_quality;
-    l_quality.good_crc = received_data_quality.good_crc;
-    l_quality.good_synhro = received_data_quality.good_synhro;
+    uint8_t rs_statistics = 0;
 
-    return l_quality;
+    for(uint8_t i = 0; i < RS_STATISTICS_QUEUE_SIZE; ++i)
+        rs_statistics += rs_statistics_queue[i];
+
+    return rs_statistics;
 }

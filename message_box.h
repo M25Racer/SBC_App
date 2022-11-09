@@ -133,6 +133,9 @@ private:
     static const uint8_t GET_AUTO_CFG_STATUS    = 0xCE;  // Get current state\status for auto configuration 'predistortion tables'
     static const uint8_t AGC_CONFIGURATION    = 0xCF;  // AGC configuraton start, stop, or get status AGC config status
 
+    // SRP2 (SBC) commands
+    static const uint8_t GET_SBC_STATISTICS = 0xE3;
+
     // AGC_CONFIGURATION
     typedef enum : uint8_t
     {

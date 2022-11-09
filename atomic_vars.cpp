@@ -17,3 +17,6 @@ QAtomicInteger<bool> sweep_command = false;
 
 QAtomicInteger<uint8_t> FreqEstState = TFreqEstState::FREQ_EST_IDLE;
 QAtomicInteger<uint8_t> SweepState = TSweepState::SWEEP_IDLE;
+
+QAtomicInteger<uint8_t> m_rxHighSpeedStatistics = 0;
+QAtomicInteger<uint16_t> m_ReedSolomonCorrections = 0;

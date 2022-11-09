@@ -33,4 +33,7 @@ extern QAtomicInteger<bool> sweep_command;
 extern QAtomicInteger<uint8_t> FreqEstState;
 extern QAtomicInteger<uint8_t> SweepState;
 
+extern QAtomicInteger<uint8_t> m_rxHighSpeedStatistics;         // Increments each QAM frame with good crc, decrements each bad crc. Limited to [0..CRC_MAX_STATISTICS]
+extern QAtomicInteger<uint16_t> m_ReedSolomonCorrections;       // Infinite counter of rs corrections, rolls over, 0..65535
+
 #endif // ATOMIC_VARS_H

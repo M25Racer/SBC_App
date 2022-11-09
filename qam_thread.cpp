@@ -17,6 +17,7 @@
 #include "rs_decoder.h"
 #include "qam_decoder/rtwtypes.h"
 #include "atomic_vars.h"
+#include "statistics.h"
 
 /* Extern global variables */
 extern RingBuffer *m_ring;              // ring data buffer (ADC data) for QAM decoder
@@ -199,6 +200,8 @@ void QamThread::QAM_Decoder()
 
         if(crc8 == tail->crc8)
         {
+            crc_statistics_good_crc_received();
+
             crc_error = false;
 
             const uint32_t data_size_not_last_frame = TxPacketDataSize - sizeof(frame_tail_nlast_t);    // valuable data in 'not last' frame
@@ -272,7 +275,10 @@ void QamThread::QAM_Decoder()
         }
 
         if(crc8 != tail->crc8)
+        {
+            crc_statistics_bad_crc_received();
             emit consolePutData(QString("CRC error, rs decoder failed to correct data\n"), 1);
+        }
     }
     
     else
@@ -300,6 +306,11 @@ void QamThread::QAM_Decoder()
         default:
             break;
     }
+
+    if(rs_decode_flag == -1)
+        rs_statistics_add_no_correction();
+    else if(rs_decode_flag < 2)
+        rs_statistics_add_correction();
 
     // Debug information
     int r = int(warning_status);
