@@ -4,6 +4,9 @@ requires(qtConfig(combobox))
 TARGET = SBC_App_v2
 TEMPLATE = app
 
+VERSION = 1.0.0
+DEFINES += VERSION_STRING=\\\"$${VERSION}\\\"
+
 SOURCES += \
     atomic_vars.cpp \
     crc16.cpp \

@@ -55,6 +55,7 @@
 #include "atomic_vars.h"
 
 #include <QApplication>
+#include <QCommandLineParser>
 
 /* Global variables */
 RingBuffer *m_ring = nullptr;       // ring data buffer (ADC data) for QAM decoder
@@ -79,8 +80,16 @@ int main(int argc, char *argv[])
     m_ring->Init();
 
     QApplication a(argc, argv);
-    MainWindow w;
+    //QCoreApplication a(argc, argv);
+    //a.setApplicationName("version-cmd");
+    a.setApplicationVersion(VERSION_STRING);
+    QCommandLineParser parser;
+    parser.addVersionOption();
+    parser.process(a);
 
+    MainWindow w;
+    w.setWindowTitle(QString("SBC application v.") + VERSION_STRING);
     w.show();
+
     return a.exec();
 }

@@ -126,7 +126,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(&m_mod_tx_thread, &ModTransmitterThread::sendCommandToSTM32, this, &MainWindow::sendCommandToSTM32, Qt::ConnectionType::QueuedConnection);
     connect(&m_mod_tx_thread, &ModTransmitterThread::qamDecoderReset, this, &MainWindow::qamDecoderReset, Qt::ConnectionType::QueuedConnection);
 
-    m_console->putData("SBC Application\n", 1);
+    m_console->putData(QString("SBC Application v.") + VERSION_STRING + "\n", 1);
     m_console->putData("Opening serial port...\n", 1);
 
     // Clear serial port tx & rx buffer
