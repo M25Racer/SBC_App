@@ -135,6 +135,7 @@ private:
 
     // SRP2 (SBC) commands
     static const uint8_t GET_SBC_STATISTICS = 0xE3;
+    static const uint8_t GET_SBC_VERSION = 0xE4;
 
     // AGC_CONFIGURATION
     typedef enum : uint8_t

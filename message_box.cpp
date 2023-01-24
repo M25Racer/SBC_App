@@ -151,6 +151,33 @@ bool CMessageBox::message_box_srp(uint8_t* Buf, uint16_t len, uint8_t master_add
         }
             break;
 
+        case GET_SBC_VERSION:
+        {
+            QString s = VERSION_STRING;
+            QString ver[3];
+
+            int j = 0;
+            for(int i = 0; i < s.size(); ++i)
+            {
+                if(s.at(i) == '.')
+                {
+                    if(++j > 2)
+                        break;
+                }
+                else
+                    ver[j].append(s[i]);
+            }
+
+            messege_box_buffer[11] = ver[0].toUInt();
+            messege_box_buffer[12] = ver[1].toUInt();
+            messege_box_buffer[13] = ver[2].toUInt();
+
+            message.data_len = 3;
+            tx_len = message_header_to_array(&message, messege_box_buffer);
+            emit postData(messege_box_buffer + 1, tx_len - 1);
+        }
+            break;
+
         default:
             // Unknown command for SBC, retransmit it to STM32H7 board
             emit postDataToStm32H7(messege_box_buffer, len);
