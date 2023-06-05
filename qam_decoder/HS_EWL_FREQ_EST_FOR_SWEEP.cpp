@@ -193,7 +193,7 @@ void HS_EWL_FREQ_EST_FOR_SWEEP(double s2[33000], double len, double Fs, double
   double err2;
   double sine_from;
   double sine_len;
-//  double sine_length;
+  double sine_length;
   int i;
   int idx;
   int k;
@@ -255,13 +255,13 @@ void HS_EWL_FREQ_EST_FOR_SWEEP(double s2[33000], double len, double Fs, double
     //  elseif (len - sine_from)/sps < (per_numb-5)
     //      per_numb    = (len - sine_from)/sps - 30;
     //      sine_to     = sine_from + sps*(per_numb-5);
-    //      sweep_freq_warning_status = 2;% path of input array equal 0, less than 33%
+    //      sweep_freq_warning_status = 2;% path of input array equal 0, less than 33% 
     //  else
     //      sine_to = sine_from + sps*(per_numb-5);
     //      sweep_freq_warning_status = 0;% OK input array
     //  end
     sine_len = sps * (per_numb - 5.0);
-//    sine_length = sine_len;
+    sine_length = sine_len;
     i = static_cast<int>((sine_len + sine_from) + (1.0 - sine_from));
     for (idx = 0; idx < i; idx++) {
       err1 = sine_from + static_cast<double>(idx);
@@ -269,7 +269,7 @@ void HS_EWL_FREQ_EST_FOR_SWEEP(double s2[33000], double len, double Fs, double
         (err1) - 1];
     }
 
-    // sine = s2(sine_from+(0:sps*(per_numb-5)));%s2(sine_from:sine_to);%sine_from+(0:sps*(per_numb-5))
+    // sine = s2(sine_from+(0:sps*(per_numb-5)));%s2(sine_from:sine_to);%sine_from+(0:sps*(per_numb-5)) 
     std::memset(&t[0], 0, 40000U * sizeof(double));
     i = static_cast<int>(sine_len);
     for (idx = 0; idx < i; idx++) {

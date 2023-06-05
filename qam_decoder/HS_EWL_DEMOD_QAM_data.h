@@ -14,7 +14,7 @@
 #include <cstdlib>
 
 // Variable Declarations
-//extern omp_nest_lock_t emlrtNestLockGlobal;
+extern omp_nest_lock_t emlrtNestLockGlobal;
 extern const double dv[52];
 extern const double dv1[52];
 extern boolean_T isInitialized_HS_EWL_DEMOD_QAM;

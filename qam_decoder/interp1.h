@@ -10,6 +10,7 @@
 // Include Files
 #include "rtwtypes.h"
 #include "omp.h"
+#include "stdint.h"
 #include <cstddef>
 #include <cstdlib>
 
@@ -17,9 +18,9 @@
 namespace coder
 {
   void interp1(const double varargin_1[14001], const double varargin_2[14001],
-               const double varargin_3[513], double Vq[513]);
-  void interp1SplineOrPCHIP(const double y[1024], double yi[2048]);
-  void interp1SplineOrPCHIP(const double y[2048], const double xi[57820], double
+               const double *varargin_3, double *Vq, uint16_t size);
+  void interp1SplineOrPCHIP(const double *y,double *freq, double *abs_freq, double *yi,uint16_t size);
+  void interp1SplineOrPCHIP_1(const double *y, const double xi[57820], double
     yi[57820]);
 }
 

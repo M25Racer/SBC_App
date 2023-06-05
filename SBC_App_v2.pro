@@ -4,7 +4,9 @@ requires(qtConfig(combobox))
 TARGET = SBC_App_v2
 TEMPLATE = app
 
+# Version, max 255.255.255
 VERSION = 1.0.0
+
 DEFINES += VERSION_STRING=\\\"$${VERSION}\\\"
 
 SOURCES += \
@@ -35,7 +37,7 @@ SOURCES += \
     qam_decoder/ifft.cpp \
     qam_decoder/ifftshift.cpp \
     qam_decoder/interp1.cpp \
-    qam_decoder/log2.cpp \
+    qam_decoder/qam_init.cpp \
     qam_decoder/minOrMax.cpp \
     qam_decoder/movSumProdOrMean.cpp \
     qam_decoder/qammod.cpp \
@@ -148,7 +150,7 @@ HEADERS += \
     qam_decoder/HS_EWL_TR_FUN_EST.h \
     qam_decoder/ifft.h \
     qam_decoder/ifftshift.h \
-    qam_decoder/log2.h \
+    qam_decoder/qam_init.h \
     qam_decoder/math_sweep.h \
     qam_decoder/interp1.h \
     qam_decoder/minOrMax.h \

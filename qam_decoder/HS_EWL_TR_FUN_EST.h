@@ -10,6 +10,7 @@
 // Include Files
 #include "rtwtypes.h"
 #include "omp.h"
+#include "qam_init.h"
 #include <cstddef>
 #include <cstdlib>
 
@@ -17,7 +18,7 @@
 extern void HS_EWL_TR_FUN_EST(const double sweep_data[450000], const double
   sweep_math[57820], double Fs, double f_opt, double f_sine, double PreSPP,
   double gain[2048], double phase[2048], double *shift_for_qam_data, double
-  *sweep_warning_status);
+  *sweep_warning_status, qam qam_str);
 
 #endif
 

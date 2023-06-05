@@ -584,6 +584,13 @@ void MainWindow::transmitDataSerialPort(const uint8_t *p_data, int length)
     // Logs
 #ifdef QT_DEBUG
     m_console->putData("SP Transmit " + QString::number(length) + " bytes\n", 0);
+    m_console->putData(QString("SP Tx data:"), 0);
+    uint8_t len_cut = length > 254 ? 254 : uint8_t(length);
+    QString d;
+    for(uint8_t i = 0; i < len_cut; ++i)
+        d.append(QString("%1 ").arg(p_data[i], 2, 16, QLatin1Char('0')));
+    d.append("\n");
+    m_console->putData(d, 0);
 #endif
 
     qint64 pt_elapsed = profiler_timer.elapsed();

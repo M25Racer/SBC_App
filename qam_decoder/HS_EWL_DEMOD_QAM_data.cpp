@@ -10,7 +10,7 @@
 #include "rt_nonfinite.h"
 
 // Variable Definitions
-//omp_nest_lock_t emlrtNestLockGlobal;
+omp_nest_lock_t emlrtNestLockGlobal;
 const double dv[52] = { 1.0, 0.9927089, 0.9709418, 0.9350162, 0.885456,
   0.8229839, 0.7485107, 0.6631227, 0.5680647, 0.4647232, 0.3546049, 0.2393157,
   0.1205367, 6.123234E-17, -0.1205367, -0.2393157, -0.3546049, -0.4647232,

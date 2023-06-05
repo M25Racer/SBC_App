@@ -413,14 +413,13 @@ namespace coder
     //                creal_T varargout_1[270]
     // Return Type  : void
     //
-    void FIRDecimator::step(const creal_T varargin_1[14040], creal_T
-      varargout_1[270])
+    void FIRDecimator::step(const creal_T *varargin_1,int sig_len, creal_T *varargout_1, int z_len)//270
     {
       if (this->isInitialized != 1) {
         this->setupAndReset();
       }
 
-      Outputs(&this->cSFunObject, varargin_1, varargout_1);
+      Outputs(&this->cSFunObject, varargin_1,sig_len, varargout_1,z_len);
     }
 
     //

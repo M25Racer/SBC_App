@@ -30,22 +30,25 @@ static double Signal[USB_MAX_DATA_SIZE];
 static int16_t FrameErrorAdcBuffer[10][USB_MAX_DATA_SIZE];
 
 //double Fs = 1832061;//280000;//ADC sample rate
-double f0 = 35000;//carrier freq
-double sps = round(Fs/f0);//sample per symbol
+extern double f_opt;
+double f0 = 35045;//carrier freq
+double sps = round(Fs/f0);//sample per spreamble_lenymbol
 double mode = 1;//1-both stages enabled, 0-only sevond stage
+
+qam qam_str;
 
 //  output var for HS_EWL_FREQ_ACQ
 double warning_status;
-double data[14040];
+double data[27300];
 //double index_data;
-double len_data;
+int32_T len_data;
 double f_est_data;//estimated frequency
 //int f_est_size;
 
 //  output var for HS_EWL_DEMOD_QAM
 //creal_T qam_symbols_data[255];
 int qam_symbols_size;
-double byte_data[255];
+double byte_data[469];
 int byte_data_size;
 
 double qam_symbols_real[275];
@@ -91,6 +94,9 @@ void QamThread::run()
     generate_gf();
     gen_poly(T1, gs);
     //gen_poly(Ts2, gs2);
+
+    //qam64_init(&qam_str);
+    qam256_double_frame_init(&qam_str);
 
     while(!m_quit)
     {
@@ -145,13 +151,19 @@ void QamThread::QAM_Decoder()
 
     peformance_timer.start();
 
+//    HS_EWL_FREQ_ACQ_error_status = HS_EWL_FREQ_ACQ(signal, len, Fs, f0, sps, mode, preamble_len,
+//                        message_len, data, &len_data, (double*)&f_est_data, &warning_status);
     HS_EWL_FREQ_ACQ_error_status = HS_EWL_FREQ_ACQ(signal, len, Fs, f0, sps, mode, preamble_len,
-                        message_len, data, &len_data, (double*)&f_est_data, &warning_status);
+        &qam_str, data, &len_data, (double*)&f_est_data, &warning_status);
 
     if(HS_EWL_FREQ_ACQ_error_status == 0)
     {
-        HS_EWL_DEMOD_QAM_error_status = HS_EWL_DEMOD_QAM(data, len_data, f_est_data, Fs, qam_symbols_real,
-                                                        qam_symbols_imag, byte_data, &start_inf_data);
+//        HS_EWL_DEMOD_QAM_error_status = HS_EWL_DEMOD_QAM(data, len_data, f_est_data, Fs, qam_symbols_real,
+//                                                        qam_symbols_imag, byte_data, &start_inf_data);
+
+        HS_EWL_DEMOD_QAM_error_status = HS_EWL_DEMOD_QAM(data, len_data, f_est_data, Fs, &qam_str, qam_symbols_real,
+                    qam_symbols_imag, byte_data, &start_inf_data);
+
         switch(HS_EWL_DEMOD_QAM_error_status)
         {
             case 1: // input data LEN <= 0
@@ -168,7 +180,7 @@ void QamThread::QAM_Decoder()
         // Data parsing
         // Convert decoded data from 'double' to 'uint8', copy to data_decoded[] buffer
 
-        for(uint8_t i = 0; i < TxPacketRsCodesSize + TxPacketDataSize; ++i)
+        for(uint16_t i = 0; i < TxPacketRsCodesSize + TxPacketDataSize; ++i)
             frame_decoded[i] = (uint8_t)byte_data[i];
 
         // Parse 'frame' tail
@@ -177,20 +189,73 @@ void QamThread::QAM_Decoder()
         // Check 'frame' CRC
         uint8_t crc8 = calc_crc8(frame_decoded + TxPacketRsCodesSize, TxPacketDataSize - 1);
 
+
         if(crc8 != tail->crc8)
         {
             crc_error = true;
-            //emit consolePutData(QString("HS frame parsing crc error, attempting to correct data with rs decoder\n"), 1);
 
             peformance_timer2.start();
 
-            // Zero padding before decode
-            memset(frame_decoded + TxPacketRsCodesSize + TxPacketDataSize, 0x00, sizeof(frame_decoded) - TxPacketRsCodesSize - TxPacketDataSize);
-
-            rs_decode_flag = decode_rs1(frame_decoded);
-
-            if(rs_decode_flag < 2)
+            // RS Codes length + Data length <= 255 ?
+            if(TxPacketRsCodesSize + TxPacketDataSize <= 255)
             {
+                // Single QAM frame mode
+                // Zero padding before decode
+                memset(frame_decoded + TxPacketRsCodesSize + TxPacketDataSize, 0x00, sizeof(frame_decoded) - TxPacketRsCodesSize - TxPacketDataSize);
+
+                rs_decode_flag = decode_rs1(frame_decoded);
+
+                if(rs_decode_flag < 2)
+                {
+                    // Check crc again
+                    crc8 = calc_crc8(frame_decoded + TxPacketRsCodesSize, TxPacketDataSize - 1);
+                }
+            }
+            else
+            {
+                // Double QAM frame mode
+                // Zero padding before decode
+                memset(frame_decoded + TxPacketRsCodesSize + TxPacketDataSize, 0x00, sizeof(frame_decoded) - TxPacketRsCodesSize - TxPacketDataSize);
+
+                // Copy RS codes and Data to 'tmp_buffer'
+                quint8 tmp_buffer[255];
+
+                // First QAM frame
+                // Copy RS codes
+                for(quint16 i = 0; i < TxPacketRsCodesSize/2; ++i)
+                    tmp_buffer[i] = frame_decoded[i];
+
+                // Copy data
+                quint16 p_data = TxPacketRsCodesSize;
+                for(quint16 i = TxPacketRsCodesSize/2; i < 255; ++i)
+                    tmp_buffer[i] = frame_decoded[p_data++];
+
+                rs_decode_flag = decode_rs1(tmp_buffer);
+
+                if(rs_decode_flag < 2)
+                {
+                    // Copy corrected data back
+                    memcpy(frame_decoded, tmp_buffer, sizeof(tmp_buffer));
+                }
+
+                // Second QAM frame
+                // Copy RS codes
+                for(quint16 i = 0; i < TxPacketRsCodesSize/2; ++i)
+                    tmp_buffer[i] = frame_decoded[TxPacketRsCodesSize/2 + i];
+
+                // Copy data
+                p_data = TxPacketRsCodesSize + (255 - TxPacketRsCodesSize/2);
+                for(quint16 i = TxPacketRsCodesSize/2; i < 255; ++i)
+                    tmp_buffer[i] = frame_decoded[p_data++];
+
+                rs_decode_flag = decode_rs1(tmp_buffer);
+
+                if(rs_decode_flag < 2)
+                {
+                    // Copy corrected data back
+                    memcpy(frame_decoded, tmp_buffer, sizeof(tmp_buffer));
+                }
+
                 // Check crc again
                 crc8 = calc_crc8(frame_decoded + TxPacketRsCodesSize, TxPacketDataSize - 1);
             }
@@ -219,7 +284,7 @@ void QamThread::QAM_Decoder()
                 else
                 {
                     // Copy decoded frame to data_decoded buffer
-                    for(uint8_t i = 0; i < data_size_not_last_frame; ++i)
+                    for(uint16_t i = 0; i < data_size_not_last_frame; ++i)
                         data_decoded[n_data_buf][tail->frame_id * data_size_not_last_frame + i] = (uint8_t)frame_decoded[TxPacketRsCodesSize + i];
                 }
             }
@@ -250,7 +315,7 @@ void QamThread::QAM_Decoder()
                     {
                         // Length is ok
                         // Copy decoded frame to data_decoded buffer (just copy everything, do not calculate data length in last frame)
-                        for(uint8_t i = 0; i < data_size_last_frame; ++i)
+                        for(uint16_t i = 0; i < data_size_last_frame; ++i)
                             data_decoded[n_data_buf][tail->frame_id * data_size_not_last_frame + i] = (uint8_t)frame_decoded[TxPacketRsCodesSize + i];
 
                         // Transmit decoded data to PC

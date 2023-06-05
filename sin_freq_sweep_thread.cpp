@@ -21,6 +21,7 @@ using namespace QAM_Common;
 /* Extern global variables */
 extern QWaitCondition sinFreqSweepBufNotEmpty;
 extern QMutex m_mutex_sweep_thread;
+extern qam qam_str;
 
 /* Private variables */
 static double SignalSin[USB_MAX_DATA_SIZE];
@@ -37,7 +38,8 @@ static double shift_for_qam_data;
 uint16_t shift_for_qam_data_int;
 
 // output var HS_EWL_FREQ_EST_FOR_SWEEP
-static double f_opt;
+//static double f_opt;
+double f_opt;
 static double ph_opt;
 static double sweep_freq_warning_status;
 
@@ -196,9 +198,13 @@ void SinFreqSweepThread::Sweep()
 
     double *sweep = (double*)&SignalSweep;
 
+//    HS_EWL_TR_FUN_EST(sweep, math_sweep, Fs, f_opt, f_sine, pream_sps,
+//                     gain_data, phase_data,&shift_for_qam_data,
+//                     &sweep_warning_status);
+
     HS_EWL_TR_FUN_EST(sweep, math_sweep, Fs, f_opt, f_sine, pream_sps,
                      gain_data, phase_data,&shift_for_qam_data,
-                     &sweep_warning_status);
+                     &sweep_warning_status, qam_str);
 
     // Convert to float
     for(uint16_t i = 0; i < 2048; ++i)

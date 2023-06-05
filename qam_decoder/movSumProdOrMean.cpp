@@ -29,7 +29,6 @@ namespace coder
     std::memset(&y[0], 0, 14001U * sizeof(double));
     ub_loop = nx - 1;
 
-
     for (int k = 0; k <= ub_loop; k++) {
       if (k + 1 <= 25) {
         iLeft = -24;
