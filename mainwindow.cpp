@@ -85,7 +85,6 @@ MainWindow::MainWindow(QWidget *parent) :
     m_message_box(new CMessageBox),
     m_gpio_shutdown(new GpioTracker(26, 0, this)),
     m_gpio_output(new GpioTracker(20, 1, this))
-
 {
     m_ui->setupUi(this);
 
@@ -107,6 +106,8 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(m_message_box, &CMessageBox::postDataToStm32H7, this, &MainWindow::postTxDataSTM);
     connect(m_message_box, &CMessageBox::commandCalculatePredistortionTablesStart, this, &MainWindow::commandCalculatePredistortionTablesStart);
     connect(m_message_box, &CMessageBox::commandAgcStart, this, &MainWindow::commandAgcStart);
+    connect(m_message_box, &CMessageBox::srpModeSet, this, &MainWindow::srpModeSet);
+
     connect(m_gpio_shutdown, &GpioTracker::consolePutData, this, &MainWindow::consolePutData);
     connect(m_gpio_output, &GpioTracker::consolePutData, this, &MainWindow::consolePutData);
     connect(&m_usb_thread, &UsbWorkThread::postTxDataToSerialPort, this, &MainWindow::transmitDataSerialPort, Qt::ConnectionType::QueuedConnection);
@@ -733,6 +734,11 @@ void MainWindow::commandCalculatePredistortionTablesStart()
 void MainWindow::commandAgcStart()
 {
     m_mod_tx_thread.separateAgcStart();
+}
+
+void MainWindow::srpModeSet(uint8_t mode)
+{
+    m_qam_thread.srpModeSet(mode);
 }
 
 void MainWindow::qamDecoderReset()

@@ -730,7 +730,7 @@ int HS_EWL_FREQ_ACQ(const double *data, double len, double Fs, double
     int         i           = 0;
     boolean_T   exitg1      = false;
 
-    if (rt_roundd_snf(len / sps) < qam_str->qam_sym_per_frame)
+    if (rt_roundd_snf(len / sps) < (qam_str->qam_sym_per_frame - 10))
     {
       *warningStatus = 1.0; //  warning_status = 1 not enough sample in the end array
     }
@@ -1072,13 +1072,13 @@ int32_T premable_from(const double *data, int data_len, int win_len)
 
         win_mean /= win_len;
 
-        if(win_mean > 0.2 && flag_amp == 1)
+        if(win_mean > 7000 && flag_amp == 1)
         {
             count++;
             position[count] = static_cast<double>(i);
             flag_amp = false;
         }
-        if(win_mean < - 0.2)
+        if(win_mean < - 7000)
         {
             flag_amp = true;
         }
@@ -1126,7 +1126,10 @@ int32_T cut_out_valid_signal(const double *in_data, double len, double data_max,
       {
         out_data[i] = in_data[pre_start + i] / data_max;
       }
-      *warning = 3.0; // start array sample equal 0 less than 0.2
+      if ((pre_end - 1000) > len)
+      {
+        *warning = 3.0; // start array sample equal 0 less than 0.2
+      }
     }
     else
     {

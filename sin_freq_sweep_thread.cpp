@@ -22,6 +22,7 @@ using namespace QAM_Common;
 extern QWaitCondition sinFreqSweepBufNotEmpty;
 extern QMutex m_mutex_sweep_thread;
 extern qam qam_str;
+extern double f0;   // carrier frequency
 
 /* Private variables */
 static double SignalSin[USB_MAX_DATA_SIZE];
@@ -38,8 +39,7 @@ static double shift_for_qam_data;
 uint16_t shift_for_qam_data_int;
 
 // output var HS_EWL_FREQ_EST_FOR_SWEEP
-//static double f_opt;
-double f_opt;
+static double f_opt;
 static double ph_opt;
 static double sweep_freq_warning_status;
 
@@ -172,6 +172,9 @@ void SinFreqSweepThread::FreqEstimateForSweep()
     {
         case 0: // sweep_freq_warning_status = 0;% OK input array
             //emit consolePutData(QString("Sweep freq: OK input array\n"), 1);
+            // Save frequency
+            f0 = f_opt;
+            emit consolePutData(QString("Saving carrier frequency f0 = %1\n").arg(f0), 1);
             break;
         case 1:
             emit consolePutData(QString("Sweep freq warning: all or more than 33% input array equal 0\n"), 1);
@@ -197,10 +200,6 @@ void SinFreqSweepThread::Sweep()
     peformance_timer.start();
 
     double *sweep = (double*)&SignalSweep;
-
-//    HS_EWL_TR_FUN_EST(sweep, math_sweep, Fs, f_opt, f_sine, pream_sps,
-//                     gain_data, phase_data,&shift_for_qam_data,
-//                     &sweep_warning_status);
 
     HS_EWL_TR_FUN_EST(sweep, math_sweep, Fs, f_opt, f_sine, pream_sps,
                      gain_data, phase_data,&shift_for_qam_data,

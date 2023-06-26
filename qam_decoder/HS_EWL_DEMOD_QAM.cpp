@@ -446,7 +446,7 @@ uint8_t* qam_64_demodulator(creal_T* filt_data, uint16_t len, double re_norm_coe
     uint8_t mapping[64] = { 0 };
     uint8_t symbolI[64] = { 0 };
     uint8_t symbolQ[64] = { 0 };
-    uint8_t data_bin[296*6] = {0};
+    uint8_t data_bin[300*6] = {0};
 
     for (int i = 0; i < len; i++) {
         real_testData = filt_data[i].re;
@@ -492,9 +492,9 @@ uint8_t* qam_64_demodulator(creal_T* filt_data, uint16_t len, double re_norm_coe
             start_inf_data = i + 4;
     }
 
-    qam64_sym_to_bin(&demod_qam_data[start_inf_data], data_bin, 296);
+    qam64_sym_to_bin(&demod_qam_data[start_inf_data], data_bin, 300);
 
-    if(bin_to_byte(data_bin, data_byte, 296*6))
+    if(bin_to_byte(data_bin, data_byte, 300*6))
         return &data_byte[0];
     else
         return 0;

@@ -3,8 +3,8 @@
 
 void qam64_init(qam *qam_str){
     qam_str->order              = 64;
-    qam_str->qam_sym_per_frame  = 340;
-    qam_str->inf_byte_amount    = 222;
+    qam_str->qam_sym_per_frame  = 344;
+    qam_str->inf_byte_amount    = 225;
     qam_str->pream_qam_sym      = 7;
     qam_str->fft_order          = 4096;
 }

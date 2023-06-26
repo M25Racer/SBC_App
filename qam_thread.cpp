@@ -30,7 +30,7 @@ static double Signal[USB_MAX_DATA_SIZE];
 static int16_t FrameErrorAdcBuffer[10][USB_MAX_DATA_SIZE];
 
 //double Fs = 1832061;//280000;//ADC sample rate
-extern double f_opt;
+//extern double f_opt;
 double f0 = 35045;//carrier freq
 double sps = round(Fs/f0);//sample per spreamble_lenymbol
 double mode = 1;//1-both stages enabled, 0-only sevond stage
@@ -95,11 +95,15 @@ void QamThread::run()
     gen_poly(T1, gs);
     //gen_poly(Ts2, gs2);
 
+    // QAM init
     //qam64_init(&qam_str);
     qam256_double_frame_init(&qam_str);
+    TxPacketRsCodesSize = 8*2;
+    TxPacketDataSize = 469 - TxPacketRsCodesSize;
 
     while(!m_quit)
     {
+
         m_mutex_ring_wait.lock();
         if(!m_ring->DataAvailable())
             ringNotEmpty.wait(&m_mutex_ring_wait);    // Wait condition unlocks mutex before 'wait', and will lock it again just after 'wait' is complete
@@ -116,6 +120,32 @@ void QamThread::run()
         }
 
         QAM_Decoder();
+
+        if(m_ChangeSpeed)   // Change speed if needed
+        {
+            m_ChangeSpeed = false;
+            switch(m_SrpMode)
+            {
+                case HS_210_MODE:
+                    // QAM64
+                    emit consolePutData(QString("Changing speed to HS_210_MODE\n"), 1);
+                    qam64_init(&qam_str);
+                    TxPacketRsCodesSize = 8;
+                    TxPacketDataSize = 225 - TxPacketRsCodesSize;
+                    break;
+
+                case HS_280_MODE:
+                    // QAM256 Double Frame
+                    emit consolePutData(QString("Changing speed to HS_280_MODE\n"), 1);
+                    qam256_double_frame_init(&qam_str);
+                    TxPacketRsCodesSize = 8*2;
+                    TxPacketDataSize = 469 - TxPacketRsCodesSize;
+                    break;
+
+                default:
+                    break;
+            }
+        }
     }
 }
 
@@ -126,6 +156,27 @@ void QamThread::SetFirstPassFlag()
     m_QamDecoderFirstPassFlag = true;
     mode = 1;
     mutex.unlock();
+}
+
+void QamThread::srpModeSet(uint8_t mode)
+{
+    srp_mode_t m = srp_mode_t(mode);
+
+    switch(m)
+    {
+        case HS_210_MODE:
+        case HS_280_MODE:
+            if(m_SrpMode != m)
+            {
+                emit consolePutData(QString("Received request to change speed, it will be changed later\n"), 1);
+                m_SrpMode = m;
+                m_ChangeSpeed = true;
+            }
+            break;
+
+        default:
+            break;
+    }
 }
 
 void QamThread::QAM_Decoder()
@@ -151,16 +202,11 @@ void QamThread::QAM_Decoder()
 
     peformance_timer.start();
 
-//    HS_EWL_FREQ_ACQ_error_status = HS_EWL_FREQ_ACQ(signal, len, Fs, f0, sps, mode, preamble_len,
-//                        message_len, data, &len_data, (double*)&f_est_data, &warning_status);
     HS_EWL_FREQ_ACQ_error_status = HS_EWL_FREQ_ACQ(signal, len, Fs, f0, sps, mode, preamble_len,
         &qam_str, data, &len_data, (double*)&f_est_data, &warning_status);
 
     if(HS_EWL_FREQ_ACQ_error_status == 0)
     {
-//        HS_EWL_DEMOD_QAM_error_status = HS_EWL_DEMOD_QAM(data, len_data, f_est_data, Fs, qam_symbols_real,
-//                                                        qam_symbols_imag, byte_data, &start_inf_data);
-
         HS_EWL_DEMOD_QAM_error_status = HS_EWL_DEMOD_QAM(data, len_data, f_est_data, Fs, &qam_str, qam_symbols_real,
                     qam_symbols_imag, byte_data, &start_inf_data);
 

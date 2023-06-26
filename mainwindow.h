@@ -100,9 +100,10 @@ private slots:
     void transmitWaitToSerialPort();
     void postTxDataSTM(const uint8_t *p_data, const int length);
 
-    // Commands form Indigo Suite
+    // Commands from Indigo Suite
     void commandCalculatePredistortionTablesStart();
     void commandAgcStart();
+    void srpModeSet(uint8_t mode);
 
     void handleError(QSerialPort::SerialPortError error);
     void consolePutData(const QString &data, quint8 priority);

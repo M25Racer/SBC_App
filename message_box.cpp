@@ -178,6 +178,10 @@ bool CMessageBox::message_box_srp(uint8_t* Buf, uint16_t len, uint8_t master_add
         }
             break;
 
+        case SET_RX_PARAMETERS:
+            emit srpModeSet(messege_box_buffer[13]);
+           /* fallthrough */
+
         default:
             // Unknown command for SBC, retransmit it to STM32H7 board
             emit postDataToStm32H7(messege_box_buffer, len);
