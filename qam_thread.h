@@ -77,6 +77,8 @@ private:
 
     bool m_ChangeSpeed = false;     // received request-command to change speed (LS\HS QAM64\HS QAM256)
     srp_mode_t m_SrpMode = LS_MODE; // current speed mode
+
+    quint8 tmp_buffer[255];
 };
 
 #endif // QAM_WORKTHREAD_H
