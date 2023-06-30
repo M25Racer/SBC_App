@@ -724,8 +724,8 @@ int HS_EWL_FREQ_ACQ(const double *data, double len, double Fs, double
 
   //  dispersion for reamble point
   if (!(len <= 0.0)) {
-
-    int32_T     pre_from;
+    //double dist_between_2point(creal_T point1, creal_T point2, creal_T norm_coeff)
+    double     pre_from;
     int32_T     pre_to;
     int         i           = 0;
     boolean_T   exitg1      = false;
@@ -759,12 +759,12 @@ int HS_EWL_FREQ_ACQ(const double *data, double len, double Fs, double
       *len_data = cut_out_valid_signal(data, len, signal_max, pre_from, pre_to, s2, warningStatus);
 
       // get bounds for processing
-      sa = sps * (Pl-15);//sps * ((Pl-10) - 2.0);
+      //sa = sps * (Pl-15);//sps * ((Pl-10) - 2.0);
       //bounds[0] = sps * (Pl - 5);//sps * ((Pl - 10) - 2.0);
       int str_pre = 0;
-      bounds[0] = 0;
-      bounds[1] = * len_data - sa;
-      bounds_find(s2, *len_data, 50, 53, 40, 30, bounds);
+      //bounds[0] = 0;
+      //bounds[1] = * len_data - sa;
+      bounds_find(s2, *len_data, sps, bounds);
       if(bounds[0] == 0)
       {
           bounds[0] = sps * (Pl - 5);
@@ -772,10 +772,10 @@ int HS_EWL_FREQ_ACQ(const double *data, double len, double Fs, double
       }
       else
       {
-          str_pre = (round(bounds[0]/52) - 15)*52;
+          str_pre = bounds[0] - 15*sps;
       }
-      bounds[1] = round(bounds[1]/52)*52;
-      *len_data = bounds[1]+5*52;
+      //bounds[1] = round(bounds[1]/52)*52;
+      *len_data = bounds[1]+5*sps;
 
       // stage 1 freq estimation
       if (mode == 1.0)
@@ -783,7 +783,6 @@ int HS_EWL_FREQ_ACQ(const double *data, double len, double Fs, double
         f_opt = optimize_sin(Fs, s2, bounds, f_opt, *len_data);
       }
 
-      // f_opt = 35046;
       //  Recover modulation frequency (stage 2)
       int32_T resamp_len;
       resamp_len = lagrange_reamp(s2, len_data, testSignal, f_opt, Fs, sps);
@@ -791,16 +790,16 @@ int HS_EWL_FREQ_ACQ(const double *data, double len, double Fs, double
         creal_T dc;
         double x;
 
-        x = resamp_len / sps;
-        if (x < 0.0) {
-          x = std::ceil(x);
-        } else {
-          x = std::floor(x);
-        }
+        //x = resamp_len / sps;
+        //if (x < 0.0) {
+        //  x = std::ceil(x);
+        //} else {
+        //  x = std::floor(x);
+        //}
 
         std::memset(&only_pream_filt[0], 0, 2392U * sizeof(creal_T));
         bounds1new = static_cast<int>(bounds[0]) - str_pre;
-        bounds2new = static_cast<int>(bounds[1]) - 52 * 10;
+        bounds2new = static_cast<int>(bounds[1]) - sps * 10;
         pream_mult_ref_exp(testSignal, len_data, bounds1new, bounds2new, str_pre, dv1, dv, sps, only_pream_filt);
 
 
@@ -819,40 +818,46 @@ int HS_EWL_FREQ_ACQ(const double *data, double len, double Fs, double
         creal_T norm_coef;
         norm_coef = complex_division(dc, filt2pream[startPream]);
 
-        b_i = static_cast<int>((bounds1new / sps + 5.0) + rt_roundd_snf((x * sps
-          - bounds2new) / (sps * 2.0))) - 1;
-        if ((std::abs(filt2pream[b_i].re) < 0.01) &&
-            (std::abs(filt2pream[b_i].im) < 0.01))
+//        b_i = static_cast<int>((bounds1new / sps + 5.0) + rt_roundd_snf((x * sps
+//          - bounds2new) / (sps * 2.0))) - 1;
+        if ((std::abs(filt2pream[endPream].re) < 0.01) &&
+            (std::abs(filt2pream[endPream].im) < 0.01))
         {
           *f_est = f_opt;
         }
         else
         {
-            x = filt2pream[startPream].re * norm_coef.re - filt2pream[startPream].im * norm_coef.im;
-            resamp_len = filt2pream[endPream - 1].re * norm_coef.re - filt2pream[endPream - 1].im * norm_coef.im;
-            pre_from = x - resamp_len;
-            re_tmp = filt2pream[startPream].re * norm_coef.im + filt2pream[startPream].im * norm_coef.re;
-            signal_max = filt2pream[endPream - 1].re * norm_coef.im + filt2pream[endPream - 1].im * norm_coef.re;
+//            x           = filt2pream[startPream].re     * norm_coef.re - filt2pream[startPream].im   * norm_coef.im;
+//            resamp_len  = filt2pream[endPream - 1].re   * norm_coef.re - filt2pream[endPream - 1].im * norm_coef.im;
+//            pre_from = x - resamp_len;
+//            re_tmp      = filt2pream[startPream].re     * norm_coef.im + filt2pream[startPream].im   * norm_coef.re;
+//            signal_max  = filt2pream[endPream - 1].re   * norm_coef.im + filt2pream[endPream - 1].im * norm_coef.re;
 
-            sa = re_tmp - signal_max;
-            pre_from = std::sqrt(pre_from * pre_from + sa * sa);
-            if (rt_atan2d_snf(re_tmp, x) < rt_atan2d_snf(signal_max, resamp_len))
-            {
-                pre_from = -pre_from;
-            }
+//            sa = re_tmp - signal_max;
+//            pre_from = std::sqrt(pre_from * pre_from + sa * sa);
+//            if (rt_atan2d_snf(re_tmp, x) < rt_atan2d_snf(signal_max, resamp_len))
+//            {
+//                pre_from = -pre_from;
+//            }
+            pre_from = dist_between_2point(filt2pream[startPream], filt2pream[endPream - 1], norm_coef);
 
-            sa = 0.0;
-            i = 0;
-            exitg1 = false;
-            while ((!exitg1) && (i < 1001)) {
-                if (b_dv[i] <= pre_from) {
-                    sa = b_dv1[i];
-                    exitg1 = true;
-                }
-                else {
-                    i++;
-                }
-            }
+            sa = find_norm_coeff_for_freq(b_dv, b_dv1, pre_from);
+            //find_norm_coeff_for_freq(const *double dist_table, const *double freq_table, double distance);
+//            sa = 0.0;
+//            i = 0;
+//            exitg1 = false;
+//            while ((!exitg1) && (i < 1001))
+//            {
+//                if (b_dv[i] <= pre_from)
+//                {
+//                    sa = b_dv1[i];
+//                    exitg1 = true;
+//                }
+//                else
+//                {
+//                    i++;
+//                }
+//            }
             *f_est = f_opt - sa;
         }
         if (*f_est < 33000.0 || *f_est > 37000.0)
@@ -902,21 +907,34 @@ void HS_EWL_FREQ_ACQ_init()
 //                const double FF[50]
 // Return Type  : double
 //
-void bounds_find(double *data, double len_data, int period_start, int period_end, int amount_start_pre, int amount_end_pre, double *bounds){
-    int count = 0;
+void bounds_find(double *data, double len_data, int32_T sps, double *bounds){
+    int32_T count = 0;
     int count_preamble = 0;
     double comp_data;
     int one_flag = 1;
 
-    for(int i = 0; i < amount_start_pre*52; i++){
+    int32_T win_for_sps         = 2;
+    int start_pre_len           = 40;
+    int end_pre_len             = 30;
+    int effective_start_pre_len = 15;
+    int effective_end_pre_len   = 5;
+
+    bounds[0] = 0;
+    bounds[1] = len_data - sps * effective_end_pre_len;
+
+    for(int i = 0; i < start_pre_len * sps; i++)
+    {
         if(data[i] < 0.000001 && data[i] > -0.000001)
             comp_data = 0;//data[i];
         else
             comp_data = data[i]/fabs(data[i]);
-        if(comp_data > 0.9 && one_flag == 1){
-            if(count >= period_start && count <= period_end){
+        if(comp_data > 0.9 && one_flag == 1)
+        {
+            if(count >= (sps - win_for_sps) && count <= (sps + win_for_sps))
+            {
                 count_preamble++;
-                if(count_preamble == 15){
+                if(count_preamble == effective_start_pre_len)
+                {
                     bounds[0] = i+1;
                     break;
                 }
@@ -935,15 +953,19 @@ void bounds_find(double *data, double len_data, int period_start, int period_end
     count_preamble = 0;
     count = 0;
 
-    for(int i = 0; i < amount_end_pre*52; i++){
+    for(int i = 0; i < end_pre_len * sps; i++)
+    {
         if(data[static_cast<int>(len_data)-i-1] < 0.000001 && data[static_cast<int>(len_data)-i-1] > -0.000001)
             comp_data = 0;//data[static_cast<int>(len_data)-i-1];
         else
             comp_data = data[static_cast<int>(len_data)-i-1]/fabs(data[static_cast<int>(len_data) - i - 1]);
-        if(comp_data > 0.9 && one_flag == 1){
-            if(count >= period_start && count <= period_end){
+        if(comp_data > 0.9 && one_flag == 1)
+        {
+            if(count >= (sps - win_for_sps) && count <= (sps + win_for_sps))
+            {
                 count_preamble++;
-                if(count_preamble == 5){
+                if(count_preamble == effective_end_pre_len)
+                {
                     bounds[1] = static_cast<int>(len_data)-i-1;
                     break;
                 }
@@ -958,7 +980,50 @@ void bounds_find(double *data, double len_data, int period_start, int period_end
         count++;
     }
 
+    bounds[0] = round(bounds[0]/sps)*sps;
+    bounds[1] = round(bounds[1]/sps)*sps;
 }
+
+double dist_between_2point(creal_T point1, creal_T point2, creal_T norm_coef)
+{
+    creal_T norm_p1;
+    creal_T norm_p2;
+    double  distance;
+
+    norm_p1.re   = point1.re   * norm_coef.re - point1.im * norm_coef.im;
+    norm_p1.im   = point1.re   * norm_coef.im + point1.im * norm_coef.re;
+
+    norm_p2.re   = point2.re   * norm_coef.re - point2.im * norm_coef.im;
+    norm_p2.im   = point2.re   * norm_coef.im + point2.im * norm_coef.re;
+
+    distance = std::sqrt(std::pow((norm_p1.re - norm_p2.re),2) + std::pow((norm_p1.im - norm_p2.im),2));
+    if (rt_atan2d_snf(norm_p1.im, norm_p1.re) < rt_atan2d_snf(norm_p2.im, norm_p1.re))
+    {
+        distance = -distance;
+    }
+    return distance;
+}
+
+double find_norm_coeff_for_freq(const double *dist_table, const double *freq_table, double distance)
+{
+    double      norm_freq = 0.0;
+    int         i = 0;
+    boolean_T   exitg1 = false;
+    while ((!exitg1) && (i < 1001))
+    {
+        if (dist_table[i] <= distance)
+        {
+            norm_freq = freq_table[i];
+            exitg1 = true;
+        }
+        else
+        {
+            i++;
+        }
+    }
+    return norm_freq;
+}
+
 double absolute_min(double idx, const double FF[50])
 {
   static const short iv1[9] = { 2304, 2401, 2500, 48, 49, 50, 1, 1, 1 };
@@ -1119,17 +1184,14 @@ int32_T cut_out_valid_signal(const double *in_data, double len, double data_max,
 {
     int32_T valid_data_len;
 
-    if (pre_end > len)
+    if ((pre_end - 1000) > len)
     {
       valid_data_len = len - pre_start;
       for (int32_T i = 0; i < valid_data_len; i++)
       {
         out_data[i] = in_data[pre_start + i] / data_max;
       }
-      if ((pre_end - 1000) > len)
-      {
-        *warning = 3.0; // start array sample equal 0 less than 0.2
-      }
+      *warning = 3.0; // start array sample equal 0 less than 0.2
     }
     else
     {

@@ -14,6 +14,25 @@
 #include <cstdlib>
 #include "qam_init.h"
 
+typedef struct{
+    double bounds[2];
+    double pream_from;
+    double pream_to;
+    double f_opt;
+}stage_1_freq_est;
+
+typedef struct{
+
+}stage_2_freq_est;
+
+typedef struct{
+    stage_1_freq_est stage_1;
+    stage_2_freq_est stage_2;
+    double *data;
+    double *data_len;
+
+}freq_est;
+
 // Function Declarations
 extern int  HS_EWL_FREQ_ACQ(const double *data, double len, double Fs,
   double f_opt, int32_T sps, double mode, int32_T Pl, qam *qam_str, double *s2,
@@ -22,9 +41,11 @@ extern int  HS_EWL_FREQ_ACQ(const double *data, double len, double Fs,
 void        HS_EWL_FREQ_ACQ_free();
 void        HS_EWL_FREQ_ACQ_init();
 double      absolute_min(double idx, const double FF[50]);
-void        bounds_find(double *data, double len_data, int period_start, int period_end, int amount_start_pre, int amount_end_pre, double *bounds);
+void bounds_find(double *data, double len_data, int32_T sps, double *bounds);
 
 
+double      dist_between_2point(creal_T point1, creal_T point2, creal_T norm_coef);
+double      find_norm_coeff_for_freq(const double *dist_table, const double *freq_table, double distance);
 int32_T     premable_from(const double *data, int data_len, int win_len);
 double      find_preamble_max(const double *data, int32_T pre_start, int32_T sps, int32_T pre_len);
 int32_T     cut_out_valid_signal(const double *in_data, double len, double data_max, int32_T pre_start, int32_T pre_end, double *out_data, double *warning);
