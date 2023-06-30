@@ -799,7 +799,7 @@ int HS_EWL_FREQ_ACQ(const double *data, double len, double Fs, double
 
         std::memset(&only_pream_filt[0], 0, 2392U * sizeof(creal_T));
         bounds1new = static_cast<int>(bounds[0]) - str_pre;
-        bounds2new = static_cast<int>(bounds[1]) - sps * 10;
+        bounds2new = static_cast<int>(bounds[1]) - sps * 6;
         pream_mult_ref_exp(testSignal, len_data, bounds1new, bounds2new, str_pre, dv1, dv, sps, only_pream_filt);
 
 
@@ -809,8 +809,10 @@ int HS_EWL_FREQ_ACQ(const double *data, double len, double Fs, double
         int32_T startPream;
         int32_T endPream;
         startPream = filter_span + static_cast<int>(round(15/2));//rt_roundd_snf(bounds1new / (sps * 2.0));
-        endPream = filter_span+15+13;//(bounds1new / sps + 5.0) + rt_roundd_snf((x * sps - bounds2new) / (sps * 2.0));
+        endPream = filter_span + rt_roundd_snf(bounds1new/sps) + rt_roundd_snf((resamp_len - bounds2new)/(sps * 2));//+15+13;//(bounds1new / sps + 5.0) + rt_roundd_snf((x * sps - bounds2new) / (sps * 2.0));
 
+        if(endPream >= 50)
+            endPream = 49;
 
         dc.re = qam_str->pream_qam_sym;
         dc.im = qam_str->pream_qam_sym;
@@ -818,10 +820,12 @@ int HS_EWL_FREQ_ACQ(const double *data, double len, double Fs, double
         creal_T norm_coef;
         norm_coef = complex_division(dc, filt2pream[startPream]);
 
-//        b_i = static_cast<int>((bounds1new / sps + 5.0) + rt_roundd_snf((x * sps
-//          - bounds2new) / (sps * 2.0))) - 1;
+        b_i = static_cast<int>((bounds1new / sps + 5.0) + rt_roundd_snf((x * sps
+          - bounds2new) / (sps * 2.0))) - 1;
         if ((std::abs(filt2pream[endPream].re) < 0.01) &&
-            (std::abs(filt2pream[endPream].im) < 0.01))
+            (std::abs(filt2pream[endPream].im) < 0.01) &&
+            (std::abs(filt2pream[endPream].re) > - 0.01) &&
+            (std::abs(filt2pream[endPream].im) > - 0.01))
         {
           *f_est = f_opt;
         }
@@ -1184,7 +1188,7 @@ int32_T cut_out_valid_signal(const double *in_data, double len, double data_max,
 {
     int32_T valid_data_len;
 
-    if ((pre_end - 1000) > len)
+    if ((pre_end - 1000)> len)
     {
       valid_data_len = len - pre_start;
       for (int32_T i = 0; i < valid_data_len; i++)
