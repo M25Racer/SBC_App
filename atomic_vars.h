@@ -19,6 +19,13 @@ typedef enum : uint8_t
     SWEEP_COMPLETE = 3,
 } TSweepState;
 
+typedef enum : uint8_t
+{
+    LS_MODE = 0x00,
+    HS_210_MODE = 0x01,
+    HS_280_MODE = 0x02
+} TSrpMode;
+
 /* Global atomic variables */
 extern QAtomicInteger<uint8_t> mod_status_reg;
 
@@ -35,5 +42,7 @@ extern QAtomicInteger<uint8_t> SweepState;
 
 extern QAtomicInteger<uint8_t> m_rxHighSpeedStatistics;         // Increments each QAM frame with good crc, decrements each bad crc. Limited to [0..CRC_MAX_STATISTICS]
 extern QAtomicInteger<uint16_t> m_ReedSolomonCorrections;       // Infinite counter of rs corrections, rolls over, 0..65535
+
+extern QAtomicInteger<uint8_t> m_SrpMode;   // current speed mode
 
 #endif // ATOMIC_VARS_H

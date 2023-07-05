@@ -54,13 +54,6 @@ private:
         WARNING_4 = 4,  // warning_satus = 4 kostyl check failed
     } HsEwlReceive_WarningStatus;
 
-    typedef enum
-    {
-        LS_MODE = 0x00,
-        HS_210_MODE = 0x01,
-        HS_280_MODE = 0x02
-    }srp_mode_t;
-
     // QAM data related sizes & offsets
     uint32_t TxPacketRsCodesSize = 8*2;//8 for qam64
     uint32_t TxPacketDataSize = (469 - TxPacketRsCodesSize);//(225 - TxPacketRsCodesSize) - for qam64
@@ -76,7 +69,6 @@ private:
     uint8_t n_error_frame = 0;
 
     bool m_ChangeSpeed = false;     // received request-command to change speed (LS\HS QAM64\HS QAM256)
-    srp_mode_t m_SrpMode = LS_MODE; // current speed mode
 
     quint8 tmp_buffer[255];
 };

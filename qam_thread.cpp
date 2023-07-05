@@ -162,7 +162,7 @@ void QamThread::SetFirstPassFlag()
 
 void QamThread::srpModeSet(uint8_t mode)
 {
-    srp_mode_t m = srp_mode_t(mode);
+    TSrpMode m = TSrpMode(mode);
 
     switch(m)
     {
@@ -183,7 +183,7 @@ void QamThread::srpModeSet(uint8_t mode)
 
 void QamThread::QAM_Decoder()
 {
-    int rs_decode_flag = -1;
+    int rs_decode_flag[2] = { -1, -1 };
     qint64 rs_elapsed = 0;
 
     // ERROR status
@@ -244,9 +244,9 @@ void QamThread::QAM_Decoder()
             if(TxPacketRsCodesSize + TxPacketDataSize <= 255)
             {
                 // Single QAM frame mode
-                rs_decode_flag = decode_rs1(frame_decoded);
+                rs_decode_flag[0] = decode_rs1(frame_decoded);
 
-                if(rs_decode_flag < 2)
+                if(rs_decode_flag[0] < 2)
                 {
                     // Check crc again
                     crc8 = calc_crc8(frame_decoded + TxPacketRsCodesSize, TxPacketDataSize - 1);
@@ -267,9 +267,9 @@ void QamThread::QAM_Decoder()
                 for(quint16 i = TxPacketRsCodesSize/2; i < 255; ++i)
                     tmp_buffer[i] = frame_decoded[p_data++];
 
-                rs_decode_flag = decode_rs1(tmp_buffer);
+                rs_decode_flag[0] = decode_rs1(tmp_buffer);
 
-                if(rs_decode_flag < 2)
+                if(rs_decode_flag[0] < 2)
                 {
                     // Copy corrected rs codes & data back
                     memcpy(frame_decoded, tmp_buffer, TxPacketRsCodesSize/2);
@@ -286,17 +286,20 @@ void QamThread::QAM_Decoder()
                 for(quint16 i = TxPacketRsCodesSize/2; i < 255; ++i)
                     tmp_buffer[i] = frame_decoded[p_data++];
 
-                rs_decode_flag = decode_rs1(tmp_buffer);
+                rs_decode_flag[1] = decode_rs1(tmp_buffer);
 
-                if(rs_decode_flag < 2)
+                if(rs_decode_flag[1] < 2)
                 {
                     // Copy corrected rs codes & data back
                     memcpy(frame_decoded + TxPacketRsCodesSize/2, tmp_buffer, TxPacketRsCodesSize/2);
                     memcpy(frame_decoded + TxPacketRsCodesSize + (255 - TxPacketRsCodesSize/2), tmp_buffer + TxPacketRsCodesSize/2, 255-TxPacketRsCodesSize/2);
                 }
 
-                // Check crc again
-                crc8 = calc_crc8(frame_decoded + TxPacketRsCodesSize, TxPacketDataSize - 1);
+                if(rs_decode_flag[0] < 2 || rs_decode_flag[1] < 2)
+                {
+                    // Check crc again
+                    crc8 = calc_crc8(frame_decoded + TxPacketRsCodesSize, TxPacketDataSize - 1);
+                }
             }
 
             rs_elapsed = peformance_timer2.elapsed();
@@ -391,29 +394,32 @@ void QamThread::QAM_Decoder()
     }
 
     // RS decoder debug information
-    switch(rs_decode_flag)
+    for(uint8_t i = 0; i < 2; ++i)
     {
-        case 0:
-            /* no non-zero syndromes => no errors: output received codeword */
-            emit consolePutData(QString("RS decoder finished in %1 ms: no errors\n").arg(rs_elapsed), 1);
-            break;
+        switch(rs_decode_flag[i])
+        {
+            case 0:
+                /* no non-zero syndromes => no errors: output received codeword */
+                emit consolePutData(QString("RS decoder finished in %1 ms: no errors\n").arg(rs_elapsed), 1);
+                break;
 
-        case 1:
-            emit consolePutData(QString("RS decoder finished in %1 ms: errors corrected\n").arg(rs_elapsed), 1);
-            break;
+            case 1:
+                emit consolePutData(QString("RS decoder finished in %1 ms: errors corrected\n").arg(rs_elapsed), 1);
+                break;
 
-        case 2:
-        case 3:
-            emit consolePutData(QString("RS decoder finished in %1 ms: unable to correct\n").arg(rs_elapsed), 1);
-            break;
+            case 2:
+            case 3:
+                emit consolePutData(QString("RS decoder finished in %1 ms: unable to correct\n").arg(rs_elapsed), 1);
+                break;
 
-        default:
-            break;
+            default:
+                break;
+        }
     }
 
-    if(rs_decode_flag == -1)
+    if(rs_decode_flag[0] == -1 && rs_decode_flag[1] == -1)
         rs_statistics_add_no_correction();
-    else if(rs_decode_flag < 2)
+    else if(rs_decode_flag[0] < 2 || rs_decode_flag[1] < 2)
         rs_statistics_add_correction();
 
     // Debug information
@@ -442,7 +448,7 @@ void QamThread::QAM_Decoder()
             break;
     };
 
-//#ifdef QT_DEBUG
+
     // Save 'error-frames' to file
     if(crc_error || warning_status != CORRECT)
     {
@@ -457,13 +463,12 @@ void QamThread::QAM_Decoder()
         if(++n_error_frame == 10)
             n_error_frame = 0;
     }
-//#endif
 
     // Debug
     qint64 elapsed = peformance_timer.elapsed();
     elapsed_all += elapsed;
 
-    emit consolePutData(QString("QAM decoder finished for length %1: freq = %2 Hz, elapsed time = %3 ms\n").arg(Length).arg(f_est_data).arg(elapsed), 1);
+    emit consolePutData(QString("QAM decoder finished, len %1, freq %2 Hz, elapsed time = %3 ms\n").arg(Length).arg(f_est_data).arg(elapsed), 1);
 
     if(last_frame_received)
     {
