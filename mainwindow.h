@@ -89,6 +89,7 @@ private slots:
     void closeSerialPort();
     void logFileFlush();
     void logFileOpen();
+    void openLogsFolder();
     void sendHsCommandAdcStart();       // command to STM32
     void sendHsCommandAdcStart2();      // command to STM32
     void sendHsCommandAdcStart3();      // command to STM32

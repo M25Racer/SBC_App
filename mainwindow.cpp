@@ -563,6 +563,7 @@ void MainWindow::initActionsConnections()
 {
     connect(m_ui->actionLogsFlush, &QAction::triggered, this, &MainWindow::logFileFlush);
     connect(m_ui->actionLogsOpenFile, &QAction::triggered, this, &MainWindow::logFileOpen);
+    connect(m_ui->actionOpen_logs_folder, &QAction::triggered, this, &MainWindow::openLogsFolder);
     connect(m_ui->actionADC_START, &QAction::triggered, this, &MainWindow::sendHsCommandAdcStart);
     connect(m_ui->actionSend_AGC_Start, &QAction::triggered, this, &MainWindow::sendHsCommandAgcStart);
     connect(m_ui->actionADC_START_for_SIN_600, &QAction::triggered, this, &MainWindow::sendHsCommandAdcStart2);
@@ -659,6 +660,10 @@ void MainWindow::logFileFlush()
 void MainWindow::logFileOpen()
 {
     m_console->fileOpen();
+}
+void MainWindow::openLogsFolder()
+{
+    m_console->openLogsFolder();
 }
 
 void MainWindow::sendCommandToSTM32(quint8 command, const quint8 *p_data, quint32 data_size)

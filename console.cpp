@@ -293,6 +293,40 @@ void Console::fileOpen()
     QDesktopServices::openUrl(QUrl::fromLocalFile(info.filePath()));
 }
 
+void Console::openLogsFolder()
+{
+    // Flush log file
+    fileFlush();
+
+    // Open logs folder
+    const QString& path = "SBC_Logs";
+    QFileInfo info(path);
+
+#if defined(Q_OS_WIN)
+    QStringList args;
+    if (!info.isDir())
+        args << "/select,";
+    args << QDir::toNativeSeparators(path);
+    if (QProcess::startDetached("explorer", args))
+        return;
+#elif defined(Q_OS_MAC)
+    QStringList args;
+    args << "-e";
+    args << "tell application \"Finder\"";
+    args << "-e";
+    args << "activate";
+    args << "-e";
+    args << "select POSIX file \"" + path + "\"";
+    args << "-e";
+    args << "end tell";
+    args << "-e";
+    args << "return";
+    if (!QProcess::execute("/usr/bin/osascript", args))
+        return;
+#endif
+    QDesktopServices::openUrl(QUrl::fromLocalFile(info.isDir()? path : info.path()));
+}
+
 void Console::Close()
 {
     out.flush();                    // Clear the buffered data

@@ -73,6 +73,7 @@ public:
     void Close();
     void fileFlush();
     void fileOpen();
+    void openLogsFolder();
 
 protected:
 

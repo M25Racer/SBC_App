@@ -444,9 +444,9 @@ void ModTransmitterThread::run()
             //====================================================================================================================
 
             case SPECIAL_USR_REQ_START:
-                emit consolePutData(":: User asked to record 'Sweep' signal, starting...'\n", 1);
-                emit consolePutData(":: Automatic Gain Control (AGC) configuration started'\n", 1);
-                emit consolePutData(":: Disable QAM decoder ring buffer'\n", 1);
+                emit consolePutData(":: User asked to record 'Sweep' signal, starting...\n", 1);
+                emit consolePutData(":: Automatic Gain Control (AGC) configuration started\n", 1);
+                emit consolePutData(":: Disable QAM decoder ring buffer\n", 1);
                 // Disable ring buffer for QAM decoder (disable QAM decoder)
                 m_ring->SetActive(false);
                 /* fallthrough */

@@ -71,19 +71,26 @@
     </property>
     <addaction name="actionLogsFlush"/>
     <addaction name="actionLogsOpenFile"/>
+    <addaction name="actionOpen_logs_folder"/>
    </widget>
    <widget class="QMenu" name="menuTest">
     <property name="title">
-     <string>Test HS</string>
+     <string>Test commands</string>
     </property>
     <addaction name="actionADC_START"/>
     <addaction name="actionSend_AGC_Start"/>
     <addaction name="actionADC_START_for_SIN_600"/>
     <addaction name="actionADC_START_for_Sweep"/>
+   </widget>
+   <widget class="QMenu" name="menuRecord">
+    <property name="title">
+     <string>Record...</string>
+    </property>
     <addaction name="actionRecord_Sweep_to_file"/>
    </widget>
    <addaction name="menuLogs"/>
    <addaction name="menuTest"/>
+   <addaction name="menuRecord"/>
   </widget>
   <widget class="QStatusBar" name="statusBar">
    <property name="enabled">
@@ -92,7 +99,7 @@
   </widget>
   <action name="actionLogsFlush">
    <property name="text">
-    <string>Flush</string>
+    <string>Flush log file</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+F</string>
@@ -145,6 +152,14 @@
   <action name="actionADC_START_for_Sweep">
    <property name="text">
     <string>ADC_START for 'Sweep'</string>
+   </property>
+  </action>
+  <action name="actionOpen_logs_folder">
+   <property name="text">
+    <string>Open logs folder</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+P</string>
    </property>
   </action>
   <action name="actionRecord_Sweep_to_file">
