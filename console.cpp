@@ -222,6 +222,43 @@ void Console::putDataAdcSpecial(const qint16 *p_data, quint32 len, uint8_t type)
 
             data.append(QString("// =================================== Sweep, len %3 ===================================\n").arg(len));
             break;
+
+        case 3:
+        {
+            // Check & create folder 'SBC_Logs'
+            if(!QDir("SBC_Logs/Sweep_records").exists())
+                QDir().mkdir("SBC_Logs/Sweep_records");
+
+            // Delete old log files
+            QStringList nameFilters;
+            nameFilters.append("*.txt");
+
+            QStringList file_list = QDir("SBC_Logs/Sweep_records").entryList(nameFilters, QDir::Filter::NoFilter, QDir::SortFlag::Time);
+            if(file_list.size())
+            {
+                while(file_list.count() > n_MaxLogFiles)
+                {
+                    QFile::remove("SBC_Logs/Sweep_records/" + file_list.last());
+                    file_list.removeLast();
+                }
+            }
+
+            QScopedPointer<QFile> m_sweepRecordFile;      // Smart pointer to file
+            m_sweepRecordFile.reset(new QFile("SBC_Logs/Sweep_records/sweep_record_" + QDateTime::currentDateTime().toString("yyyy-MM-dd_hh.mm.ss.zzz") + ".txt"));
+            m_sweepRecordFile.data()->open(QFile::Append | QFile::Text);
+
+            outSweepRecords.setDevice(m_sweepRecordFile.data());
+
+            outSweepRecords << QString("// =================================== Sweep, len %3 ===================================\n").arg(len);
+
+            for(uint64_t i = 1; i < len; ++i)
+                outSweepRecords << QString("%1\n").arg((int16_t)p_data[i]);
+
+            outSweepRecords.flush();
+
+            m_sweepRecordFile->close();
+            return;
+        }
     }
 
     for(uint64_t i = 1; i < len; ++i)

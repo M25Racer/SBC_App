@@ -118,8 +118,18 @@ void SinFreqSweepThread::run()
                     double val = SignalSweep[i];
                     SignalBuffer[1][i] = (int16_t)val;
                 }
-                emit consolePutAdcDataSpecial(SignalBuffer[1], LengthSweep, 2);
-                Sweep();
+
+                if(sweep_record_to_file)
+                {
+                    // Save 'sweep' to file, do not calculate
+                    sweep_record_to_file = false;
+                    emit consolePutAdcDataSpecial(SignalBuffer[1], LengthSweep, 3);
+                }
+                else
+                {
+                    emit consolePutAdcDataSpecial(SignalBuffer[1], LengthSweep, 2);
+                    Sweep();
+                }
             }
         }
     }

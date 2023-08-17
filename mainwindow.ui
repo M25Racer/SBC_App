@@ -76,13 +76,11 @@
     <property name="title">
      <string>Test HS</string>
     </property>
-    <addaction name="actionSend_HS_command_GET_STATUS"/>
-    <addaction name="actionSend_HS_command_GET_DATA"/>
-    <addaction name="actionGET_DATA_SIZE"/>
     <addaction name="actionADC_START"/>
     <addaction name="actionSend_AGC_Start"/>
     <addaction name="actionADC_START_for_SIN_600"/>
     <addaction name="actionADC_START_for_Sweep"/>
+    <addaction name="actionRecord_Sweep_to_file"/>
    </widget>
    <addaction name="menuLogs"/>
    <addaction name="menuTest"/>
@@ -147,6 +145,11 @@
   <action name="actionADC_START_for_Sweep">
    <property name="text">
     <string>ADC_START for 'Sweep'</string>
+   </property>
+  </action>
+  <action name="actionRecord_Sweep_to_file">
+   <property name="text">
+    <string>Record 'Sweep' to file</string>
    </property>
   </action>
  </widget>

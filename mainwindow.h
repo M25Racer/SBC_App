@@ -89,12 +89,11 @@ private slots:
     void closeSerialPort();
     void logFileFlush();
     void logFileOpen();
-    void sendHsCommandGetStatus();      // command to STM32
-    void sendHsCommandGetData();        // command to STM32
     void sendHsCommandAdcStart();       // command to STM32
     void sendHsCommandAdcStart2();      // command to STM32
     void sendHsCommandAdcStart3();      // command to STM32
     void sendHsCommandAgcStart();       // command to STM32
+    void recordSweep();                 // command to STM32
     void readDataSerialPort();
     void transmitDataSerialPort(const uint8_t *p_data, int length);
     void transmitWaitToSerialPort();

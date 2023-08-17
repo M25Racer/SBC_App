@@ -36,6 +36,7 @@ extern QAtomicInteger<uint8_t> AgcStateGlobal;
 extern QAtomicInteger<bool> common_special_command;
 extern QAtomicInteger<bool> sin600_command;
 extern QAtomicInteger<bool> sweep_command;
+extern QAtomicInteger<bool> sweep_record_to_file;
 
 extern QAtomicInteger<uint8_t> FreqEstState;
 extern QAtomicInteger<uint8_t> SweepState;

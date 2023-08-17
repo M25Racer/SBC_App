@@ -563,12 +563,11 @@ void MainWindow::initActionsConnections()
 {
     connect(m_ui->actionLogsFlush, &QAction::triggered, this, &MainWindow::logFileFlush);
     connect(m_ui->actionLogsOpenFile, &QAction::triggered, this, &MainWindow::logFileOpen);
-    connect(m_ui->actionSend_HS_command_GET_STATUS, &QAction::triggered, this, &MainWindow::sendHsCommandGetStatus);
-    connect(m_ui->actionSend_HS_command_GET_DATA, &QAction::triggered, this, &MainWindow::sendHsCommandGetData);
     connect(m_ui->actionADC_START, &QAction::triggered, this, &MainWindow::sendHsCommandAdcStart);
     connect(m_ui->actionSend_AGC_Start, &QAction::triggered, this, &MainWindow::sendHsCommandAgcStart);
     connect(m_ui->actionADC_START_for_SIN_600, &QAction::triggered, this, &MainWindow::sendHsCommandAdcStart2);
     connect(m_ui->actionADC_START_for_Sweep, &QAction::triggered, this, &MainWindow::sendHsCommandAdcStart3);
+    connect(m_ui->actionRecord_Sweep_to_file, &QAction::triggered, this, &MainWindow::recordSweep);
 }
 
 void MainWindow::showStatusMessage(const QString &message)
@@ -682,18 +681,6 @@ void MainWindow::usbHsDataReceived()
 }
 
 // Debug HS command from GUI
-void MainWindow::sendHsCommandGetStatus()
-{
-    m_console->putData(QString("Send HS command USB_CMD_GET_STATUS\n"), 1);
-    m_usb_thread.sendHsCommand(USB_CMD_GET_STATUS, 0, nullptr);
-}
-
-void MainWindow::sendHsCommandGetData()
-{
-    m_console->putData(QString("Send HS command GET_DATA, requested data size %1\n").arg(m_usb_thread.stm32_ready_data_size), 1);
-    m_usb_thread.sendHsCommand(USB_CMD_GET_DATA, 4, (uint8_t*)&m_usb_thread.stm32_ready_data_size);
-}
-
 void MainWindow::sendHsCommandAdcStart()
 {
     uint32_t adc_data_length = 440000;
@@ -725,6 +712,11 @@ void MainWindow::sendHsCommandAgcStart()
 {
     m_console->putData(QString("Send HS command USB_CMD_AGC_START\n"), 1);
     sendCommandToSTM32(USB_CMD_AGC_START, nullptr, 0);
+}
+
+void MainWindow::recordSweep()
+{
+    m_mod_tx_thread.separateRecordSweepStart();
 }
 
 void MainWindow::commandCalculatePredistortionTablesStart()

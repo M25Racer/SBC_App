@@ -14,6 +14,7 @@ QAtomicInteger<uint8_t> AgcStateGlobal = AGC_OK;
 QAtomicInteger<bool> common_special_command = false;
 QAtomicInteger<bool> sin600_command = false;
 QAtomicInteger<bool> sweep_command = false;
+QAtomicInteger<bool> sweep_record_to_file = false;
 
 QAtomicInteger<uint8_t> FreqEstState = TFreqEstState::FREQ_EST_IDLE;
 QAtomicInteger<uint8_t> SweepState = TSweepState::SWEEP_IDLE;

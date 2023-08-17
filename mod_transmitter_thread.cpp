@@ -295,7 +295,7 @@ void ModTransmitterThread::run()
                     message.own_address = CMessageBox::MASTER_ADDR;
 
                     uint16_t tx_len = CMessageBox::message_header_to_array(&message, message_box_buffer_mod);
-                    emit consolePutData(QString(":: Predistortion auto cfg :: Send 'SEND_SIN_35KHZ_600' command to MOD\n"), 1);
+                    emit consolePutData(QString(":: Predistortion auto cfg :: Send 'SEND_SWEEP_SIGNAL' command to MOD\n"), 1);
                     postDataToStm32H7(message_box_buffer_mod, tx_len);
 
                     // Wait for freq estimate
@@ -307,7 +307,7 @@ void ModTransmitterThread::run()
                     // Reset timeout
                     Timeout = 0;
 
-                    // Start timeout to check 'frequency estimate' function completion
+                    // Start timeout to check 'sweep' function completion
                     emit startAnswerTimeoutTimer(100);
                 }
                 /* fallthrough */
@@ -441,7 +441,113 @@ void ModTransmitterThread::run()
                 calculatePredistortionTablesStop();
                 break;
 
-             default:
+            //====================================================================================================================
+
+            case SPECIAL_USR_REQ_START:
+                emit consolePutData(":: User asked to record 'Sweep' signal, starting...'\n", 1);
+                emit consolePutData(":: Automatic Gain Control (AGC) configuration started'\n", 1);
+                emit consolePutData(":: Disable QAM decoder ring buffer'\n", 1);
+                // Disable ring buffer for QAM decoder (disable QAM decoder)
+                m_ring->SetActive(false);
+                /* fallthrough */
+
+            case SPECIAL_USR_REQ_AGC_START_FOR_SWEEP:
+                // Send 'AGC start' to STM32
+                emit consolePutData(":: Send 'AGC start'\n", 1);
+                emit sendCommandToSTM32(USB_CMD_AGC_START, nullptr, 0);
+
+                // Delay
+                QThread::msleep(100);
+
+                setState(SPECIAL_USR_REQ_SWEEP_MOD_COMMANDS_FOR_AGC);
+                n_commands = 0;
+                AgcStateGlobal = AGC_START;
+                /* fallthrough */
+
+            case SPECIAL_USR_REQ_SWEEP_MOD_COMMANDS_FOR_AGC:
+            {
+                // Send 'SWEEP' command to MOD
+                uint8_t AGCState = AgcStateGlobal;
+
+                // At least one 'SWEEP' must be transmitted and AGCState = AGC_OK
+                if(AGCState != AGC_OK || !n_commands)
+                {
+                    if(++n_commands > n_MaxSweepCommands)
+                    {
+                        emit consolePutData(":: AGC for 'SWEEP' error: too many 'SEND_SWEEP_SIGNAL' commands transmitted to MOD and still no 'AGC OK' status from STM32\n", 1);
+                        setState(ERROR_AGC_SWEEP);
+                        calculatePredistortionTablesStop();
+                        break;
+                     }
+
+                    message.command = CMessageBox::SEND_SWEEP_SIGNAL;
+                    message.packet_adr = 0;
+                    message.data_len = 0;
+                    message.message_id = 0;
+                    message.master_address = CMessageBox::MOD2_ADDR;
+                    message.own_address = CMessageBox::MASTER_ADDR;
+
+                    uint16_t tx_len = CMessageBox::message_header_to_array(&message, message_box_buffer_mod);
+                    emit consolePutData(QString(":: Send 'SEND_SWEEP_SIGNAL' command to MOD #%1 of max #%2\n").arg(n_commands).arg(n_MaxSweepCommands), 1);
+                    postDataToStm32H7(message_box_buffer_mod, tx_len);
+
+                    // Start timeout before next command
+                    emit startAnswerTimeoutTimer(timeoutAgcSweepCommands_ms);
+                    break;
+                }
+
+                emit consolePutData(":: AGC for 'SWEEP' configured, state AGC_OK\n", 1);
+
+                n_commands = 0;
+                setState(SPECIAL_USR_REQ_ADC_START_FOR_SWEEP);
+            }
+                /* fallthrough */
+
+            case SPECIAL_USR_REQ_ADC_START_FOR_SWEEP:
+            {
+                // Send 'ADC_START for SWEEP' to STM32
+                emit consolePutData("Send 'ADC_START for 'sweep'\n", 1);
+                sweep_record_to_file = true;
+                common_special_command = true;
+
+                uint32_t adc_data_length = 440000;
+                emit sendCommandToSTM32(USB_CMD_ADC_START, (uint8_t*)&adc_data_length, 4);
+
+                // Delay
+                QThread::msleep(100);
+            }
+            /* fallthrough */
+
+            case SPECIAL_USR_REQ_SWEEP_MOD_COMMAND:
+            {
+                if(++n_commands > 3)
+                {
+                    emit consolePutData("User requested 'Sweep' records has finished\n", 1);
+                    setState(AUTOCFG_COMPLETE_SUCCESSFULLY);
+                    calculatePredistortionTablesStop();
+                    break;
+                }
+
+                message.command = CMessageBox::SEND_SWEEP_SIGNAL;
+                message.packet_adr = 0;
+                message.data_len = 0;
+                message.message_id = 0;
+                message.master_address = CMessageBox::MOD2_ADDR;
+                message.own_address = CMessageBox::MASTER_ADDR;
+
+                uint16_t tx_len = CMessageBox::message_header_to_array(&message, message_box_buffer_mod);
+                emit consolePutData(QString(":: Predistortion auto cfg :: Send 'SEND_SWEEP_SIGNAL' command to MOD\n"), 1);
+                postDataToStm32H7(message_box_buffer_mod, tx_len);
+
+                // Start timeout before next command
+                emit startAnswerTimeoutTimer(timeoutAgcSweepCommands_ms);
+                break;
+            }
+            /* fallthrough */
+
+            //====================================================================================================================
+
+            default:
                 emit consolePutData(":: Predistortion auto cfg :: error wrong state\n", 1);
                 break;
         }
@@ -662,13 +768,37 @@ void ModTransmitterThread::calculatePredistortionTablesStart()
 
 void ModTransmitterThread::separateAgcStart()
 {
-    m_AutoConfigurationMode = true;
+    if(m_AutoConfigurationMode)
+    {
+        emit consolePutData("Error: unable to start user requested AGC configuration, because autoconfiguration is in progress\n", 1);
+        return;
+    }
 
+    m_AutoConfigurationMode = true;
     emit consolePutData("==================================================\n"
                         "Starting AGC configuration sequence\n"
                         "==================================================\n", 1);
     m_mutex_mod.lock();
     setState(AGCCFG_START);
+    StatePredistTx = TX_IDLE;
+    m_mutex_mod.unlock();
+    modTransmitWakeUp.wakeOne();
+}
+
+void ModTransmitterThread::separateRecordSweepStart()
+{
+    if(m_AutoConfigurationMode)
+    {
+        emit consolePutData("Error: unable to start user requested 'sweep' signal record sequence, because autoconfiguration is in progress\n", 1);
+        return;
+    }
+
+    m_AutoConfigurationMode = true;
+    emit consolePutData("==================================================\n"
+                        "Starting 'sweep' signal record sequence\n"
+                        "==================================================\n", 1);
+    m_mutex_mod.lock();
+    setState(SPECIAL_USR_REQ_START);
     StatePredistTx = TX_IDLE;
     m_mutex_mod.unlock();
     modTransmitWakeUp.wakeOne();
