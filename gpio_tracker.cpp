@@ -26,13 +26,13 @@ bool GpioTracker::Init()
     QFile exportFile("/sys/class/gpio/export");
     if(!exportFile.open(QIODevice::WriteOnly))
     {
-        emit consolePutData("GPIO export file open failed\n", 1);
+        emit consolePutData("GPIO export file open failed\n", 2);
         res = false;
     }
     QString gpioNumber = QString::number(gpio_number);
     if(exportFile.write(gpioNumber.toUtf8()) == -1)
     {
-        emit consolePutData("GPIO export file write failed\n", 1);
+        emit consolePutData("GPIO export file write failed\n", 2);
         res = false;
     }
     exportFile.close();
@@ -45,7 +45,7 @@ bool GpioTracker::Init()
     QFile directionFile(QString("/sys/class/gpio/gpio%1/direction").arg(gpio_number));
     if(!directionFile.open(QIODevice::WriteOnly))
     {
-        emit consolePutData("GPIO direction file open failed\n", 1);
+        emit consolePutData("GPIO direction file open failed\n", 2);
         res = false;
     }
     switch(gpio_direction)
@@ -53,14 +53,14 @@ bool GpioTracker::Init()
         case DirectionIn:
             if(directionFile.write("in") == -1)
             {
-                emit consolePutData("GPIO direction file write failed\n", 1);
+                emit consolePutData("GPIO direction file write failed\n", 2);
                 res = false;
             }
             break;
         case DirectionOut:
             if(directionFile.write("out") == -1)
             {
-                emit consolePutData("GPIO direction file write failed\n", 1);
+                emit consolePutData("GPIO direction file write failed\n", 2);
                 res = false;
             }
             break;
@@ -75,19 +75,19 @@ bool GpioTracker::Init()
     // Check if GPIO value file exists
     if(!file->exists())
     {
-        emit consolePutData("Error GPIO " + pathname + " file does not exist\n", 1);
+        emit consolePutData("Error GPIO " + pathname + " file does not exist\n", 2);
         res = false;
         return res;
     }
 
     if(!file->open(QIODevice::ReadOnly))
     {
-        emit consolePutData("Error GPIO value file open failed", 1);
+        emit consolePutData("Error GPIO value file open failed", 2);
         res = false;
         return res;
     }
 
-    emit consolePutData(QString("GPIO %1 read: ").arg(gpio_number) + file->peek(1) + "\n", 1);
+    emit consolePutData(QString("GPIO %1 read: ").arg(gpio_number) + file->peek(1) + "\n", 2);
     file->close();
 
     return res;
@@ -129,7 +129,7 @@ bool GpioTracker::writeValue(quint8 value)
             file->write("0");
     }
 
-    emit consolePutData(QString("GPIO %1 write: %2\n").arg(gpio_number).arg(value), 1);
+    emit consolePutData(QString("GPIO %1 write: %2\n").arg(gpio_number).arg(value), 2);
 
     file->close();
     return false;

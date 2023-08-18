@@ -55,6 +55,7 @@
 #include <QDesktopServices>
 #include <QFileInfo>
 #include <QDir>
+#include "atomic_vars.h"
 
 Console::Console(QWidget *parent) :
     QPlainTextEdit(parent)
@@ -131,7 +132,7 @@ void Console::putData(const QString &data, uint8_t priority)
     ++priority;
 #endif
 
-    if(priority)
+    if((priority > 1) || (priority == 1 && m_ShowAdvancedLogs))
     {
         insertPlainText(data);
 
@@ -139,7 +140,7 @@ void Console::putData(const QString &data, uint8_t priority)
         bar->setValue(bar->maximum());
     }
 
-    // Log to file
+    // Log to file (any 'priority')
 
     // Write the date of recording
     out << QDateTime::currentDateTime().toString("hh:mm:ss.zzz ");
@@ -273,7 +274,7 @@ void Console::putDataAdcSpecial(const qint16 *p_data, quint32 len, uint8_t type)
 
 void Console::fileFlush()
 {
-    putData("Force log file flush by user\n", 1);
+    putData("Force log file flush by user\n", 2);
     out.flush();    // Clear the buffered data
 }
 
@@ -284,7 +285,7 @@ void Console::fileOpen()
     info.setFile(m_logFile->fileName());
     info.makeAbsolute();
 
-    putData(QString("Opening log file: ") + info.filePath() + QString("\n"), 1);
+    putData(QString("Opening log file: ") + info.filePath() + QString("\n"), 2);
 
     // Flush before open
     fileFlush();

@@ -37,7 +37,7 @@ ModTransmitterThread::~ModTransmitterThread()
 void ModTransmitterThread::setState(TState state)
 {
     State = state;
-    emit consolePutData(QString(":: Predistortion auto cfg :: State #%1\n").arg(State), 1);
+    emit consolePutData(QString(":: Predistortion auto cfg :: State #%1\n").arg(State), 2);
     m_statusAutoCfgPredistortion = (quint8)state;
 }
 
@@ -64,11 +64,11 @@ void ModTransmitterThread::run()
 
             case AUTOCFG_START:
                 // Disable ring buffer for QAM decoder (disable QAM decoder)
-                emit consolePutData(":: Predistortion auto cfg :: disable QAM decoder ring buffer'\n", 1);
+                emit consolePutData(":: Predistortion auto cfg :: disable QAM decoder ring buffer'\n", 2);
                 m_ring->SetActive(false);
 
                 // Send 'AGC start' to STM32
-                emit consolePutData(":: Predistortion auto cfg :: send 'AGC start'\n", 1);          
+                emit consolePutData(":: Predistortion auto cfg :: send 'AGC start'\n", 2);
                 emit sendCommandToSTM32(USB_CMD_AGC_START, nullptr, 0);
 
                 // Delay
@@ -91,7 +91,7 @@ void ModTransmitterThread::run()
                         if(++n_continuous_errors > n_MaxContinuousAgcErrors)
                         {
                             n_continuous_errors = 0;
-                            emit consolePutData(":: Predistortion auto cfg :: AGC failed with status 'AGC error' (too much continuous errors)\n", 1);
+                            emit consolePutData(":: Predistortion auto cfg :: AGC failed with status 'AGC error' (too much continuous errors)\n", 2);
                             setState(ERROR_AGC_SIN35KHZ);
                             calculatePredistortionTablesStop();
                             break;
@@ -105,7 +105,7 @@ void ModTransmitterThread::run()
                     {                       
                         if(++n_commands > n_MaxSin35kHzCommands)
                         {
-                            emit consolePutData(":: Predistortion auto cfg :: AGC for 'SIN 35kHz' error: too many 'SEND_SIN_35KHZ' commands transmitted to MOD and still no 'AGC OK' status from STM32\n", 1);
+                            emit consolePutData(":: Predistortion auto cfg :: AGC for 'SIN 35kHz' error: too many 'SEND_SIN_35KHZ' commands transmitted to MOD and still no 'AGC OK' status from STM32\n", 2);
                             setState(ERROR_AGC_SIN35KHZ);
                             calculatePredistortionTablesStop();
                             break;
@@ -119,7 +119,7 @@ void ModTransmitterThread::run()
                         message.own_address = CMessageBox::MASTER_ADDR;
 
                         uint16_t tx_len = CMessageBox::message_header_to_array(&message, message_box_buffer_mod);
-                        emit consolePutData(QString(":: Predistortion auto cfg :: Send 'SEND_SIN_35KHZ' command to MOD #%1 of max #%2\n").arg(n_commands).arg(n_MaxSin35kHzCommands), 1);
+                        emit consolePutData(QString(":: Predistortion auto cfg :: Send 'SEND_SIN_35KHZ' command to MOD #%1 of max #%2\n").arg(n_commands).arg(n_MaxSin35kHzCommands), 2);
                         postDataToStm32H7(message_box_buffer_mod, tx_len);
 
                         // Start timeout before next command
@@ -127,7 +127,7 @@ void ModTransmitterThread::run()
                         break;
                     }
 
-                    emit consolePutData(":: Predistortion auto cfg :: AGC for 'SIN 35kHz' configured, state AGC_OK\n", 1);
+                    emit consolePutData(":: Predistortion auto cfg :: AGC for 'SIN 35kHz' configured, state AGC_OK\n", 2);
 
                     if(State == SIN35KHZ_MOD_COMMANDS_FOR_AGC_2)
                     {
@@ -143,7 +143,7 @@ void ModTransmitterThread::run()
             case ADC_START_FOR_SIN600:
             {
                 // Send 'ADC_START for SIN 600' to STM32
-                emit consolePutData(":: Predistortion auto cfg :: send 'ADC_START for SIN 600'\n", 1);
+                emit consolePutData(":: Predistortion auto cfg :: send 'ADC_START for SIN 600'\n", 2);
                 sin600_command = true;
                 common_special_command = true;
 
@@ -160,7 +160,7 @@ void ModTransmitterThread::run()
 
             case SIN600_MOD_COMMAND:
             {
-                emit consolePutData(QString(":: Predistortion auto cfg :: Send 'SEND_SIN_35KHZ_600' command to MOD\n"), 1);
+                emit consolePutData(QString(":: Predistortion auto cfg :: Send 'SEND_SIN_35KHZ_600' command to MOD\n"), 2);
                 FreqEstState = TFreqEstState::FREQ_EST_START;
 
                 message.command = CMessageBox::SEND_SIN_35KHZ_600;
@@ -201,7 +201,7 @@ void ModTransmitterThread::run()
                     }
                     else if(Timeout >= 30000/100)  // 30 sec
                     {
-                        emit consolePutData(":: Predistortion auto cfg :: Error freq estimate timeout elapsed\n", 1);
+                        emit consolePutData(":: Predistortion auto cfg :: Error freq estimate timeout elapsed\n", 2);
                         setState(ERROR_FREQ_ESTIMATE_TIMEOUT);
                         calculatePredistortionTablesStop();
                         break;
@@ -217,7 +217,7 @@ void ModTransmitterThread::run()
 
             case AGC_START_FOR_SWEEP:
                 // Send 'AGC start' to STM32
-                emit consolePutData(":: Predistortion auto cfg :: send 'AGC start'\n", 1);
+                emit consolePutData(":: Predistortion auto cfg :: send 'AGC start'\n", 2);
                 emit sendCommandToSTM32(USB_CMD_AGC_START, nullptr, 0);
 
                 // Delay
@@ -238,7 +238,7 @@ void ModTransmitterThread::run()
                     {
                         if(++n_commands > n_MaxSweepCommands)
                         {
-                            emit consolePutData(":: Predistortion auto cfg :: AGC for 'SWEEP' error: too many 'SEND_SWEEP_SIGNAL' commands transmitted to MOD and still no 'AGC OK' status from STM32\n", 1);
+                            emit consolePutData(":: Predistortion auto cfg :: AGC for 'SWEEP' error: too many 'SEND_SWEEP_SIGNAL' commands transmitted to MOD and still no 'AGC OK' status from STM32\n", 2);
                             setState(ERROR_AGC_SWEEP);
                             calculatePredistortionTablesStop();
                             break;
@@ -252,7 +252,7 @@ void ModTransmitterThread::run()
                         message.own_address = CMessageBox::MASTER_ADDR;
 
                         uint16_t tx_len = CMessageBox::message_header_to_array(&message, message_box_buffer_mod);
-                        emit consolePutData(QString(":: Predistortion auto cfg :: Send 'SEND_SWEEP_SIGNAL' command to MOD #%1 of max #%2\n").arg(n_commands).arg(n_MaxSweepCommands), 1);
+                        emit consolePutData(QString(":: Predistortion auto cfg :: Send 'SEND_SWEEP_SIGNAL' command to MOD #%1 of max #%2\n").arg(n_commands).arg(n_MaxSweepCommands), 2);
                         postDataToStm32H7(message_box_buffer_mod, tx_len);
 
                         // Start timeout before next command
@@ -260,7 +260,7 @@ void ModTransmitterThread::run()
                         break;
                     }
 
-                    emit consolePutData(":: Predistortion auto cfg :: AGC for 'SWEEP' configured, state AGC_OK\n", 1);
+                    emit consolePutData(":: Predistortion auto cfg :: AGC for 'SWEEP' configured, state AGC_OK\n", 2);
                     setState(ADC_START_FOR_SWEEP);
                 }
                 /* fallthrough */
@@ -268,7 +268,7 @@ void ModTransmitterThread::run()
             case ADC_START_FOR_SWEEP:
                 {
                     // 3. Send 'ADC_START for SWEEP' to STM32
-                    emit consolePutData("Predistortion auto cfg: send 'ADC_START for 'SIN 35KHZ 600''\n", 1);
+                    emit consolePutData("Predistortion auto cfg: send 'ADC_START for 'SIN 35KHZ 600''\n", 2);
                     sweep_command = true;
                     common_special_command = true;
 
@@ -295,7 +295,7 @@ void ModTransmitterThread::run()
                     message.own_address = CMessageBox::MASTER_ADDR;
 
                     uint16_t tx_len = CMessageBox::message_header_to_array(&message, message_box_buffer_mod);
-                    emit consolePutData(QString(":: Predistortion auto cfg :: Send 'SEND_SWEEP_SIGNAL' command to MOD\n"), 1);
+                    emit consolePutData(QString(":: Predistortion auto cfg :: Send 'SEND_SWEEP_SIGNAL' command to MOD\n"), 2);
                     postDataToStm32H7(message_box_buffer_mod, tx_len);
 
                     // Wait for freq estimate
@@ -325,7 +325,7 @@ void ModTransmitterThread::run()
                     }
                     else if(Timeout >= 30000/100)  // 30 sec
                     {
-                        emit consolePutData(":: Predistortion auto cfg :: Error predistortion auto cfg: sweep func timeout elapsed\n", 1);
+                        emit consolePutData(":: Predistortion auto cfg :: Error predistortion auto cfg: sweep func timeout elapsed\n", 2);
                         setState(ERROR_SWEEP_TIMEOUT);
                         calculatePredistortionTablesStop();
                         break;
@@ -341,7 +341,7 @@ void ModTransmitterThread::run()
 
             case AGC_START_FOR_SIN35KHZ:
                 // Send 'AGC start' to STM32
-                emit consolePutData(":: Predistortion auto cfg :: send 'AGC start'\n", 1);
+                emit consolePutData(":: Predistortion auto cfg :: send 'AGC start'\n", 2);
                 emit sendCommandToSTM32(USB_CMD_AGC_START, nullptr, 0);
 
                 // Delay
@@ -378,14 +378,14 @@ void ModTransmitterThread::run()
 
             case AGCCFG_START:
                 // Disable ring buffer for QAM decoder (disable QAM decoder)
-                emit consolePutData(":: Automatic Gain Control (AGC) configuration started'\n", 1);
-                emit consolePutData(":: Disable QAM decoder ring buffer'\n", 1);
+                emit consolePutData(":: Automatic Gain Control (AGC) configuration started'\n", 2);
+                emit consolePutData(":: Disable QAM decoder ring buffer'\n", 2);
                 m_ring->SetActive(false);
                 /* fallthrough */
 
             case AGC_START_FOR_MOD_STAT:
                 // Send 'AGC start' to STM32
-                emit consolePutData(":: Predistortion auto cfg :: send 'AGC start'\n", 1);
+                emit consolePutData(":: Predistortion auto cfg :: send 'AGC start'\n", 2);
                 emit sendCommandToSTM32(USB_CMD_AGC_START, nullptr, 0);
 
                 // Delay
@@ -406,7 +406,7 @@ void ModTransmitterThread::run()
                     {
                         if(++n_commands > n_MaxModStatusCommands)
                         {
-                            emit consolePutData(":: Predistortion auto cfg :: AGC for 'MOD STATUS' error: too many 'GET STATUS' commands transmitted to MOD and still no 'AGC OK' status from STM32\n", 1);
+                            emit consolePutData(":: Predistortion auto cfg :: AGC for 'MOD STATUS' error: too many 'GET STATUS' commands transmitted to MOD and still no 'AGC OK' status from STM32\n", 2);
                             setState(ERROR_AGC_MODSTAT);
                             calculatePredistortionTablesStop();
                             break;
@@ -420,7 +420,7 @@ void ModTransmitterThread::run()
                         message.own_address = CMessageBox::MASTER_ADDR;
 
                         uint16_t tx_len = CMessageBox::message_header_to_array(&message, message_box_buffer_mod);
-                        emit consolePutData(QString(":: Predistortion auto cfg :: Send 'GET STATUS' command to MOD #%1 of max #%2\n").arg(n_commands).arg(n_MaxModStatusCommands), 1);
+                        emit consolePutData(QString(":: Predistortion auto cfg :: Send 'GET STATUS' command to MOD #%1 of max #%2\n").arg(n_commands).arg(n_MaxModStatusCommands), 2);
                         postDataToStm32H7(message_box_buffer_mod, tx_len);
 
                         // Start timeout before next command
@@ -428,7 +428,7 @@ void ModTransmitterThread::run()
                         break;
                     }
 
-                    emit consolePutData(":: Predistortion auto cfg :: AGC for 'GET STATUS' configured, state AGC_OK\n", 1);
+                    emit consolePutData(":: Predistortion auto cfg :: AGC for 'GET STATUS' configured, state AGC_OK\n", 2);
 
                     // Finishing
                     setState(AUTOCFG_COMPLETE_SUCCESSFULLY);
@@ -437,23 +437,23 @@ void ModTransmitterThread::run()
                 break;
 
              case AUTOCFG_COMPLETE_SUCCESSFULLY:
-                emit consolePutData(":: Predistortion auto cfg :: auto configuration complete, all operations completed successfully\n", 1);
+                emit consolePutData(":: Predistortion auto cfg :: auto configuration complete, all operations completed successfully\n", 2);
                 calculatePredistortionTablesStop();
                 break;
 
             //====================================================================================================================
 
             case SPECIAL_USR_REQ_START:
-                emit consolePutData(":: User asked to record 'Sweep' signal, starting...\n", 1);
-                emit consolePutData(":: Automatic Gain Control (AGC) configuration started\n", 1);
-                emit consolePutData(":: Disable QAM decoder ring buffer\n", 1);
+                emit consolePutData(":: User asked to record 'Sweep' signal, starting...\n", 2);
+                emit consolePutData(":: Automatic Gain Control (AGC) configuration started\n", 2);
+                emit consolePutData(":: Disable QAM decoder ring buffer\n", 2);
                 // Disable ring buffer for QAM decoder (disable QAM decoder)
                 m_ring->SetActive(false);
                 /* fallthrough */
 
             case SPECIAL_USR_REQ_AGC_START_FOR_SWEEP:
                 // Send 'AGC start' to STM32
-                emit consolePutData(":: Send 'AGC start'\n", 1);
+                emit consolePutData(":: Send 'AGC start'\n", 2);
                 emit sendCommandToSTM32(USB_CMD_AGC_START, nullptr, 0);
 
                 // Delay
@@ -474,7 +474,7 @@ void ModTransmitterThread::run()
                 {
                     if(++n_commands > n_MaxSweepCommands)
                     {
-                        emit consolePutData(":: AGC for 'SWEEP' error: too many 'SEND_SWEEP_SIGNAL' commands transmitted to MOD and still no 'AGC OK' status from STM32\n", 1);
+                        emit consolePutData(":: AGC for 'SWEEP' error: too many 'SEND_SWEEP_SIGNAL' commands transmitted to MOD and still no 'AGC OK' status from STM32\n", 2);
                         setState(ERROR_AGC_SWEEP);
                         calculatePredistortionTablesStop();
                         break;
@@ -488,7 +488,7 @@ void ModTransmitterThread::run()
                     message.own_address = CMessageBox::MASTER_ADDR;
 
                     uint16_t tx_len = CMessageBox::message_header_to_array(&message, message_box_buffer_mod);
-                    emit consolePutData(QString(":: Send 'SEND_SWEEP_SIGNAL' command to MOD #%1 of max #%2\n").arg(n_commands).arg(n_MaxSweepCommands), 1);
+                    emit consolePutData(QString(":: Send 'SEND_SWEEP_SIGNAL' command to MOD #%1 of max #%2\n").arg(n_commands).arg(n_MaxSweepCommands), 2);
                     postDataToStm32H7(message_box_buffer_mod, tx_len);
 
                     // Start timeout before next command
@@ -496,7 +496,7 @@ void ModTransmitterThread::run()
                     break;
                 }
 
-                emit consolePutData(":: AGC for 'SWEEP' configured, state AGC_OK\n", 1);
+                emit consolePutData(":: AGC for 'SWEEP' configured, state AGC_OK\n", 2);
 
                 n_commands = 0;
                 setState(SPECIAL_USR_REQ_ADC_START_FOR_SWEEP);
@@ -506,7 +506,7 @@ void ModTransmitterThread::run()
             case SPECIAL_USR_REQ_ADC_START_FOR_SWEEP:
             {
                 // Send 'ADC_START for SWEEP' to STM32
-                emit consolePutData("Send 'ADC_START for 'sweep'\n", 1);
+                emit consolePutData("Send 'ADC_START for 'sweep'\n", 2);
                 sweep_record_to_file = true;
                 common_special_command = true;
 
@@ -522,7 +522,7 @@ void ModTransmitterThread::run()
             {
                 if(++n_commands > 3)
                 {
-                    emit consolePutData("User requested 'Sweep' records has finished\n", 1);
+                    emit consolePutData("User requested 'Sweep' records has finished\n", 2);
                     setState(AUTOCFG_COMPLETE_SUCCESSFULLY);
                     calculatePredistortionTablesStop();
                     break;
@@ -536,7 +536,7 @@ void ModTransmitterThread::run()
                 message.own_address = CMessageBox::MASTER_ADDR;
 
                 uint16_t tx_len = CMessageBox::message_header_to_array(&message, message_box_buffer_mod);
-                emit consolePutData(QString(":: Predistortion auto cfg :: Send 'SEND_SWEEP_SIGNAL' command to MOD\n"), 1);
+                emit consolePutData(QString(":: Predistortion auto cfg :: Send 'SEND_SWEEP_SIGNAL' command to MOD\n"), 2);
                 postDataToStm32H7(message_box_buffer_mod, tx_len);
 
                 // Start timeout before next command
@@ -548,7 +548,7 @@ void ModTransmitterThread::run()
             //====================================================================================================================
 
             default:
-                emit consolePutData(":: Predistortion auto cfg :: error wrong state\n", 1);
+                emit consolePutData(":: Predistortion auto cfg :: error wrong state\n", 2);
                 break;
         }
 
@@ -568,7 +568,7 @@ void ModTransmitterThread::ModStartTransmitPhaseGain()
        && State != ERROR_FREQ_ESTIMATE_TIMEOUT
        && State != ERROR_AGC_SIN35KHZ)
     {
-        emit consolePutData("Error: unable to start transmitting phase & gain tables, state != IDLE (already transmitting?)\n", 1);
+        emit consolePutData("Error: unable to start transmitting phase & gain tables, state != IDLE (already transmitting?)\n", 2);
         m_mutex_mod.unlock();
         return;
     }
@@ -590,14 +590,14 @@ void ModTransmitterThread::transmitPredistortionTables()
 
             if(++n_attempts_high_level > n_MaxAttemptsHighLevel)
             {
-                emit consolePutData(":: Predistortion auto cfg :: failed to transmit predistorion tables to MOD\n", 1);
+                emit consolePutData(":: Predistortion auto cfg :: failed to transmit predistorion tables to MOD\n", 2);
                 setState(ERROR_PREDISTORTION_TABLES_TX_FAILED);
                 calculatePredistortionTablesStop();
                 return;
             }
 
-            emit consolePutData(QString(":: Predistortion auto cfg :: error attempts exceeded %1, start again from first command\n").arg(n_MaxAttempts), 1);
-            emit consolePutData(":: Predistortion auto cfg :: Starting transmit 'phase table' \n", 1);
+            emit consolePutData(QString(":: Predistortion auto cfg :: error attempts exceeded %1, start again from first command\n").arg(n_MaxAttempts), 2);
+            emit consolePutData(":: Predistortion auto cfg :: Starting transmit 'phase table' \n", 2);
             StatePredistTx = TX_PHASE_TABLE;
             n_channel = 0;
         }
@@ -609,8 +609,8 @@ void ModTransmitterThread::transmitPredistortionTables()
         switch(StatePredistTx)
         {
             case TX_START:
-                emit consolePutData(QString(":: Predistortion auto cfg :: Starting transmit predistortion tables, attempt %1\n").arg(n_attempts_high_level), 1);
-                emit consolePutData(":: Predistortion auto cfg :: Starting transmit 'phase table' \n", 1);
+                emit consolePutData(QString(":: Predistortion auto cfg :: Starting transmit predistortion tables, attempt %1\n").arg(n_attempts_high_level), 2);
+                emit consolePutData(":: Predistortion auto cfg :: Starting transmit 'phase table' \n", 2);
 
                 StatePredistTx = TX_PHASE_TABLE;
                 n_channel = 0;
@@ -619,7 +619,7 @@ void ModTransmitterThread::transmitPredistortionTables()
             case TX_PHASE_TABLE:
                 if(++n_channel == n_elements/64)
                 {
-                    emit consolePutData(":: Predistortion auto cfg :: Finished transmitting 'phase table', transmit 'gain table' next\n", 1);
+                    emit consolePutData(":: Predistortion auto cfg :: Finished transmitting 'phase table', transmit 'gain table' next\n", 2);
                     StatePredistTx = TX_GAIN_TABLE;
                     n_channel = 0;
                 }
@@ -628,13 +628,13 @@ void ModTransmitterThread::transmitPredistortionTables()
             case TX_GAIN_TABLE:
                 if(++n_channel == n_elements/64)
                 {
-                    emit consolePutData(":: Predistortion auto cfg :: Finished transmitting 'gain table', transmit 'shift + crc' next\n", 1);
+                    emit consolePutData(":: Predistortion auto cfg :: Finished transmitting 'gain table', transmit 'shift + crc' next\n", 2);
                     StatePredistTx = TX_SHIFT_CRC;
                 }
                 break;
 
             case TX_SHIFT_CRC:
-                emit consolePutData(":: Predistortion auto cfg :: Mod predistortion tables and 'shift + crc' transmission completed\n", 1);
+                emit consolePutData(":: Predistortion auto cfg :: Mod predistortion tables and 'shift + crc' transmission completed\n", 2);
                 StatePredistTx = TX_FINISHED;
 
                 // Start AGC for final configuration
@@ -645,7 +645,7 @@ void ModTransmitterThread::transmitPredistortionTables()
                 return;
 
              default:
-                emit consolePutData(":: Predistortion auto cfg :: error wrong state\n", 1);
+                emit consolePutData(":: Predistortion auto cfg :: error wrong state\n", 2);
                 break;
         }
     }
@@ -696,7 +696,7 @@ void ModTransmitterThread::transmitPredistortionTables()
             break;
 
         default:
-            emit consolePutData(":: Predistortion auto cfg :: error wrong state\n", 1);
+            emit consolePutData(":: Predistortion auto cfg :: error wrong state\n", 2);
             break;
     }
 
@@ -733,14 +733,14 @@ void ModTransmitterThread::timeoutAnswer()
     {
         if(!hs_data_received)
         {
-            emit consolePutData(":: Predistortion auto cfg :: retry previous transfer\n", 1);
+            emit consolePutData(":: Predistortion auto cfg :: retry previous transfer\n", 2);
             retry = true;
         }
         else
         {
             // Some HS data (probably broken) received
             // Assume it is an answer from MOD
-            emit consolePutData(":: Predistortion auto cfg :: some HS data was received, assume it was a good answer from MOD\n", 1);
+            emit consolePutData(":: Predistortion auto cfg :: some HS data was received, assume it was a good answer from MOD\n", 2);
             hs_data_received = false;
         }
     }
@@ -758,7 +758,7 @@ void ModTransmitterThread::calculatePredistortionTablesStart()
 
     emit consolePutData("==================================================\n"
                         "Starting predistortion auto configuration sequence\n"
-                        "==================================================\n", 1);
+                        "==================================================\n", 2);
     m_mutex_mod.lock();
     setState(AUTOCFG_START);
     StatePredistTx = TX_IDLE;
@@ -770,14 +770,14 @@ void ModTransmitterThread::separateAgcStart()
 {
     if(m_AutoConfigurationMode)
     {
-        emit consolePutData("Error: unable to start user requested AGC configuration, because autoconfiguration is in progress\n", 1);
+        emit consolePutData("Error: unable to start user requested AGC configuration, because autoconfiguration is in progress\n", 2);
         return;
     }
 
     m_AutoConfigurationMode = true;
     emit consolePutData("==================================================\n"
                         "Starting AGC configuration sequence\n"
-                        "==================================================\n", 1);
+                        "==================================================\n", 2);
     m_mutex_mod.lock();
     setState(AGCCFG_START);
     StatePredistTx = TX_IDLE;
@@ -789,14 +789,14 @@ void ModTransmitterThread::separateRecordSweepStart()
 {
     if(m_AutoConfigurationMode)
     {
-        emit consolePutData("Error: unable to start user requested 'sweep' signal record sequence, because autoconfiguration is in progress\n", 1);
+        emit consolePutData("Error: unable to start user requested 'sweep' signal record sequence, because autoconfiguration is in progress\n", 2);
         return;
     }
 
     m_AutoConfigurationMode = true;
     emit consolePutData("==================================================\n"
                         "Starting 'sweep' signal record sequence\n"
-                        "==================================================\n", 1);
+                        "==================================================\n", 2);
     m_mutex_mod.lock();
     setState(SPECIAL_USR_REQ_START);
     StatePredistTx = TX_IDLE;
@@ -819,11 +819,11 @@ void ModTransmitterThread::calculatePredistortionTablesStop()
 
         if(!n_retrys)
         {
-            emit consolePutData(":: Predistortion auto cfg :: error 'AGC stop' failed\n", 1);
+            emit consolePutData(":: Predistortion auto cfg :: error 'AGC stop' failed\n", 2);
             break;
         }
 
-        emit consolePutData(":: Predistortion auto cfg :: send 'AGC stop'\n", 1);
+        emit consolePutData(":: Predistortion auto cfg :: send 'AGC stop'\n", 2);
         emit sendCommandToSTM32(USB_CMD_AGC_STOP, nullptr, 0);
         QThread::msleep(1000);
         emit sendCommandToSTM32(USB_CMD_GET_STATUS, nullptr, 0);
@@ -833,7 +833,7 @@ void ModTransmitterThread::calculatePredistortionTablesStop()
     }
 
     StatePredistTx = TX_IDLE;
-    emit consolePutData(":: Predistortion auto cfg :: enable QAM decoder ring buffer\n", 1);
+    emit consolePutData(":: Predistortion auto cfg :: enable QAM decoder ring buffer\n", 2);
 
     // Unlock ring buffer for QAM decoder (enable QAM decoder)
     m_ring->SetActive(true);

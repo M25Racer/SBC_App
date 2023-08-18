@@ -119,6 +119,8 @@ private slots:
     void usbInitTimeoutStart(int timeout_ms);
     //void modAnswerTimeoutStart(int timeout_ms);
 
+    void on_checkBox_ShowAdvLogs_stateChanged(int arg1);
+
 private:
     void initActionsConnections();
 

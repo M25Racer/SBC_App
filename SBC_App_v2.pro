@@ -5,7 +5,7 @@ TARGET = SBC_App_v2
 TEMPLATE = app
 
 # Version, max 255.255.255
-VERSION = 1.1.0
+VERSION = 1.1.1
 
 DEFINES += VERSION_STRING=\\\"$${VERSION}\\\"
 

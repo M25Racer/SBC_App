@@ -45,14 +45,14 @@ bool RingBuffer::Append(const uint8_t *p_data_in, const uint32_t data_length)
     // Check data pointer
     if(p_data_in == nullptr)
     {
-        emit consolePutData("Error ring buffer append: data pointer = null", 1);
+        emit consolePutData("Error ring buffer append: data pointer = null", 2);
         return false;
     }
 
     // Check length
     if(data_length > USB_MAX_DATA_SIZE)
     {
-        emit consolePutData(QString("Error ring buffer append: length %1 is too big").arg(data_length), 1);
+        emit consolePutData(QString("Error ring buffer append: length %1 is too big").arg(data_length), 2);
         return false;
     }
 
@@ -75,7 +75,7 @@ bool RingBuffer::Append(const uint8_t *p_data_in, const uint32_t data_length)
     // Check if we catch a tail?
     if(h == t)
     {
-        emit consolePutData(QString("Error ring buffer append: head = tail"), 1);
+        emit consolePutData(QString("Error ring buffer append: head = tail"), 2);
         m_mutex_ring.unlock();
         return false;
     }
@@ -100,7 +100,7 @@ bool RingBuffer::Get(uint8_t *p_data_out, uint32_t *p_length)
     // Check pointers
     if(p_data_out == nullptr || p_length == nullptr)
     {
-        emit consolePutData("Error ring buffer get: data pointer or length pointer = null", 1);
+        emit consolePutData("Error ring buffer get: data pointer or length pointer = null", 2);
         return false;
     }
 
@@ -111,7 +111,7 @@ bool RingBuffer::Get(uint8_t *p_data_out, uint32_t *p_length)
     // Check if there is no new elements in ring buffer
     if(t == h)
     {
-        //emit consolePutData(QString("Error ring buffer get: no elements in ring buffer"), 1);
+        //emit consolePutData(QString("Error ring buffer get: no elements in ring buffer"), 2);
         m_mutex_ring.unlock();
         return false;
     }
@@ -139,7 +139,7 @@ bool RingBuffer::GetDouble(double *p_data_out, double *p_length)
     // Check pointers
     if(p_data_out == nullptr || p_length == nullptr)
     {
-        emit consolePutData("Error ring buffer get: data pointer or length pointer = null", 1);
+        emit consolePutData("Error ring buffer get: data pointer or length pointer = null", 2);
         return false;
     }
 
@@ -150,7 +150,7 @@ bool RingBuffer::GetDouble(double *p_data_out, double *p_length)
     // Check if there is no new elements in ring buffer
     if(t == h)
     {
-        //emit consolePutData(QString("Error ring buffer get: no elements in ring buffer"), 1);
+        //emit consolePutData(QString("Error ring buffer get: no elements in ring buffer"), 2);
         m_mutex_ring.unlock();
         return false;
     }

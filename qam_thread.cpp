@@ -115,7 +115,7 @@ void QamThread::run()
 
         if(!res)
         {
-            emit consolePutData("Error ring buffer get() returned false\n", 1);
+            emit consolePutData("Error ring buffer get() returned false\n", 2);
             continue;
         }
 
@@ -128,7 +128,7 @@ void QamThread::run()
             {
                 case HS_210_MODE:
                     // QAM64
-                    emit consolePutData(QString("Changing speed to HS_210_MODE\n"), 1);
+                    emit consolePutData(QString("Changing speed to HS_210_MODE\n"), 2);
                     qam64_init(&qam_str);
                     TxPacketRsCodesSize = 8;
                     TxPacketDataSize = 225 - TxPacketRsCodesSize;
@@ -137,7 +137,7 @@ void QamThread::run()
 
                 case HS_280_MODE:
                     // QAM256 Double Frame
-                    emit consolePutData(QString("Changing speed to HS_280_MODE\n"), 1);
+                    emit consolePutData(QString("Changing speed to HS_280_MODE\n"), 2);
                     qam256_double_frame_init(&qam_str);
                     TxPacketRsCodesSize = 8*2;
                     TxPacketDataSize = 469 - TxPacketRsCodesSize;
@@ -153,7 +153,7 @@ void QamThread::run()
 
 void QamThread::SetFirstPassFlag()
 {
-    emit consolePutData("QAM decoder reset (calcluate and save new frequency next time)\n", 1);
+    emit consolePutData("QAM decoder reset (calcluate and save new frequency next time)\n", 2);
     mutex.lock();
     m_QamDecoderFirstPassFlag = true;
     mode = 1;
@@ -170,7 +170,7 @@ void QamThread::srpModeSet(uint8_t mode)
         case HS_280_MODE:
             if(m_SrpMode != m)
             {
-                emit consolePutData(QString("Received request to change speed, it will be changed later\n"), 1);
+                emit consolePutData(QString("Received request to change speed, it will be changed later\n"), 2);
                 m_SrpMode = m;
                 m_ChangeSpeed = true;
             }
@@ -208,10 +208,10 @@ void QamThread::QAM_Decoder()
         switch(HS_EWL_DEMOD_QAM_error_status)
         {
             case 1: // input data LEN <= 0
-                emit consolePutData("HS_EWL_DEMOD_QAM_error_status: input data LEN <= 0\n", 1);
+                emit consolePutData("HS_EWL_DEMOD_QAM_error_status: input data LEN <= 0\n", 2);
                 break;
             case 2: // incorrect input sample freq for lagrange_resamp func
-                emit consolePutData("HS_EWL_DEMOD_QAM_error_status: incorrect input sample freq for lagrange_resamp func\n", 1);
+                emit consolePutData("HS_EWL_DEMOD_QAM_error_status: incorrect input sample freq for lagrange_resamp func\n", 2);
                 break;
             default:
             case 0: // OK
@@ -321,7 +321,7 @@ void QamThread::QAM_Decoder()
 
                 if(DATA_DECODED_SIZE < tail->frame_id * data_size_not_last_frame + data_size_not_last_frame)
                 {
-                    emit consolePutData(QString("Error wrong frame number %1 or too too long continuous data receive\n").arg(tail->frame_id), 1);
+                    emit consolePutData(QString("Error wrong frame number %1 or too too long continuous data receive\n").arg(tail->frame_id), 2);
                 }
                 else
                 {
@@ -338,7 +338,7 @@ void QamThread::QAM_Decoder()
 
                 if(DATA_DECODED_SIZE < tail->frame_id * data_size_not_last_frame + data_size_last_frame)
                 {
-                    emit consolePutData(QString("Error wrong frame number %1 or too too long continuous data receive\n").arg(tail->frame_id), 1);
+                    emit consolePutData(QString("Error wrong frame number %1 or too too long continuous data receive\n").arg(tail->frame_id), 2);
                 }
                 else
                 {
@@ -346,12 +346,12 @@ void QamThread::QAM_Decoder()
                     if(tail_last->len < MOD_SRP_MIN_VALID_LENGTH_NEW)
                     {
                         // Error length is too short
-                        emit consolePutData(QString("HS data parsing error, packet data length is too short %1\n").arg(tail_last->len), 1);
+                        emit consolePutData(QString("HS data parsing error, packet data length is too short %1\n").arg(tail_last->len), 2);
                     }
                     else if(tail_last->len > (tail->frame_id * data_size_not_last_frame + TxPacketDataSize - sizeof(frame_tail_last_t)))
                     {
                         // Error length is too long
-                        emit consolePutData(QString("HS data parsing error, packet data length is too long %1\n").arg(tail_last->len), 1);
+                        emit consolePutData(QString("HS data parsing error, packet data length is too long %1\n").arg(tail_last->len), 2);
                     }
                     else
                     {
@@ -366,7 +366,7 @@ void QamThread::QAM_Decoder()
                         if(++n_data_buf == N_DATA_DECODED_BUFFERS)
                             n_data_buf = 0;
 
-                        emit consolePutData(QString("Last frame #%1, data length %2\n").arg(tail_last->tail.frame_id).arg(tail_last->len), 1);
+                        emit consolePutData(QString("Last frame #%1, data length %2\n").arg(tail_last->tail.frame_id).arg(tail_last->len), 2);
                     }
                 }
             }
@@ -384,7 +384,7 @@ void QamThread::QAM_Decoder()
         if(crc8 != tail->crc8)
         {
             crc_statistics_bad_crc_received();
-            emit consolePutData(QString("CRC error, rs decoder failed to correct data\n"), 1);
+            emit consolePutData(QString("CRC error, rs decoder failed to correct data\n"), 2);
         }
     }
     
@@ -400,16 +400,16 @@ void QamThread::QAM_Decoder()
         {
             case 0:
                 /* no non-zero syndromes => no errors: output received codeword */
-                emit consolePutData(QString("RS decoder finished in %1 ms: no errors\n").arg(rs_elapsed), 1);
+                emit consolePutData(QString("RS decoder finished in %1 ms: no errors\n").arg(rs_elapsed), 2);
                 break;
 
             case 1:
-                emit consolePutData(QString("RS decoder finished in %1 ms: errors corrected\n").arg(rs_elapsed), 1);
+                emit consolePutData(QString("RS decoder finished in %1 ms: errors corrected\n").arg(rs_elapsed), 2);
                 break;
 
             case 2:
             case 3:
-                emit consolePutData(QString("RS decoder finished in %1 ms: unable to correct\n").arg(rs_elapsed), 1);
+                emit consolePutData(QString("RS decoder finished in %1 ms: unable to correct\n").arg(rs_elapsed), 2);
                 break;
 
             default:
@@ -432,19 +432,19 @@ void QamThread::QAM_Decoder()
             break;
         case WARNING_1:
             // warning_status = 1 not enough sample in the end array
-            emit consolePutData("warning_status = 1: not enough sample in the end array\n", 1);
+            emit consolePutData("warning_status = 1: not enough sample in the end array\n", 2);
             break;
         case WARNING_2:
             // warning_status = 2 all or more than 0.2 array equal 0
-            emit consolePutData("warning_status = 2: all or more than 0.2 array equal 0\n", 1);
+            emit consolePutData("warning_status = 2: all or more than 0.2 array equal 0\n", 2);
             break;
         case WARNING_3:
             // warning_status = 3 start array sample equal 0 less than 0
-            emit consolePutData("warning_status = 3: start array sample equal 0 less than 0\n", 1);
+            emit consolePutData("warning_status = 3: start array sample equal 0 less than 0\n", 2);
             break;
         case WARNING_4:
             // warning_status = 4 f_est == 0
-            emit consolePutData("warning_status = 4: error probably wrong f_est\n", 1);
+            emit consolePutData("warning_status = 4: error probably wrong f_est\n", 2);
             break;
     };
 

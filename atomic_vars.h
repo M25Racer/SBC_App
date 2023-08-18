@@ -46,4 +46,6 @@ extern QAtomicInteger<uint16_t> m_ReedSolomonCorrections;       // Infinite coun
 
 extern QAtomicInteger<uint8_t> m_SrpMode;   // current speed mode
 
+extern QAtomicInteger<bool> m_ShowAdvancedLogs;
+
 #endif // ATOMIC_VARS_H

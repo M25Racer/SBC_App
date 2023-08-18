@@ -128,8 +128,8 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(&m_mod_tx_thread, &ModTransmitterThread::sendCommandToSTM32, this, &MainWindow::sendCommandToSTM32, Qt::ConnectionType::QueuedConnection);
     connect(&m_mod_tx_thread, &ModTransmitterThread::qamDecoderReset, this, &MainWindow::qamDecoderReset, Qt::ConnectionType::QueuedConnection);
 
-    m_console->putData(QString("SBC Application v.") + VERSION_STRING + "\n", 1);
-    m_console->putData("Opening serial port...\n", 1);
+    m_console->putData(QString("SBC Application v.") + VERSION_STRING + "\n", 2);
+    m_console->putData("Opening serial port...\n", 2);
 
     // Clear serial port tx & rx buffer
     TtyUserRxBuffer.clear();
@@ -161,7 +161,7 @@ MainWindow::MainWindow(QWidget *parent) :
     version = libusb_get_version();
     m_console->putData(QString("libusb version: %1.%2.%3.%4\n")
                        .arg(version->major).arg(version->minor)
-                       .arg(version->micro).arg(version->nano), 1);
+                       .arg(version->micro).arg(version->nano), 2);
 
     // Start timer for continuous usb initialization attempts
     timerUsbInit->start(m_usb_thread.timeoutUsbInit_ms);
@@ -186,13 +186,13 @@ MainWindow::MainWindow(QWidget *parent) :
     // Init & start GPIO monitoring
     if(m_gpio_shutdown->Init() && m_gpio_output->Init())
     {
-        m_console->putData("GPIO initialization successfull\n", 1);
+        m_console->putData("GPIO initialization successfull\n", 2);
 
         // Start input (m_gpio_shutdown) monitoring
         timerGpioTracking->start(timeoutGpioTrackingPeriod_ms);
     }
     else
-        m_console->putData("Error: GPIO initialization failed\n", 1);
+        m_console->putData("Error: GPIO initialization failed\n", 2);
 
     // Set gpio output (m_gpio_output) to 1
     m_gpio_output->writeValue(1);
@@ -280,7 +280,7 @@ bool MainWindow::openSerialPort()
         m_console->setEnabled(true);
         m_console->putData(tr("Connected to %1 : %2, %3, %4, %5, %6\n")
                            .arg(p.name).arg(p.stringBaudRate).arg(p.stringDataBits)
-                           .arg(p.stringParity).arg(p.stringStopBits).arg(p.stringFlowControl), 1);
+                           .arg(p.stringParity).arg(p.stringStopBits).arg(p.stringFlowControl), 2);
         return true;
     }
     else
@@ -289,7 +289,7 @@ bool MainWindow::openSerialPort()
         str_b.append(tr("Error "));
         str_b.append(m_serial->errorString());
         str_b.append("\n");
-        m_console->putData(str_b, 1);
+        m_console->putData(str_b, 2);
         return false;
     }
 }
@@ -300,7 +300,7 @@ void MainWindow::closeSerialPort()
         m_serial->close();
     m_console->setEnabled(false);
     //showStatusMessage(tr("Disconnected"));
-    m_console->putData("Serial port disconnected\n", 1);
+    m_console->putData("Serial port disconnected\n", 2);
 }
 
 void MainWindow::timeoutUsbInitCallback()
@@ -314,7 +314,7 @@ void MainWindow::timeoutGpioCallback()
     {
         // Shutdown pin is set
         ++ShutdownTime;
-        m_console->putData(QString("Shutdown pin is set for %1 sec\n").arg(ShutdownTime), 1);
+        m_console->putData(QString("Shutdown pin is set for %1 sec\n").arg(ShutdownTime), 2);
     }
     else
     {
@@ -324,7 +324,7 @@ void MainWindow::timeoutGpioCallback()
 
     if(ShutdownTime > 3)
     {
-        m_console->putData(QString("Shutdown in progress...\n"), 1);
+        m_console->putData(QString("Shutdown in progress...\n"), 2);
 
         timerUsbInit->stop();
         timerSpReconnect->stop();
@@ -386,7 +386,7 @@ void MainWindow::usbInitTimeoutStart(int timeout_ms)
 
 void MainWindow::timeoutSerialPortReconnect()
 {
-    m_console->putData("SP Trying to reconnect to a serial port...\n", 1);
+    m_console->putData("SP Trying to reconnect to a serial port...\n", 2);
     if(!openSerialPort())
     {
         // Start timer again
@@ -424,7 +424,7 @@ void MainWindow::readDataSerialPort()
             // Protection from infinite loop
             if(TtyUserRxBuffer_len > 65536) // 64 KBytes of data in single packet
             {
-                m_console->putData("Error: serial port buffer overflow detected, drop data\n", 1);
+                m_console->putData("Error: serial port buffer overflow detected, drop data\n", 2);
                 serialPortRxCleanup();
                 return;
             }
@@ -469,7 +469,7 @@ void MainWindow::parseDataSerialPort()
         // len < minimum packet size
         if(TtyUserRxBuffer_len < m_message_box->TX_HEADER_LENGTH + m_message_box->DATA_ADDRESS_LENGTH + m_message_box->CRC_LENGTH)
         {
-            m_console->putData("SP Broken packet from PC to SRP: length is too short\n", 1);
+            m_console->putData("SP Broken packet from PC to SRP: length is too short\n", 2);
             serialPortRxCleanup();
             return;
         }
@@ -480,7 +480,7 @@ void MainWindow::parseDataSerialPort()
         const uint8_t *p_data = (const uint8_t*)TtyUserRxBuffer.data();
         if(calc_crc16(p_data + 1, TtyUserRxBuffer_len-1-m_message_box->CRC_LENGTH) != crc16)
         {
-            m_console->putData("SP Broken packet from PC to SRP: crc error\n", 1);
+            m_console->putData("SP Broken packet from PC to SRP: crc error\n", 2);
             serialPortRxCleanup();
             return;
         }
@@ -526,7 +526,7 @@ void MainWindow::parseDataSerialPort()
     if(TtyUserRxBuffer_len > TtyUserRxBuffer_MaxSize)
     {
         TtyUserRxBuffer_len = TtyUserRxBuffer_MaxSize;
-        m_console->putData("SP Warning: received length is too big\n", 1);
+        m_console->putData("SP Warning: received length is too big\n", 2);
     }
 
     // Transmit to STM32H7
@@ -550,7 +550,7 @@ void MainWindow::handleError(QSerialPort::SerialPortError error)
             break;
 
         default:
-            m_console->putData("Serial port error: " + m_serial->errorString() + "\n", 1);
+            m_console->putData("Serial port error: " + m_serial->errorString() + "\n", 2);
             closeSerialPort();
 
             // Start timer to periodically try to reconnect
@@ -606,7 +606,7 @@ void MainWindow::postTxDataSTM(const uint8_t *p_data, const int length)
 
     if(p_data == nullptr)
     {
-        m_console->putData("Error postTxDataToSTM32H7 reported p_data = NULL\n", 1);
+        m_console->putData("Error postTxDataToSTM32H7 reported p_data = NULL\n", 2);
         return;
     }
 
@@ -614,13 +614,13 @@ void MainWindow::postTxDataSTM(const uint8_t *p_data, const int length)
 
     if(len + sizeof(header) > int(sizeof(m_usb_thread.UserTxBuffer)))
     {
-        m_console->putData("Error postTxDataToSTM32H7 reported length is too long\n", 1);
+        m_console->putData("Error postTxDataToSTM32H7 reported length is too long\n", 2);
         len = sizeof(m_usb_thread.UserTxBuffer);
     }
 
     if(len > int(sizeof(USB_Protocol::data)))
     {
-        m_console->putData("Error postTxDataToSTM32H7 reported length is too long\n", 1);
+        m_console->putData("Error postTxDataToSTM32H7 reported length is too long\n", 2);
         len = sizeof(USB_Protocol::data);
     }
 
@@ -670,7 +670,7 @@ void MainWindow::sendCommandToSTM32(quint8 command, const quint8 *p_data, quint3
 {
     if(data_size && p_data == nullptr)
     {
-        m_console->putData("Error sendCommandToSTM32sendCommandToSTM32 wrong parameters\n", 1);
+        m_console->putData("Error sendCommandToSTM32sendCommandToSTM32 wrong parameters\n", 2);
         return;
     }
 
@@ -689,7 +689,7 @@ void MainWindow::usbHsDataReceived()
 void MainWindow::sendHsCommandAdcStart()
 {
     uint32_t adc_data_length = 440000;
-    m_console->putData(QString("Send HS command USB_CMD_ADC_START, adc_data_length %1\n").arg(adc_data_length), 1);
+    m_console->putData(QString("Send HS command USB_CMD_ADC_START, adc_data_length %1\n").arg(adc_data_length), 2);
     m_usb_thread.sendHsCommand(USB_CMD_ADC_START, 4, (uint8_t*)&adc_data_length);
 }
 
@@ -699,7 +699,7 @@ void MainWindow::sendHsCommandAdcStart2()
     common_special_command = true;
 
     uint32_t adc_data_length = 31400;
-    m_console->putData(QString("Send HS command USB_CMD_ADC_START, adc_data_length %1\n").arg(adc_data_length), 1);
+    m_console->putData(QString("Send HS command USB_CMD_ADC_START, adc_data_length %1\n").arg(adc_data_length), 2);
     m_usb_thread.sendHsCommand(USB_CMD_ADC_START, 4, (uint8_t*)&adc_data_length);
 }
 
@@ -709,13 +709,13 @@ void MainWindow::sendHsCommandAdcStart3()
     common_special_command = true;
 
     uint32_t adc_data_length = 440000;
-    m_console->putData(QString("Send HS command USB_CMD_ADC_START, adc_data_length %1\n").arg(adc_data_length), 1);
+    m_console->putData(QString("Send HS command USB_CMD_ADC_START, adc_data_length %1\n").arg(adc_data_length), 2);
     m_usb_thread.sendHsCommand(USB_CMD_ADC_START, 4, (uint8_t*)&adc_data_length);
 }
 
 void MainWindow::sendHsCommandAgcStart()
 {
-    m_console->putData(QString("Send HS command USB_CMD_AGC_START\n"), 1);
+    m_console->putData(QString("Send HS command USB_CMD_AGC_START\n"), 2);
     sendCommandToSTM32(USB_CMD_AGC_START, nullptr, 0);
 }
 
@@ -755,4 +755,17 @@ bool MainWindow::frame_builded_cb(const void *param, const uint8_t *buffer, uint
     self->transmitDataSerialPort(buffer, size);
 
     return true;
+}
+
+void MainWindow::on_checkBox_ShowAdvLogs_stateChanged(int state)
+{
+    //todo
+    if(state == Qt::Unchecked)
+    {
+        m_ShowAdvancedLogs = false;
+    }
+    else if(state == Qt::Checked)
+    {
+        m_ShowAdvancedLogs = true;
+    }
 }

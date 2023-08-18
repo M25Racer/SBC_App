@@ -23,3 +23,5 @@ QAtomicInteger<uint8_t> m_rxHighSpeedStatistics = 0;
 QAtomicInteger<uint16_t> m_ReedSolomonCorrections = 0;
 
 QAtomicInteger<uint8_t> m_SrpMode = HS_280_MODE; // current speed mode
+
+QAtomicInteger<bool> m_ShowAdvancedLogs = false;
