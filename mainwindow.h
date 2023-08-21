@@ -99,6 +99,7 @@ private slots:
     void transmitDataSerialPort(const uint8_t *p_data, int length);
     void transmitWaitToSerialPort();
     void postTxDataSTM(const uint8_t *p_data, const int length);
+    void on_actionShow_advanced_logs_in_console_triggered(bool checked);
 
     // Commands from Indigo Suite
     void commandCalculatePredistortionTablesStart();
@@ -117,9 +118,6 @@ private slots:
     void qamDecoderReset();
 
     void usbInitTimeoutStart(int timeout_ms);
-    //void modAnswerTimeoutStart(int timeout_ms);
-
-    void on_checkBox_ShowAdvLogs_stateChanged(int arg1);
 
 private:
     void initActionsConnections();

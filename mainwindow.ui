@@ -54,25 +54,6 @@
       </widget>
      </widget>
     </item>
-    <item>
-     <widget class="QCheckBox" name="checkBox_ShowAdvLogs">
-      <property name="tabletTracking">
-       <bool>false</bool>
-      </property>
-      <property name="text">
-       <string>Show advanced logs</string>
-      </property>
-      <property name="checkable">
-       <bool>true</bool>
-      </property>
-      <property name="checked">
-       <bool>false</bool>
-      </property>
-      <property name="tristate">
-       <bool>false</bool>
-      </property>
-     </widget>
-    </item>
    </layout>
   </widget>
   <widget class="QMenuBar" name="menuBar">
@@ -91,6 +72,7 @@
     <addaction name="actionLogsFlush"/>
     <addaction name="actionLogsOpenFile"/>
     <addaction name="actionOpen_logs_folder"/>
+    <addaction name="actionShow_advanced_logs_in_console"/>
    </widget>
    <widget class="QMenu" name="menuTest">
     <property name="title">
@@ -103,7 +85,7 @@
    </widget>
    <widget class="QMenu" name="menuRecord">
     <property name="title">
-     <string>Record...</string>
+     <string>Record</string>
     </property>
     <addaction name="actionRecord_Sweep_to_file"/>
    </widget>
@@ -184,6 +166,17 @@
   <action name="actionRecord_Sweep_to_file">
    <property name="text">
     <string>Record 'Sweep' to file</string>
+   </property>
+   <property name="toolTip">
+    <string>Configure AGC for 'sweep' and record 'sweep' to file</string>
+   </property>
+  </action>
+  <action name="actionShow_advanced_logs_in_console">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show advanced logs in console</string>
    </property>
   </action>
  </widget>

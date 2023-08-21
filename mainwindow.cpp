@@ -757,15 +757,7 @@ bool MainWindow::frame_builded_cb(const void *param, const uint8_t *buffer, uint
     return true;
 }
 
-void MainWindow::on_checkBox_ShowAdvLogs_stateChanged(int state)
+void MainWindow::on_actionShow_advanced_logs_in_console_triggered(bool checked)
 {
-    //todo
-    if(state == Qt::Unchecked)
-    {
-        m_ShowAdvancedLogs = false;
-    }
-    else if(state == Qt::Checked)
-    {
-        m_ShowAdvancedLogs = true;
-    }
+    m_ShowAdvancedLogs = checked;
 }
