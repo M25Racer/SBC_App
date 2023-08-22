@@ -119,6 +119,8 @@ private slots:
 
     void usbInitTimeoutStart(int timeout_ms);
 
+    void on_actionReset_statistics_in_status_bar_triggered();
+
 private:
     void initActionsConnections();
 

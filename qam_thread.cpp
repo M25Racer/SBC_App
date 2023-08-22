@@ -477,5 +477,7 @@ void QamThread::QAM_Decoder()
         elapsed_all = 0;
     }
 
+    ++m_QamFramesCounter;
+
 //    HS_EWL_DEMOD_QAM_terminate();
 }

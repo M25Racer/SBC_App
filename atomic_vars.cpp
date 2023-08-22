@@ -20,7 +20,10 @@ QAtomicInteger<uint8_t> FreqEstState = TFreqEstState::FREQ_EST_IDLE;
 QAtomicInteger<uint8_t> SweepState = TSweepState::SWEEP_IDLE;
 
 QAtomicInteger<uint8_t> m_rxHighSpeedStatistics = 0;
-QAtomicInteger<uint16_t> m_ReedSolomonCorrections = 0;
+QAtomicInteger<uint16_t> m_ReedSolomonCorrectionsCounter = 0;
+QAtomicInteger<uint16_t> m_ReedSolomonFailsCounter = 0;
+QAtomicInteger<uint16_t> m_QamFramesCounter = 0;
+QAtomicInteger<uint16_t> m_CrcErrorsCounter = 0;
 
 QAtomicInteger<uint8_t> m_SrpMode = HS_280_MODE; // current speed mode
 

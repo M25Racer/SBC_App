@@ -62,11 +62,8 @@
 #include "atomic_vars.h"
 #include "synchro_watcher.h"
 #include "indigo_base_protocol.h"
+#include "statistics.h"
 
-//#include "linux/reboot.h"
-//#include "sys/syscall.h"
-//#include "sys/reboot.h"
-//#include "unistd.h"
 #include <QtDBus/QDBusInterface>
 #include <QtDBus/QDBusPendingReply>
 
@@ -310,6 +307,7 @@ void MainWindow::timeoutUsbInitCallback()
 
 void MainWindow::timeoutGpioCallback()
 {
+    // 1 second passed
     if(m_gpio_shutdown->readValue())
     {
         // Shutdown pin is set
@@ -336,6 +334,32 @@ void MainWindow::timeoutGpioCallback()
 
         // In case shutdown failed, close application
         MainWindow::close();
+    }
+
+    // Show transfer statistics in status bar
+    static uint16_t prev_QamFramesCounter = 65535;
+    //++m_QamFramesCounter; //test delete todo
+    if(m_QamFramesCounter != prev_QamFramesCounter)
+    {
+        prev_QamFramesCounter = m_QamFramesCounter;
+
+        static uint8_t cnt = 5;
+        if(++cnt == 6)
+            cnt = 0;
+
+        QString squares = "";
+
+        switch(cnt)
+        {
+            case 0: squares.append("⬜ ⬜ ⬜"); break;
+            case 1: squares.append("⬛ ⬜ ⬜"); break;
+            case 2: squares.append("⬛ ⬛ ⬜"); break;
+            case 3: squares.append("⬛ ⬛ ⬛"); break;
+            case 4: squares.append("⬜ ⬛ ⬛"); break;
+            case 5: squares.append("⬜ ⬜ ⬛"); break;
+        }
+
+        showStatusMessage(squares + QString("  crc errors %1, rs corrections %2, rs fails %3").arg(m_CrcErrorsCounter).arg(m_ReedSolomonCorrectionsCounter).arg(m_ReedSolomonFailsCounter));
     }
 }
 
@@ -661,6 +685,7 @@ void MainWindow::logFileOpen()
 {
     m_console->fileOpen();
 }
+
 void MainWindow::openLogsFolder()
 {
     m_console->openLogsFolder();
@@ -760,4 +785,9 @@ bool MainWindow::frame_builded_cb(const void *param, const uint8_t *buffer, uint
 void MainWindow::on_actionShow_advanced_logs_in_console_triggered(bool checked)
 {
     m_ShowAdvancedLogs = checked;
+}
+
+void MainWindow::on_actionReset_statistics_in_status_bar_triggered()
+{
+    statisics_reset();
 }

@@ -89,13 +89,25 @@
     </property>
     <addaction name="actionRecord_Sweep_to_file"/>
    </widget>
+   <widget class="QMenu" name="menuStatistics">
+    <property name="title">
+     <string>Statistics</string>
+    </property>
+    <addaction name="actionReset_statistics_in_status_bar"/>
+   </widget>
    <addaction name="menuLogs"/>
    <addaction name="menuTest"/>
    <addaction name="menuRecord"/>
+   <addaction name="menuStatistics"/>
   </widget>
   <widget class="QStatusBar" name="statusBar">
    <property name="enabled">
     <bool>true</bool>
+   </property>
+   <property name="font">
+    <font>
+     <pointsize>10</pointsize>
+    </font>
    </property>
   </widget>
   <action name="actionLogsFlush">
@@ -177,6 +189,11 @@
    </property>
    <property name="text">
     <string>Show advanced logs in console</string>
+   </property>
+  </action>
+  <action name="actionReset_statistics_in_status_bar">
+   <property name="text">
+    <string>Reset statistics in status bar</string>
    </property>
   </action>
  </widget>

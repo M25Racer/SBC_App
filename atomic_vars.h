@@ -42,7 +42,10 @@ extern QAtomicInteger<uint8_t> FreqEstState;
 extern QAtomicInteger<uint8_t> SweepState;
 
 extern QAtomicInteger<uint8_t> m_rxHighSpeedStatistics;         // Increments each QAM frame with good crc, decrements each bad crc. Limited to [0..CRC_MAX_STATISTICS]
-extern QAtomicInteger<uint16_t> m_ReedSolomonCorrections;       // Infinite counter of rs corrections, rolls over, 0..65535
+extern QAtomicInteger<uint16_t> m_ReedSolomonCorrectionsCounter;// Infinite counter of RS success corrections, rolls over, 0..65535
+extern QAtomicInteger<uint16_t> m_ReedSolomonFailsCounter;      // Infinite counter of RS failed to correct QAM frames, rolls over, 0..65535
+extern QAtomicInteger<uint16_t> m_QamFramesCounter;             // Infinite counter of received QAM frames, rolls over, 0..65535
+extern QAtomicInteger<uint16_t> m_CrcErrorsCounter;             // Infinite counter of QAM frames CRC errors, rolls over, 0..65535
 
 extern QAtomicInteger<uint8_t> m_SrpMode;   // current speed mode
 

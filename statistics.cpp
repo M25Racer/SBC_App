@@ -15,7 +15,11 @@ static uint8_t rs_cnt = 0;
 void statisics_reset()
 {
     m_rxHighSpeedStatistics = 0;
-    m_ReedSolomonCorrections = 0;
+
+    m_ReedSolomonCorrectionsCounter = 0;
+    m_ReedSolomonFailsCounter = 0;
+    m_QamFramesCounter = 0;
+    m_CrcErrorsCounter = 0;
 
     for(uint8_t i = 0; i < RS_STATISTICS_QUEUE_SIZE; ++i)
         rs_statistics_queue[i] = 0;
@@ -37,6 +41,8 @@ void crc_statistics_good_crc_received()
 */
 void crc_statistics_bad_crc_received()
 {
+    ++m_CrcErrorsCounter;
+
     if (m_rxHighSpeedStatistics > 0)
     {
         --m_rxHighSpeedStatistics;
@@ -48,7 +54,7 @@ void crc_statistics_bad_crc_received()
 */
 void rs_statistics_add_correction()
 {
-    ++m_ReedSolomonCorrections;
+    ++m_ReedSolomonCorrectionsCounter;
 
     rs_statistics_queue[rs_cnt] = 1;
     if(++rs_cnt == RS_STATISTICS_QUEUE_SIZE)
@@ -60,6 +66,8 @@ void rs_statistics_add_correction()
 */
 void rs_statistics_add_no_correction()
 {
+    ++m_ReedSolomonFailsCounter;
+
     rs_statistics_queue[rs_cnt] = 0;
     if(++rs_cnt == RS_STATISTICS_QUEUE_SIZE)
         rs_cnt = 0;
