@@ -862,7 +862,14 @@ int HS_EWL_FREQ_ACQ(const double *data, double len, double Fs, double
 //                    i++;
 //                }
 //            }
-            *f_est = f_opt - sa;
+            if(qam_str->qam_sym_per_frame >= 512)
+            {
+                *f_est = f_opt - sa/2;
+            }
+            else
+            {
+                *f_est = f_opt - sa;
+            }
         }
         if (*f_est < 33000.0 || *f_est > 37000.0)
             return 4; // error freq estimate(f < 34000Hz || f>37000Hz)

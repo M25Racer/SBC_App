@@ -375,7 +375,7 @@ void QamThread::QAM_Decoder()
             if(m_QamDecoderFirstPassFlag)
             {
                 m_QamDecoderFirstPassFlag = false;
-                f0 = f_est_data;
+                //f0 = f_est_data;
                 mode = 0;
             }
             mutex.unlock();
