@@ -74,6 +74,7 @@ public:
     void fileFlush();
     void fileOpen();
     void openLogsFolder();
+    void setSweepRecordDirectory(QString dir);
 
 protected:
 
@@ -104,6 +105,8 @@ private:
     uint32_t n_frame = 0;                   // Number of frame for 'frame error adc data file'
 
     const int n_MaxLogFiles = 20;           // Maximum log files in the 'Logs' folder
+
+    QString m_SweepSaveDirectory = "SBC_Logs/Sweep_records";
 };
 
 #endif // CONSOLE_H

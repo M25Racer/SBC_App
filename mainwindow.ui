@@ -129,21 +129,6 @@
     <string>Ctrl+O</string>
    </property>
   </action>
-  <action name="actionSend_HS_command_GET_STATUS">
-   <property name="text">
-    <string>Send GET_STATUS</string>
-   </property>
-  </action>
-  <action name="actionSend_HS_command_GET_DATA">
-   <property name="text">
-    <string>Send GET_DATA</string>
-   </property>
-  </action>
-  <action name="actionGET_DATA_SIZE">
-   <property name="text">
-    <string>Send GET_DATA_SIZE</string>
-   </property>
-  </action>
   <action name="actionADC_START">
    <property name="text">
     <string>Send ADC_START</string>
@@ -177,7 +162,7 @@
   </action>
   <action name="actionRecord_Sweep_to_file">
    <property name="text">
-    <string>Record 'Sweep' to file</string>
+    <string>Record 'Sweep' to file...</string>
    </property>
    <property name="toolTip">
     <string>Configure AGC for 'sweep' and record 'sweep' to file</string>

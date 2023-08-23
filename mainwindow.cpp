@@ -58,6 +58,7 @@
 #include <QMessageBox>
 #include <QTimer>
 #include <QThread>
+#include <QFileDialog>
 #include "crc16.h"
 #include "atomic_vars.h"
 #include "synchro_watcher.h"
@@ -746,6 +747,12 @@ void MainWindow::sendHsCommandAgcStart()
 
 void MainWindow::recordSweep()
 {
+    // Show 'select directory' modal dialog
+    QString dir = QFileDialog::getExistingDirectory(this, "Select directory for 'sweep' signals", "/home", QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
+
+    // Set directory
+    m_console->setSweepRecordDirectory(dir);
+
     m_mod_tx_thread.separateRecordSweepStart();
 }
 
