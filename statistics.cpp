@@ -17,7 +17,6 @@ void statisics_reset()
     m_rxHighSpeedStatistics = 0;
 
     m_ReedSolomonCorrectionsCounter = 0;
-    m_ReedSolomonFailsCounter = 0;
     m_QamFramesCounter = 0;
     m_CrcErrorsCounter = 0;
 
@@ -66,8 +65,6 @@ void rs_statistics_add_correction()
 */
 void rs_statistics_add_no_correction()
 {
-    ++m_ReedSolomonFailsCounter;
-
     rs_statistics_queue[rs_cnt] = 0;
     if(++rs_cnt == RS_STATISTICS_QUEUE_SIZE)
         rs_cnt = 0;

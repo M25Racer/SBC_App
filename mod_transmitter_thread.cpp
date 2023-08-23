@@ -507,7 +507,7 @@ void ModTransmitterThread::run()
             {
                 // Send 'ADC_START for SWEEP' to STM32
                 emit consolePutData("Send 'ADC_START for 'sweep'\n", 2);
-                sweep_record_to_file = true;
+                sweep_record_to_file = sweep_command = true;
                 common_special_command = true;
 
                 uint32_t adc_data_length = 440000;

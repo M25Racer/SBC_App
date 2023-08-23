@@ -359,7 +359,7 @@ void MainWindow::timeoutGpioCallback()
             case 5: squares.append("⬜ ⬜ ⬛"); break;
         }
 
-        showStatusMessage(squares + QString("  crc errors %1, rs corrections %2, rs fails %3").arg(m_CrcErrorsCounter).arg(m_ReedSolomonCorrectionsCounter).arg(m_ReedSolomonFailsCounter));
+        showStatusMessage(squares + QString("  crc errors %1, rs successful corrections %2").arg(m_CrcErrorsCounter).arg(m_ReedSolomonCorrectionsCounter));
     }
 }
 

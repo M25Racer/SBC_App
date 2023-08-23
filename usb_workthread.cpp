@@ -1108,4 +1108,3 @@ void UsbWorkThread::Default_HsDataParser(uint8_t *p_data)
 {
     Q_UNUSED(p_data);
 }
-
