@@ -64,6 +64,7 @@
 #include "synchro_watcher.h"
 #include "indigo_base_protocol.h"
 #include "statistics.h"
+#include <blackbox.h>
 
 #include <QtDBus/QDBusInterface>
 #include <QtDBus/QDBusPendingReply>
@@ -163,6 +164,10 @@ MainWindow::MainWindow(QWidget *parent) :
 
     // Start timer for continuous usb initialization attempts
     timerUsbInit->start(m_usb_thread.timeoutUsbInit_ms);
+
+    // Init & read BlackBox from file
+    m_blackbox.Init();
+    m_blackbox.Read();
 
     // Start QAM decoder thread
     m_qam_thread.start();
@@ -337,6 +342,11 @@ void MainWindow::timeoutGpioCallback()
         MainWindow::close();
     }
 
+    secondElapsedCallback();
+}
+
+void MainWindow::secondElapsedCallback()
+{
     // Show transfer statistics in status bar
     static uint16_t prev_QamFramesCounter = 65535;
     //++m_QamFramesCounter; //test delete todo
@@ -361,6 +371,14 @@ void MainWindow::timeoutGpioCallback()
         }
 
         showStatusMessage(squares + QString("  crc errors %1, rs successful corrections %2").arg(m_CrcErrorsCounter).arg(m_ReedSolomonCorrectionsCounter));
+    }
+
+    // Periodically save estimated frequency to file
+    static uint16_t time_sec = 0;
+    if(++time_sec == 60*10)    // 10 minutes
+    {
+        time_sec = 0;
+        m_blackbox.Save();
     }
 }
 
@@ -750,6 +768,12 @@ void MainWindow::recordSweep()
     // Show 'select directory' modal dialog
     QString dir = QFileDialog::getExistingDirectory(this, "Select directory for 'sweep' signals", "/home", QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
 
+    if(dir == NULL)
+    {
+        m_console->putData(QString("Sweep record canceled\n"), 2);
+        return;
+    }
+
     // Set directory
     m_console->setSweepRecordDirectory(dir);
 
@@ -773,7 +797,7 @@ void MainWindow::srpModeSet(uint8_t mode)
 
 void MainWindow::qamDecoderReset()
 {
-    m_qam_thread.SetFirstPassFlag();
+    m_qam_thread.setFirstPassFlag();
 }
 
 // Indigo Base Protocol callback

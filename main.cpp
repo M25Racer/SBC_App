@@ -68,6 +68,8 @@ QMutex m_mutex_sweep_thread;
 QWaitCondition modTransmitWakeUp;
 QMutex m_mutex_mod;
 
+QMutex m_freqValMutex;
+
 QElapsedTimer profiler_timer;       // debug timer for time measurements
 
 int main(int argc, char *argv[])

@@ -18,12 +18,14 @@
 #include "qam_decoder/rtwtypes.h"
 #include "atomic_vars.h"
 #include "statistics.h"
+#include <median_window_filter.h>
 
 /* Extern global variables */
 extern RingBuffer *m_ring;              // ring data buffer (ADC data) for QAM decoder
 extern QWaitCondition ringNotEmpty;
 extern QMutex m_mutex_ring_wait;
 extern QElapsedTimer profiler_timer;
+extern QMutex m_freqValMutex;
 
 /* Private variables */
 static double Signal[USB_MAX_DATA_SIZE];
@@ -31,9 +33,10 @@ static int16_t FrameErrorAdcBuffer[10][USB_MAX_DATA_SIZE];
 
 //double Fs = 1832061;//280000;//ADC sample rate
 //extern double f_opt;
-double f0 = 35045;//carrier freq
-double sps = round(Fs/f0);//sample per spreamble_lenymbol
-double mode = 1;//1-both stages enabled, 0-only sevond stage
+double f0 = 35045;          //carrier freq
+double f0_saved = 35045;    //carrier freq saved for blackbox usage
+double sps = round(Fs/f0);  //sample per spreamble_lenymbol
+double mode = 0;            //1-both stages enabled, 0-only sevond stage
 
 qam qam_str;
 
@@ -73,7 +76,8 @@ qint64 elapsed_all_saved = 0;
 unsigned char gs[nn-K1+1];
 
 QamThread::QamThread(QObject *parent) :
-    QThread(parent)
+    QThread(parent),
+    m_flt(new MedianWindowFilter(10, this))
 {
 }
 
@@ -103,7 +107,6 @@ void QamThread::run()
 
     while(!m_quit)
     {
-
         m_mutex_ring_wait.lock();
         if(!m_ring->DataAvailable())
             ringNotEmpty.wait(&m_mutex_ring_wait);    // Wait condition unlocks mutex before 'wait', and will lock it again just after 'wait' is complete
@@ -132,7 +135,7 @@ void QamThread::run()
                     qam64_init(&qam_str);
                     TxPacketRsCodesSize = 8;
                     TxPacketDataSize = 225 - TxPacketRsCodesSize;
-                    SetFirstPassFlag();
+                    setFirstPassFlag();
                     break;
 
                 case HS_280_MODE:
@@ -141,7 +144,7 @@ void QamThread::run()
                     qam256_double_frame_init(&qam_str);
                     TxPacketRsCodesSize = 8*2;
                     TxPacketDataSize = 469 - TxPacketRsCodesSize;
-                    SetFirstPassFlag();
+                    setFirstPassFlag();
                     break;
 
                 default:
@@ -151,12 +154,11 @@ void QamThread::run()
     }
 }
 
-void QamThread::SetFirstPassFlag()
+void QamThread::setFirstPassFlag()
 {
-    emit consolePutData("QAM decoder reset (calcluate and save new frequency next time)\n", 2);
     mutex.lock();
+    emit consolePutData(QString("Filter f0: reset filter\n"), 1);
     m_QamDecoderFirstPassFlag = true;
-    mode = 1;
     mutex.unlock();
 }
 
@@ -194,6 +196,8 @@ void QamThread::QAM_Decoder()
     bool last_frame_received = false;
     double *signal = (double*)&Signal;
     double len = Length;
+
+    m_flt->Reset();
 
     peformance_timer.start();
 
@@ -370,15 +374,6 @@ void QamThread::QAM_Decoder()
                     }
                 }
             }
-
-            mutex.lock();
-            if(m_QamDecoderFirstPassFlag)
-            {
-                m_QamDecoderFirstPassFlag = false;
-                //f0 = f_est_data;
-                mode = 0;
-            }
-            mutex.unlock();
         }
 
         if(crc8 != tail->crc8)
@@ -480,4 +475,32 @@ void QamThread::QAM_Decoder()
     ++m_QamFramesCounter;
 
 //    HS_EWL_DEMOD_QAM_terminate();
+
+    //todo If frame received without any errors, save 'f_est_data' to window filter array, median filter data, then save new value to 'f0'
+    if(!crc_error && warning_status == CORRECT && rs_decode_flag[0] == -1 && rs_decode_flag[1] == -1)
+    {
+        // Filter f0 carrier frequency
+        mutex.lock();
+        if(m_QamDecoderFirstPassFlag)
+        {
+            m_QamDecoderFirstPassFlag = false;
+            m_flt->Reset();
+        }
+        mutex.unlock();
+
+        m_flt->AddElement(f_est_data);
+        if(m_flt->IsFilled())
+        {
+            f0 = m_flt->Filter();
+            m_freqValMutex.lock();
+            f0_saved = f0;
+            m_freqValMutex.unlock();
+            emit consolePutData(QString("Filter f0: saving median filtered f0 = %1\n").arg(f0), 1);
+        }
+        else
+        {
+            emit consolePutData(QString("Filter f0: filter is not filled yet, skipping\n"), 1);
+        }
+    }
+    //todo Periodically save 'f0' to file, read file with 'f0' at startup
 }

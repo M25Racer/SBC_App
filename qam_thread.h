@@ -8,6 +8,7 @@
 #include <ringbuffer.h>
 #include <message_box.h>
 #include "qam_common.h"
+#include <median_window_filter.h>
 
 using namespace QAM_Common;
 
@@ -28,7 +29,7 @@ public:
     explicit QamThread(QObject *parent = nullptr);
     ~QamThread();
 
-    void SetFirstPassFlag();
+    void setFirstPassFlag();
     void srpModeSet(uint8_t mode);
 
 private:
@@ -57,7 +58,6 @@ private:
     // QAM data related sizes & offsets
     uint32_t TxPacketRsCodesSize = 8*2;//8 for qam64
     uint32_t TxPacketDataSize = (469 - TxPacketRsCodesSize);//(225 - TxPacketRsCodesSize) - for qam64
-    //static const uint32_t TxPacketDataOffset = 23;
 
     bool m_QamDecoderFirstPassFlag = true;
 
@@ -71,6 +71,8 @@ private:
     bool m_ChangeSpeed = false;     // received request-command to change speed (LS\HS QAM64\HS QAM256)
 
     quint8 tmp_buffer[255];
+
+    MedianWindowFilter *m_flt = nullptr;
 };
 
 #endif // QAM_WORKTHREAD_H

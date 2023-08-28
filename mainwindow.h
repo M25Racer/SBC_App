@@ -60,6 +60,7 @@
 #include <sin_freq_sweep_thread.h>
 #include <mod_transmitter_thread.h>
 #include <gpio_tracker.h>
+#include <blackbox.h>
 
 QT_BEGIN_NAMESPACE
 
@@ -75,6 +76,7 @@ class Console;
 class SettingsDialog;
 class MessageBox;
 class GpioTracker;
+class BlackBox;
 
 class MainWindow : public QMainWindow
 {
@@ -129,6 +131,7 @@ private:
     void parseDataSerialPort();
     void serialPortRxCleanup();
     int shutdownProcedure();
+    void secondElapsedCallback();
 
     static bool frame_builded_cb(const void *param, const uint8_t *buffer, uint32_t size);
 
@@ -144,7 +147,7 @@ private:
     ModTransmitterThread m_mod_tx_thread;
     GpioTracker *m_gpio_shutdown = nullptr;
     GpioTracker *m_gpio_output = nullptr;
-
+    BlackBox m_blackbox;
 
     QByteArray TtyUserRxBuffer;
 
