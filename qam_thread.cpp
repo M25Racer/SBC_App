@@ -105,6 +105,9 @@ void QamThread::run()
     TxPacketRsCodesSize = 8*2;
     TxPacketDataSize = 469 - TxPacketRsCodesSize;
 
+    // Reset filter for 'f0' carrier frequency
+    m_flt->Reset();
+
     while(!m_quit)
     {
         m_mutex_ring_wait.lock();
@@ -185,6 +188,9 @@ void QamThread::srpModeSet(uint8_t mode)
 
 void QamThread::QAM_Decoder()
 {
+    QString log_str1 = "";  // combined logs with priority = 1
+    QString log_str2 = "";  // combined logs with priority = 2
+
     int rs_decode_flag[2] = { -1, -1 };
     qint64 rs_elapsed = 0;
 
@@ -196,8 +202,6 @@ void QamThread::QAM_Decoder()
     bool last_frame_received = false;
     double *signal = (double*)&Signal;
     double len = Length;
-
-    m_flt->Reset();
 
     peformance_timer.start();
 
@@ -212,10 +216,10 @@ void QamThread::QAM_Decoder()
         switch(HS_EWL_DEMOD_QAM_error_status)
         {
             case 1: // input data LEN <= 0
-                emit consolePutData("HS_EWL_DEMOD_QAM_error_status: input data LEN <= 0\n", 2);
+                log_str2.append("HS_EWL_DEMOD_QAM_error_status: input data LEN <= 0\n");
                 break;
             case 2: // incorrect input sample freq for lagrange_resamp func
-                emit consolePutData("HS_EWL_DEMOD_QAM_error_status: incorrect input sample freq for lagrange_resamp func\n", 2);
+                log_str2.append("HS_EWL_DEMOD_QAM_error_status: incorrect input sample freq for lagrange_resamp func\n");
                 break;
             default:
             case 0: // OK
@@ -321,11 +325,9 @@ void QamThread::QAM_Decoder()
             // Not last frame
             if(tail->frame_flag == ENUM_FRAME_NOT_LAST)
             {
-                //emit consolePutData(QString("Not last frame #%1, continue receive\n").arg(tail->frame_id), 1);
-
                 if(DATA_DECODED_SIZE < tail->frame_id * data_size_not_last_frame + data_size_not_last_frame)
                 {
-                    emit consolePutData(QString("Error wrong frame number %1 or too too long continuous data receive\n").arg(tail->frame_id), 2);
+                    log_str2.append(QString("Error wrong frame number %1 or too too long continuous data receive\n").arg(tail->frame_id));
                 }
                 else
                 {
@@ -342,7 +344,7 @@ void QamThread::QAM_Decoder()
 
                 if(DATA_DECODED_SIZE < tail->frame_id * data_size_not_last_frame + data_size_last_frame)
                 {
-                    emit consolePutData(QString("Error wrong frame number %1 or too too long continuous data receive\n").arg(tail->frame_id), 2);
+                    log_str2.append(QString("Error wrong frame number %1 or too too long continuous data receive\n").arg(tail->frame_id));
                 }
                 else
                 {
@@ -350,12 +352,12 @@ void QamThread::QAM_Decoder()
                     if(tail_last->len < MOD_SRP_MIN_VALID_LENGTH_NEW)
                     {
                         // Error length is too short
-                        emit consolePutData(QString("HS data parsing error, packet data length is too short %1\n").arg(tail_last->len), 2);
+                        log_str2.append(QString("HS data parsing error, packet data length is too short %1\n").arg(tail_last->len));
                     }
                     else if(tail_last->len > (tail->frame_id * data_size_not_last_frame + TxPacketDataSize - sizeof(frame_tail_last_t)))
                     {
                         // Error length is too long
-                        emit consolePutData(QString("HS data parsing error, packet data length is too long %1\n").arg(tail_last->len), 2);
+                        log_str2.append(QString("HS data parsing error, packet data length is too long %1\n").arg(tail_last->len));
                     }
                     else
                     {
@@ -370,7 +372,7 @@ void QamThread::QAM_Decoder()
                         if(++n_data_buf == N_DATA_DECODED_BUFFERS)
                             n_data_buf = 0;
 
-                        emit consolePutData(QString("Last frame #%1, data length %2\n").arg(tail_last->tail.frame_id).arg(tail_last->len), 2);
+                        log_str2.append(QString(QString("Last frame #%1, data length %2\n").arg(tail_last->tail.frame_id).arg(tail_last->len)));
                     }
                 }
             }
@@ -379,7 +381,7 @@ void QamThread::QAM_Decoder()
         if(crc8 != tail->crc8)
         {
             crc_statistics_bad_crc_received();
-            emit consolePutData(QString("CRC error, rs decoder failed to correct data\n"), 2);
+            log_str2.append("CRC error, rs decoder failed to correct data\n");
         }
     }
     
@@ -395,16 +397,16 @@ void QamThread::QAM_Decoder()
         {
             case 0:
                 /* no non-zero syndromes => no errors: output received codeword */
-                emit consolePutData(QString("RS decoder finished in %1 ms: no errors\n").arg(rs_elapsed), 2);
+                log_str2.append(QString("RS decoder finished in %1 ms: no errors\n").arg(rs_elapsed));
                 break;
 
             case 1:
-                emit consolePutData(QString("RS decoder finished in %1 ms: errors corrected\n").arg(rs_elapsed), 2);
+                log_str2.append(QString("RS decoder finished in %1 ms: errors corrected\n").arg(rs_elapsed));
                 break;
 
             case 2:
             case 3:
-                emit consolePutData(QString("RS decoder finished in %1 ms: unable to correct\n").arg(rs_elapsed), 2);
+                log_str2.append(QString("RS decoder finished in %1 ms: unable to correct\n").arg(rs_elapsed));
                 break;
 
             default:
@@ -427,19 +429,19 @@ void QamThread::QAM_Decoder()
             break;
         case WARNING_1:
             // warning_status = 1 not enough sample in the end array
-            emit consolePutData("warning_status = 1: not enough sample in the end array\n", 2);
+            log_str2.append("warning_status = 1: not enough sample in the end array\n");
             break;
         case WARNING_2:
             // warning_status = 2 all or more than 0.2 array equal 0
-            emit consolePutData("warning_status = 2: all or more than 0.2 array equal 0\n", 2);
+            log_str2.append("warning_status = 2: all or more than 0.2 array equal 0\n");
             break;
         case WARNING_3:
             // warning_status = 3 start array sample equal 0 less than 0
-            emit consolePutData("warning_status = 3: start array sample equal 0 less than 0\n", 2);
+            log_str2.append("warning_status = 3: start array sample equal 0 less than 0\n");
             break;
         case WARNING_4:
             // warning_status = 4 f_est == 0
-            emit consolePutData("warning_status = 4: error probably wrong f_est\n", 2);
+            log_str2.append("warning_status = 4: error probably wrong f_est\n");
             break;
     };
 
@@ -463,11 +465,11 @@ void QamThread::QAM_Decoder()
     qint64 elapsed = peformance_timer.elapsed();
     elapsed_all += elapsed;
 
-    emit consolePutData(QString("QAM decoder finished, len %1, freq %2 Hz, elapsed time = %3 ms\n").arg(Length).arg(f_est_data).arg(elapsed), 1);
+    log_str1.append(QString("QAM decoder finished, len %1, freq %2 Hz, elapsed time = %3 ms\n").arg(Length).arg(f_est_data).arg(elapsed));
 
     if(last_frame_received)
     {
-        emit consolePutData(QString("Elapsed all qam = %1\n").arg(elapsed_all), 1);
+        log_str1.append(QString("Elapsed all qam = %1\n").arg(elapsed_all));
         elapsed_all_saved = elapsed_all;
         elapsed_all = 0;
     }
@@ -476,7 +478,7 @@ void QamThread::QAM_Decoder()
 
 //    HS_EWL_DEMOD_QAM_terminate();
 
-    //todo If frame received without any errors, save 'f_est_data' to window filter array, median filter data, then save new value to 'f0'
+    // If frame received without any errors
     if(!crc_error && warning_status == CORRECT && rs_decode_flag[0] == -1 && rs_decode_flag[1] == -1)
     {
         // Filter f0 carrier frequency
@@ -495,12 +497,15 @@ void QamThread::QAM_Decoder()
             m_freqValMutex.lock();
             f0_saved = f0;
             m_freqValMutex.unlock();
-            emit consolePutData(QString("Filter f0: saving median filtered f0 = %1\n").arg(f0), 1);
+            log_str1.append(QString("Filter f0: median filtered = %1\n").arg(f0));
         }
         else
         {
-            emit consolePutData(QString("Filter f0: filter is not filled yet, skipping\n"), 1);
+            log_str1.append("Filter f0: filter is not filled yet, skipping\n");
         }
     }
-    //todo Periodically save 'f0' to file, read file with 'f0' at startup
+
+    // Show logs to console and save to log file (depending on priority)
+    if(!log_str2.isEmpty()) emit consolePutData(log_str2, 2);
+    if(!log_str1.isEmpty()) emit consolePutData(log_str1, 1);
 }

@@ -34,6 +34,11 @@ bool BlackBox::Save()
     f0_current = f0_saved;
     m_freqValMutex.unlock();
 
+    // Round to .XX precision
+    f0_current = (int)(f0_current * 100);
+    f0_current /= 100.f;
+    //f0_current = (QString::number(f0_current, 'f', 2)).toDouble();
+
     // Check if 'f0' value is not changed
     static double f0_prev = 0.f;
     if(f0_prev == f0_current)
@@ -46,7 +51,7 @@ bool BlackBox::Save()
         QScopedPointer<QFile> m_file1;      // Smart pointer to file
         m_file1.reset(new QFile("BlackBox/BlackBox_1.ini"));
 
-        res = m_file1.data()->open(QFile::Append | QFile::Text);
+        res = m_file1.data()->open(QFile::ReadWrite | QFile::Text);
 
         if(!res)
         {
@@ -54,8 +59,11 @@ bool BlackBox::Save()
             return false;
         }
 
+        // Clear file contents
+        m_file1->resize(0);
+
         out.setDevice(m_file1.data());
-        out << QString("%1\n").arg(f0_current);
+        out << QString("%1\n").arg(f0_current, 0, 'f', 2);
         out.flush();
 
         m_file1->close();
@@ -65,7 +73,7 @@ bool BlackBox::Save()
         QScopedPointer<QFile> m_file2;      // Smart pointer to file
         m_file2.reset(new QFile("BlackBox/BlackBox_2.ini"));
 
-        res = m_file2.data()->open(QFile::Append | QFile::Text);
+        res = m_file2.data()->open(QFile::ReadWrite | QFile::Text);
 
         if(!res)
         {
@@ -73,8 +81,11 @@ bool BlackBox::Save()
             return false;
         }
 
+        // Clear file contents
+        m_file2->resize(0);
+
         out.setDevice(m_file2.data());
-        out << QString("%1\n").arg(f0_current);
+        out << QString("%1\n").arg(f0_current, 0, 'f', 2);
         out.flush();
 
         m_file2->close();
