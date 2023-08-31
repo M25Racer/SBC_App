@@ -137,7 +137,7 @@ bool CMessageBox::message_box_srp(uint8_t* Buf, uint16_t len, uint8_t master_add
         {
             uint8_t statistics = m_rxHighSpeedStatistics;
             uint8_t statistics2 = rs_calculate_statistics();
-            uint16_t statistics3 = m_ReedSolomonCorrections;
+            uint16_t statistics3 = m_ReedSolomonCorrectionsCounter;
 
             messege_box_buffer[11] = uint8_t(statistics);
             messege_box_buffer[12] = uint8_t(statistics2);
@@ -177,6 +177,10 @@ bool CMessageBox::message_box_srp(uint8_t* Buf, uint16_t len, uint8_t master_add
             emit postData(messege_box_buffer + 1, tx_len - 1);
         }
             break;
+
+        case SET_RX_PARAMETERS:
+            emit srpModeSet(messege_box_buffer[13]);
+           /* fallthrough */
 
         default:
             // Unknown command for SBC, retransmit it to STM32H7 board

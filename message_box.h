@@ -36,6 +36,7 @@ signals:
     void postDataToStm32H7(const uint8_t *p_data, const int length);
     void commandCalculatePredistortionTablesStart();
     void commandAgcStart();
+    void srpModeSet(uint8_t mode);
 
 public:
     bool message_box_srp(uint8_t* Buf, uint16_t len, uint8_t master_address, uint8_t own_address);

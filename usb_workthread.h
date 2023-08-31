@@ -22,6 +22,7 @@ signals:
     void postDataToStm32H7(const uint8_t *p_data, const int length);
     void usbInitTimeoutStart(int timeout_ms);
     void hsDataReceived();
+    void srpModeSet(uint8_t mode);
 
 public slots:
     void sendHsCommand(uint8_t Command, uint32_t Length, const uint8_t *p_Data);

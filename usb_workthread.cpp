@@ -96,7 +96,7 @@ void UsbWorkThread::run()
 
                     if(rc != LIBUSB_SUCCESS)
                     {
-                        emit consolePutData(QString("Usb Transfer Error: %1\n").arg(libusb_error_name(rc)), 1);
+                        emit consolePutData(QString("Usb Transfer Error: %1\n").arg(libusb_error_name(rc)), 2);
                     }
                 }
             }
@@ -119,7 +119,7 @@ void UsbWorkThread::run()
 
                     if(rc != LIBUSB_SUCCESS)
                     {
-                        emit consolePutData(QString("Transfer Error: %1\n").arg(libusb_error_name(rc)), 1);
+                        emit consolePutData(QString("Transfer Error: %1\n").arg(libusb_error_name(rc)), 2);
                     }
                 }
             }
@@ -163,7 +163,7 @@ void UsbWorkThread::USB_ReceiveTransmitInit()
 
     if(t_rx != nullptr)
     {
-        emit consolePutData("Error USB_ReceiveTransmitInit reported t_rx != nullptr\n", 1);
+        emit consolePutData("Error USB_ReceiveTransmitInit reported t_rx != nullptr\n", 2);
         return;
     }
 
@@ -171,7 +171,7 @@ void UsbWorkThread::USB_ReceiveTransmitInit()
 
     if(t_rx == nullptr)
     {
-        emit consolePutData("Error USB_ReceiveTransmitInit: unable to allocate a libusb transfer rx\n", 1);
+        emit consolePutData("Error USB_ReceiveTransmitInit: unable to allocate a libusb transfer rx\n", 2);
         return;
     }
     else
@@ -183,7 +183,7 @@ void UsbWorkThread::USB_ReceiveTransmitInit()
 
     if(t_tx != nullptr)
     {
-        emit consolePutData("Error USB_ReceiveTransmitInit reported t_tx != nullptr\n", 1);
+        emit consolePutData("Error USB_ReceiveTransmitInit reported t_tx != nullptr\n", 2);
         return;
     }
 
@@ -191,7 +191,7 @@ void UsbWorkThread::USB_ReceiveTransmitInit()
 
     if(t_tx == nullptr)
     {
-        emit consolePutData("Error USB_ReceiveTransmitInit: unable to allocate a libusb transfer tx\n", 1);
+        emit consolePutData("Error USB_ReceiveTransmitInit: unable to allocate a libusb transfer tx\n", 2);
         return;
     }
     else
@@ -207,13 +207,13 @@ void UsbWorkThread::USB_StartReceive(uint8_t *p_rx_buffer_offset)
 
     if(t_rx == nullptr)
     {
-        emit consolePutData("Error USB_StartReceive transfer = NULL\n", 1);
+        emit consolePutData("Error USB_StartReceive transfer = NULL\n", 2);
         return;
     }
 
     if(handle == nullptr)
     {
-        emit consolePutData("Error USB_StartReceivereported handle = nullptr\n", 1);
+        emit consolePutData("Error USB_StartReceivereported handle = nullptr\n", 2);
         return;
     }
 
@@ -228,7 +228,7 @@ void UsbWorkThread::USB_StartReceive(uint8_t *p_rx_buffer_offset)
 
     if(rc < 0)
     {
-        emit consolePutData(QString("Error USB_StartReceive libusb_submit_transfer: %1\n").arg(libusb_error_name(rc)), 1);
+        emit consolePutData(QString("Error USB_StartReceive libusb_submit_transfer: %1\n").arg(libusb_error_name(rc)), 2);
 
         if (rc == LIBUSB_ERROR_NO_DEVICE)
         {
@@ -248,13 +248,13 @@ void UsbWorkThread::USB_StartTransmit()
 
     if(t_tx == nullptr)
     {
-        emit consolePutData("Error USB_StartTransmit reported t_tx == nullptr\n", 1);
+        emit consolePutData("Error USB_StartTransmit reported t_tx == nullptr\n", 2);
         return;
     }
 
     if(handle == nullptr)
     {
-        emit consolePutData("Error USB_StartTransmit reported handle = nullptr\n", 1);
+        emit consolePutData("Error USB_StartTransmit reported handle = nullptr\n", 2);
         return;
     }
 
@@ -267,7 +267,7 @@ void UsbWorkThread::USB_StartTransmit()
 
     if(rc < 0)
     {
-        emit consolePutData(QString("Error USB_StartTransmit libusb_submit_transfer: %1\n").arg(libusb_error_name(rc)), 1);
+        emit consolePutData(QString("Error USB_StartTransmit libusb_submit_transfer: %1\n").arg(libusb_error_name(rc)), 2);
 
         if (rc == LIBUSB_ERROR_NO_DEVICE)
         {
@@ -304,7 +304,7 @@ void UsbWorkThread::USB_StopReceive()
         }
 
         // Some other error
-        emit consolePutData(QString("Error USB_StopReceive libusb_cancel_transfer error: %1\n").arg(libusb_error_name(rc)), 1);
+        emit consolePutData(QString("Error USB_StopReceive libusb_cancel_transfer error: %1\n").arg(libusb_error_name(rc)), 2);
     }
 
     // Reset received length
@@ -332,7 +332,7 @@ void UsbWorkThread::USB_StopTransmit()
         else
         {
             // Some other error, report it
-            emit consolePutData(QString("Error USB_StopTransmit libusb_cancel_transfer error: %1\n").arg(libusb_error_name(rc)), 1);
+            emit consolePutData(QString("Error USB_StopTransmit libusb_cancel_transfer error: %1\n").arg(libusb_error_name(rc)), 2);
         }
     }
 }
@@ -379,13 +379,13 @@ void UsbWorkThread::USB_Deinit()
     {
         rc = libusb_release_interface(handle, DEV_INTF);
         if(rc < 0)
-            emit consolePutData(QString("Error libusb_release_interface: %1\n").arg(libusb_error_name(rc)), 1);
+            emit consolePutData(QString("Error libusb_release_interface: %1\n").arg(libusb_error_name(rc)), 2);
     }
     if(handle)
     {
         rc = libusb_attach_kernel_driver(handle, DEV_INTF);
         if(rc < 0)
-            emit consolePutData(QString("Error libusb_attach_kernel_driver: %1\n").arg(libusb_error_name(rc)), 1);
+            emit consolePutData(QString("Error libusb_attach_kernel_driver: %1\n").arg(libusb_error_name(rc)), 2);
     }
     if(handle)
     {
@@ -410,7 +410,7 @@ void LIBUSB_CALL UsbWorkThread::tx_callback(struct libusb_transfer *transfer)
 
     if(transfer == nullptr)
     {
-        emit consolePutData("Error tx_callback reported transfer = NULL\n", 1);
+        emit consolePutData("Error tx_callback reported transfer = NULL\n", 2);
         return;
     }
 
@@ -461,7 +461,7 @@ void LIBUSB_CALL UsbWorkThread::tx_callback(struct libusb_transfer *transfer)
 
     if(transfer->status != LIBUSB_TRANSFER_COMPLETED)
     {
-        emit consolePutData(QString("Error tx transfer: %1\n").arg(libusb_error_name(transfer->status)), 1);
+        emit consolePutData(QString("Error tx transfer: %1\n").arg(libusb_error_name(transfer->status)), 2);
     }
 
     tx_complete_flag = 1;
@@ -488,7 +488,7 @@ void LIBUSB_CALL UsbWorkThread::rx_callback(struct libusb_transfer *transfer)
 {
     if(transfer == nullptr)
     {
-        emit consolePutData("Error rx_callback reported transfer = NULL\n", 1);
+        emit consolePutData("Error rx_callback reported transfer = NULL\n", 2);
         return;
     }
 
@@ -518,14 +518,14 @@ void LIBUSB_CALL UsbWorkThread::rx_callback(struct libusb_transfer *transfer)
 
             // Drop previously received data
             UserRxBuffer_len = 0;
-            emit consolePutData(QString("Usb receive timeout detected, broken previously received packet\n"), 1);
+            emit consolePutData(QString("Usb receive timeout detected, broken previously received packet\n"), 2);
         }
 
         // Protection from UserRxBuffer overflow
         if(pStartData > int(sizeof(UserRxBuffer) - USB_BULK_SIZE))
         {
             pStartData = 0;
-            emit consolePutData(QString("Usb receive warning: buffer overflow, dropping data\n"), 1);
+            emit consolePutData(QString("Usb receive warning: buffer overflow, dropping data\n"), 2);
             break;
         }
 
@@ -540,7 +540,7 @@ void LIBUSB_CALL UsbWorkThread::rx_callback(struct libusb_transfer *transfer)
 
             if(header->packet_length > uint32_t(UserRxBuffer_len))
             {
-                emit consolePutData(QString("Parse error, packet length is too long %1\n").arg(header->packet_length), 1);
+                emit consolePutData(QString("Parse error, packet length is too long %1\n").arg(header->packet_length), 2);
                 UserRxBuffer_len = pStartData = 0;
                 break;
             }
@@ -551,7 +551,7 @@ void LIBUSB_CALL UsbWorkThread::rx_callback(struct libusb_transfer *transfer)
             // Packet length should be at least equal to header size
             if(header->packet_length < sizeof(USBheader_t))
             {
-                emit consolePutData(QString("Parse error, packet length is too short %1\n").arg(header->packet_length), 1);
+                emit consolePutData(QString("Parse error, packet length is too short %1\n").arg(header->packet_length), 2);
                 UserRxBuffer_len = pStartData = 0;
                 break;
             }
@@ -561,11 +561,25 @@ void LIBUSB_CALL UsbWorkThread::rx_callback(struct libusb_transfer *transfer)
                 case SRP_LS_DATA:
                     // Retransmit data to PC
                     emit postTxDataToSerialPort(UserRxBuffer + pStartData + sizeof(USBheader_t), header->packet_length - sizeof(USBheader_t));
-//                    emit consolePutData(QString("Received SRP LS DATA\n"), 0);
                     break;
                 case SRP_HS_DATA:
-//                    emit consolePutData(QString("Received SRP HS DATA, continue to parsing\n"), 0);
                     parseHsData();
+
+//                    // Check speed and change it if needed
+//                    // Normally speed is changed using 'custom parameters' commands, the code below should execute only
+//                    // if 'SBC_App' suddenly restarts and looses speed configuration
+//                    static uint8_t cnt = 0;
+//                    if(header->type != m_SrpMode)
+//                    {
+//                        if(++cnt > 10)
+//                        {
+//                            cnt = 0;
+//                            emit consolePutData(QString("Warning: SBC detected wrong speed configuration, changing speed\n"), 2);
+//                            emit srpModeSet(header->type);
+//                        }
+//                    }
+//                    else
+//                        cnt = 0;
                     break;
             }
 
@@ -626,7 +640,7 @@ void LIBUSB_CALL UsbWorkThread::rx_callback(struct libusb_transfer *transfer)
             // Check time, we should not spam to console too often
             if(console_spam_timer.hasExpired(1000))
             {
-                emit consolePutData(QString("Error rx transfer: %1\n").arg(libusb_error_name(transfer->status)), 1);
+                emit consolePutData(QString("Error rx transfer: %1\n").arg(libusb_error_name(transfer->status)), 2);
                 console_spam_timer.start();
             }
         }
@@ -661,7 +675,7 @@ bool UsbWorkThread::usbInitialization()
     int rc = libusb_init(&context);
     if(rc < 0)
     {
-        emit consolePutData(QString("Error Initializing libusb: %1\n").arg(libusb_error_name(rc)), 1);
+        emit consolePutData(QString("Error Initializing libusb: %1\n").arg(libusb_error_name(rc)), 2);
         return false;
     }
     Q_ASSERT(rc == 0);
@@ -670,7 +684,7 @@ bool UsbWorkThread::usbInitialization()
     rc = libusb_set_option(nullptr, LIBUSB_OPTION_LOG_LEVEL, LIBUSB_LOG_LEVEL_WARNING);     // LIBUSB_LOG_LEVEL_DEBUG
     if(rc < 0)
     {
-        emit consolePutData(QString("Error libusb_set_option: %1\n").arg(libusb_error_name(rc)), 1);
+        emit consolePutData(QString("Error libusb_set_option: %1\n").arg(libusb_error_name(rc)), 2);
         return false;
     }
 
@@ -689,7 +703,7 @@ bool UsbWorkThread::usbInitialization()
 
         emit consolePutData(QString("Vendor:Device = %1:%2\n")
                             .arg(desc.idVendor, 4, 16, QLatin1Char('0'))
-                            .arg(desc.idProduct, 4, 16, QLatin1Char('0')), 1);
+                            .arg(desc.idProduct, 4, 16, QLatin1Char('0')), 2);
     }
 
     // Free device list
@@ -709,7 +723,7 @@ bool UsbWorkThread::usbInitialization()
                                              &h_hotplug);
         if(rc < 0)
         {
-            emit consolePutData(QString("Error libusb_hotplug_register_callback: %1\n").arg(libusb_error_name(rc)), 1);
+            emit consolePutData(QString("Error libusb_hotplug_register_callback: %1\n").arg(libusb_error_name(rc)), 2);
         }
     }
 
@@ -729,7 +743,7 @@ void UsbWorkThread::USB_Init()
             if(!r)
             {
                 // Try again
-                emit consolePutData(QString("Usb initialization failed, next attempt in %1 ms\n").arg(timeoutUsbInit_ms), 1);
+                emit consolePutData(QString("Usb initialization failed, next attempt in %1 ms\n").arg(timeoutUsbInit_ms), 2);
                 emit usbInitTimeoutStart(timeoutUsbInit_ms);
                 return;
             }
@@ -746,13 +760,13 @@ void UsbWorkThread::USB_Init()
                 //printf("USB device %04x:%04x has been connected\n", VID, PID);
                 emit consolePutData(QString("USB device %1:%2 has been connected\n")
                                    .arg(VID, 4, 16, QLatin1Char('0'))
-                                   .arg(PID, 4, 16, QLatin1Char('0')), 1);
+                                   .arg(PID, 4, 16, QLatin1Char('0')), 2);
             }
             else
             {
                 emit consolePutData(QString("USB device %1:%2 has not been connected\n")
                                    .arg(VID, 4, 16, QLatin1Char('0'))
-                                   .arg(PID, 4, 16, QLatin1Char('0')), 1);
+                                   .arg(PID, 4, 16, QLatin1Char('0')), 2);
                 if(handle)
                 {
                     //m_usb->end(handle);
@@ -760,7 +774,7 @@ void UsbWorkThread::USB_Init()
                     libusb_close(handle);
                 }
                 // Try again
-                emit consolePutData(QString("Usb initialization failed, next attempt in %1 ms\n").arg(timeoutUsbInit_ms), 1);
+                emit consolePutData(QString("Usb initialization failed, next attempt in %1 ms\n").arg(timeoutUsbInit_ms), 2);
                 emit usbInitTimeoutStart(timeoutUsbInit_ms);
                 return;
             }
@@ -796,17 +810,17 @@ void UsbWorkThread::USB_Init()
                 {
                     //fprintf(stderr, "Error libusb_set_option: %s\n", libusb_error_name(rc));
                     emit consolePutData(QString("Error libusb_set_option: %1\n")
-                                       .arg(libusb_error_name(rc)), 1);
+                                       .arg(libusb_error_name(rc)), 2);
                 }
 #endif
                 else if(rc == LIBUSB_ERROR_NO_DEVICE)
                 {
-                    emit consolePutData("USB device has been disconnected\n", 1);
-                    emit consolePutData(QString("Error libusb_kernel_driver_active: %1\n").arg(libusb_error_name(rc)), 1);
+                    emit consolePutData("USB device has been disconnected\n", 2);
+                    emit consolePutData(QString("Error libusb_kernel_driver_active: %1\n").arg(libusb_error_name(rc)), 2);
                 }
 
                 // Try again
-                emit consolePutData(QString("Usb initialization failed, next attempt in %1 ms\n").arg(timeoutUsbInit_ms), 1);
+                emit consolePutData(QString("Usb initialization failed, next attempt in %1 ms\n").arg(timeoutUsbInit_ms), 2);
                 emit usbInitTimeoutStart(timeoutUsbInit_ms);
                 return;
             }
@@ -821,11 +835,11 @@ void UsbWorkThread::USB_Init()
 
             if(rc != 0)
             {
-                emit consolePutData("Interface error", 1);
-                emit consolePutData(QString("Error libusb_claim_interface: %1\n").arg(libusb_error_name(rc)), 1);
+                emit consolePutData("Interface error", 2);
+                emit consolePutData(QString("Error libusb_claim_interface: %1\n").arg(libusb_error_name(rc)), 2);
 
                 // Try again
-                emit consolePutData(QString("Usb initialization failed, next attempt in %1 ms\n").arg(timeoutUsbInit_ms), 1);
+                emit consolePutData(QString("Usb initialization failed, next attempt in %1 ms\n").arg(timeoutUsbInit_ms), 2);
                 emit usbInitTimeoutStart(timeoutUsbInit_ms);
             }
 
@@ -857,7 +871,7 @@ void UsbWorkThread::USB_Init()
 
 void UsbWorkThread::USB_Reconnect()
 {
-    emit consolePutData("USB reconnect attempt...\n", 1);
+    emit consolePutData("USB reconnect attempt...\n", 2);
 
     USB_StopReceive();
     USB_StopTransmit();
@@ -884,13 +898,13 @@ void UsbWorkThread::sendHsCommand(uint8_t Command, uint32_t Length, const uint8_
     {
         if(p_Data == nullptr)
         {
-            emit consolePutData("Error: sendHsCommand reported p_data == null\n", 1);
+            emit consolePutData("Error: sendHsCommand reported p_data == null\n", 2);
             return;
         }
 
         if(header.packet_length > sizeof(UserTxBuffer))
         {
-            emit consolePutData("Error: sendHsCommand reported length is too long\n", 1);
+            emit consolePutData("Error: sendHsCommand reported length is too long\n", 2);
             header.packet_length = sizeof(UserTxBuffer);
         }
     }
@@ -1034,28 +1048,28 @@ void UsbWorkThread::parseHsData()
                 case AGC_OK:          // Настройка аттенюатора/усилителя закончена
                     if(agc_is_active)
                     {
-                        emit consolePutData("parseHsData(): AGC state = ok\n", 1);
+                        emit consolePutData("parseHsData(): AGC state = ok\n", 2);
                         agc_is_active = false;
                     }
                     break;
                 case AGC_INIT:        // Выполнена инициализация АРУ
                     if(agc_is_active)
-                        emit consolePutData("parseHsData(): AGC state = init\n", 1);
+                        emit consolePutData("parseHsData(): AGC state = init\n", 2);
                     break;
                 case AGC_START:       // Запуск АРУ произведен
-                    emit consolePutData("parseHsData(): AGC state = start\n", 1);
+                    emit consolePutData("parseHsData(): AGC state = start\n", 2);
                     break;
                 case AGC_OVERVOLTAGE: // Уровень сигнала превышает максимально возможное значение АЦП
-                    emit consolePutData("parseHsData(): AGC state = overvoltage\n", 1);
+                    emit consolePutData("parseHsData(): AGC state = overvoltage\n", 2);
                     break;
                 case AGC_ADJUST_MIN:  // Уровень сигнала сильно ослаблен (лежит ниже порогового значения)
-                    emit consolePutData("parseHsData(): AGC state = adjust min\n", 1);
+                    emit consolePutData("parseHsData(): AGC state = adjust min\n", 2);
                     break;
                 case AGC_ADJUST_MAX:  // Уровень сигнала превышает максимально допустимое значение АЦП (лежит выше порогового значения АЦП)
-                    emit consolePutData("parseHsData(): AGC state = adjust max\n", 1);
+                    emit consolePutData("parseHsData(): AGC state = adjust max\n", 2);
                     break;
                 case AGC_ERROR:       // Обнаружена ошибка АРУ (не выполнена инициализация; процедура запуска; не удается выполнить настройку)
-                    emit consolePutData("parseHsData(): AGC state = error\n", 1);
+                    emit consolePutData("parseHsData(): AGC state = error\n", 2);
                     break;
             }
 
@@ -1093,4 +1107,3 @@ void UsbWorkThread::Default_HsDataParser(uint8_t *p_data)
 {
     Q_UNUSED(p_data);
 }
-

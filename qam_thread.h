@@ -8,6 +8,7 @@
 #include <ringbuffer.h>
 #include <message_box.h>
 #include "qam_common.h"
+#include <median_window_filter.h>
 
 using namespace QAM_Common;
 
@@ -28,7 +29,8 @@ public:
     explicit QamThread(QObject *parent = nullptr);
     ~QamThread();
 
-    void SetFirstPassFlag();
+    void setFirstPassFlag();
+    void srpModeSet(uint8_t mode);
 
 private:
     void run() override;
@@ -66,6 +68,12 @@ private:
     uint8_t frame_decoded[255];
 
     uint8_t n_error_frame = 0;
+
+    bool m_ChangeSpeed = false;     // received request-command to change speed (LS\HS QAM64\HS QAM256)
+
+    quint8 tmp_buffer[255];
+
+    MedianWindowFilter *m_flt = nullptr;
 };
 
 #endif // QAM_WORKTHREAD_H

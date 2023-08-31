@@ -58,15 +58,14 @@
 #include <QMessageBox>
 #include <QTimer>
 #include <QThread>
+#include <QFileDialog>
 #include "crc16.h"
 #include "atomic_vars.h"
 #include "synchro_watcher.h"
 #include "indigo_base_protocol.h"
+#include "statistics.h"
+#include <blackbox.h>
 
-//#include "linux/reboot.h"
-//#include "sys/syscall.h"
-//#include "sys/reboot.h"
-//#include "unistd.h"
 #include <QtDBus/QDBusInterface>
 #include <QtDBus/QDBusPendingReply>
 
@@ -107,6 +106,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(m_message_box, &CMessageBox::postDataToStm32H7, this, &MainWindow::postTxDataSTM);
     connect(m_message_box, &CMessageBox::commandCalculatePredistortionTablesStart, this, &MainWindow::commandCalculatePredistortionTablesStart);
     connect(m_message_box, &CMessageBox::commandAgcStart, this, &MainWindow::commandAgcStart);
+    connect(m_message_box, &CMessageBox::srpModeSet, this, &MainWindow::srpModeSet);
     connect(m_gpio_shutdown, &GpioTracker::consolePutData, this, &MainWindow::consolePutData);
     connect(m_gpio_output, &GpioTracker::consolePutData, this, &MainWindow::consolePutData);
     connect(&m_usb_thread, &UsbWorkThread::postTxDataToSerialPort, this, &MainWindow::transmitDataSerialPort, Qt::ConnectionType::QueuedConnection);
@@ -115,6 +115,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(&m_usb_thread, &UsbWorkThread::usbInitTimeoutStart, this, &MainWindow::usbInitTimeoutStart, Qt::ConnectionType::QueuedConnection);
     connect(&m_usb_thread, &UsbWorkThread::consoleAdcFile, this, &MainWindow::consoleAdcData, Qt::ConnectionType::QueuedConnection);
     connect(&m_usb_thread, &UsbWorkThread::hsDataReceived, this, &MainWindow::usbHsDataReceived, Qt::ConnectionType::QueuedConnection);
+    connect(&m_usb_thread, &UsbWorkThread::srpModeSet, this, &MainWindow::srpModeSet, Qt::ConnectionType::QueuedConnection);
     connect(&m_qam_thread, &QamThread::consolePutData, this, &MainWindow::consolePutData, Qt::ConnectionType::QueuedConnection);
     connect(&m_qam_thread, &QamThread::consoleFrameErrorFile, this, &MainWindow::consoleDataAdcSpecial, Qt::ConnectionType::QueuedConnection);
     connect(&m_qam_thread, &QamThread::postTxDataToSerialPort, this, &MainWindow::transmitDataSerialPort, Qt::ConnectionType::QueuedConnection);
@@ -126,8 +127,8 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(&m_mod_tx_thread, &ModTransmitterThread::sendCommandToSTM32, this, &MainWindow::sendCommandToSTM32, Qt::ConnectionType::QueuedConnection);
     connect(&m_mod_tx_thread, &ModTransmitterThread::qamDecoderReset, this, &MainWindow::qamDecoderReset, Qt::ConnectionType::QueuedConnection);
 
-    m_console->putData(QString("SBC Application v.") + VERSION_STRING + "\n", 1);
-    m_console->putData("Opening serial port...\n", 1);
+    m_console->putData(QString("SBC Application v.") + VERSION_STRING + "\n", 2);
+    m_console->putData("Opening serial port...\n", 2);
 
     // Clear serial port tx & rx buffer
     TtyUserRxBuffer.clear();
@@ -159,10 +160,14 @@ MainWindow::MainWindow(QWidget *parent) :
     version = libusb_get_version();
     m_console->putData(QString("libusb version: %1.%2.%3.%4\n")
                        .arg(version->major).arg(version->minor)
-                       .arg(version->micro).arg(version->nano), 1);
+                       .arg(version->micro).arg(version->nano), 2);
 
     // Start timer for continuous usb initialization attempts
     timerUsbInit->start(m_usb_thread.timeoutUsbInit_ms);
+
+    // Init & read BlackBox from file
+    m_blackbox.Init();
+    m_blackbox.Read();
 
     // Start QAM decoder thread
     m_qam_thread.start();
@@ -184,13 +189,13 @@ MainWindow::MainWindow(QWidget *parent) :
     // Init & start GPIO monitoring
     if(m_gpio_shutdown->Init() && m_gpio_output->Init())
     {
-        m_console->putData("GPIO initialization successfull\n", 1);
+        m_console->putData("GPIO initialization successfull\n", 2);
 
         // Start input (m_gpio_shutdown) monitoring
         timerGpioTracking->start(timeoutGpioTrackingPeriod_ms);
     }
     else
-        m_console->putData("Error: GPIO initialization failed\n", 1);
+        m_console->putData("Error: GPIO initialization failed\n", 2);
 
     // Set gpio output (m_gpio_output) to 1
     m_gpio_output->writeValue(1);
@@ -278,7 +283,7 @@ bool MainWindow::openSerialPort()
         m_console->setEnabled(true);
         m_console->putData(tr("Connected to %1 : %2, %3, %4, %5, %6\n")
                            .arg(p.name).arg(p.stringBaudRate).arg(p.stringDataBits)
-                           .arg(p.stringParity).arg(p.stringStopBits).arg(p.stringFlowControl), 1);
+                           .arg(p.stringParity).arg(p.stringStopBits).arg(p.stringFlowControl), 2);
         return true;
     }
     else
@@ -287,7 +292,7 @@ bool MainWindow::openSerialPort()
         str_b.append(tr("Error "));
         str_b.append(m_serial->errorString());
         str_b.append("\n");
-        m_console->putData(str_b, 1);
+        m_console->putData(str_b, 2);
         return false;
     }
 }
@@ -298,7 +303,7 @@ void MainWindow::closeSerialPort()
         m_serial->close();
     m_console->setEnabled(false);
     //showStatusMessage(tr("Disconnected"));
-    m_console->putData("Serial port disconnected\n", 1);
+    m_console->putData("Serial port disconnected\n", 2);
 }
 
 void MainWindow::timeoutUsbInitCallback()
@@ -308,11 +313,12 @@ void MainWindow::timeoutUsbInitCallback()
 
 void MainWindow::timeoutGpioCallback()
 {
+    // 1 second passed
     if(m_gpio_shutdown->readValue())
     {
         // Shutdown pin is set
         ++ShutdownTime;
-        m_console->putData(QString("Shutdown pin is set for %1 sec\n").arg(ShutdownTime), 1);
+        m_console->putData(QString("Shutdown pin is set for %1 sec\n").arg(ShutdownTime), 2);
     }
     else
     {
@@ -322,7 +328,7 @@ void MainWindow::timeoutGpioCallback()
 
     if(ShutdownTime > 3)
     {
-        m_console->putData(QString("Shutdown in progress...\n"), 1);
+        m_console->putData(QString("Shutdown in progress...\n"), 2);
 
         timerUsbInit->stop();
         timerSpReconnect->stop();
@@ -334,6 +340,45 @@ void MainWindow::timeoutGpioCallback()
 
         // In case shutdown failed, close application
         MainWindow::close();
+    }
+
+    secondElapsedCallback();
+}
+
+void MainWindow::secondElapsedCallback()
+{
+    // Show transfer statistics in status bar
+    static uint16_t prev_QamFramesCounter = 65535;
+    //++m_QamFramesCounter; //test delete todo
+    if(m_QamFramesCounter != prev_QamFramesCounter)
+    {
+        prev_QamFramesCounter = m_QamFramesCounter;
+
+        static uint8_t cnt = 5;
+        if(++cnt == 6)
+            cnt = 0;
+
+        QString squares = "";
+
+        switch(cnt)
+        {
+            case 0: squares.append("⬜ ⬜ ⬜"); break;
+            case 1: squares.append("⬛ ⬜ ⬜"); break;
+            case 2: squares.append("⬛ ⬛ ⬜"); break;
+            case 3: squares.append("⬛ ⬛ ⬛"); break;
+            case 4: squares.append("⬜ ⬛ ⬛"); break;
+            case 5: squares.append("⬜ ⬜ ⬛"); break;
+        }
+
+        showStatusMessage(squares + QString("  crc errors %1, rs successful corrections %2").arg(m_CrcErrorsCounter).arg(m_ReedSolomonCorrectionsCounter));
+    }
+
+    // Periodically save estimated frequency to file
+    static uint16_t time_sec = 0;
+    if(++time_sec == 60*10)    // 10 minutes
+    {
+        time_sec = 0;
+        m_blackbox.Save();
     }
 }
 
@@ -384,7 +429,7 @@ void MainWindow::usbInitTimeoutStart(int timeout_ms)
 
 void MainWindow::timeoutSerialPortReconnect()
 {
-    m_console->putData("SP Trying to reconnect to a serial port...\n", 1);
+    m_console->putData("SP Trying to reconnect to a serial port...\n", 2);
     if(!openSerialPort())
     {
         // Start timer again
@@ -422,7 +467,7 @@ void MainWindow::readDataSerialPort()
             // Protection from infinite loop
             if(TtyUserRxBuffer_len > 65536) // 64 KBytes of data in single packet
             {
-                m_console->putData("Error: serial port buffer overflow detected, drop data\n", 1);
+                m_console->putData("Error: serial port buffer overflow detected, drop data\n", 2);
                 serialPortRxCleanup();
                 return;
             }
@@ -467,7 +512,7 @@ void MainWindow::parseDataSerialPort()
         // len < minimum packet size
         if(TtyUserRxBuffer_len < m_message_box->TX_HEADER_LENGTH + m_message_box->DATA_ADDRESS_LENGTH + m_message_box->CRC_LENGTH)
         {
-            m_console->putData("SP Broken packet from PC to SRP: length is too short\n", 1);
+            m_console->putData("SP Broken packet from PC to SRP: length is too short\n", 2);
             serialPortRxCleanup();
             return;
         }
@@ -478,7 +523,7 @@ void MainWindow::parseDataSerialPort()
         const uint8_t *p_data = (const uint8_t*)TtyUserRxBuffer.data();
         if(calc_crc16(p_data + 1, TtyUserRxBuffer_len-1-m_message_box->CRC_LENGTH) != crc16)
         {
-            m_console->putData("SP Broken packet from PC to SRP: crc error\n", 1);
+            m_console->putData("SP Broken packet from PC to SRP: crc error\n", 2);
             serialPortRxCleanup();
             return;
         }
@@ -524,7 +569,7 @@ void MainWindow::parseDataSerialPort()
     if(TtyUserRxBuffer_len > TtyUserRxBuffer_MaxSize)
     {
         TtyUserRxBuffer_len = TtyUserRxBuffer_MaxSize;
-        m_console->putData("SP Warning: received length is too big\n", 1);
+        m_console->putData("SP Warning: received length is too big\n", 2);
     }
 
     // Transmit to STM32H7
@@ -548,7 +593,7 @@ void MainWindow::handleError(QSerialPort::SerialPortError error)
             break;
 
         default:
-            m_console->putData("Serial port error: " + m_serial->errorString() + "\n", 1);
+            m_console->putData("Serial port error: " + m_serial->errorString() + "\n", 2);
             closeSerialPort();
 
             // Start timer to periodically try to reconnect
@@ -561,12 +606,12 @@ void MainWindow::initActionsConnections()
 {
     connect(m_ui->actionLogsFlush, &QAction::triggered, this, &MainWindow::logFileFlush);
     connect(m_ui->actionLogsOpenFile, &QAction::triggered, this, &MainWindow::logFileOpen);
-    connect(m_ui->actionSend_HS_command_GET_STATUS, &QAction::triggered, this, &MainWindow::sendHsCommandGetStatus);
-    connect(m_ui->actionSend_HS_command_GET_DATA, &QAction::triggered, this, &MainWindow::sendHsCommandGetData);
+    connect(m_ui->actionOpen_logs_folder, &QAction::triggered, this, &MainWindow::openLogsFolder);
     connect(m_ui->actionADC_START, &QAction::triggered, this, &MainWindow::sendHsCommandAdcStart);
     connect(m_ui->actionSend_AGC_Start, &QAction::triggered, this, &MainWindow::sendHsCommandAgcStart);
     connect(m_ui->actionADC_START_for_SIN_600, &QAction::triggered, this, &MainWindow::sendHsCommandAdcStart2);
     connect(m_ui->actionADC_START_for_Sweep, &QAction::triggered, this, &MainWindow::sendHsCommandAdcStart3);
+    connect(m_ui->actionRecord_Sweep_to_file, &QAction::triggered, this, &MainWindow::recordSweep);
 }
 
 void MainWindow::showStatusMessage(const QString &message)
@@ -584,6 +629,13 @@ void MainWindow::transmitDataSerialPort(const uint8_t *p_data, int length)
     // Logs
 #ifdef QT_DEBUG
     m_console->putData("SP Transmit " + QString::number(length) + " bytes\n", 0);
+    m_console->putData(QString("SP Tx data:"), 0);
+    uint8_t len_cut = length > 254 ? 254 : uint8_t(length);
+    QString d;
+    for(uint8_t i = 0; i < len_cut; ++i)
+        d.append(QString("%1 ").arg(p_data[i], 2, 16, QLatin1Char('0')));
+    d.append("\n");
+    m_console->putData(d, 0);
 #endif
 
     qint64 pt_elapsed = profiler_timer.elapsed();
@@ -597,7 +649,7 @@ void MainWindow::postTxDataSTM(const uint8_t *p_data, const int length)
 
     if(p_data == nullptr)
     {
-        m_console->putData("Error postTxDataToSTM32H7 reported p_data = NULL\n", 1);
+        m_console->putData("Error postTxDataToSTM32H7 reported p_data = NULL\n", 2);
         return;
     }
 
@@ -605,13 +657,13 @@ void MainWindow::postTxDataSTM(const uint8_t *p_data, const int length)
 
     if(len + sizeof(header) > int(sizeof(m_usb_thread.UserTxBuffer)))
     {
-        m_console->putData("Error postTxDataToSTM32H7 reported length is too long\n", 1);
+        m_console->putData("Error postTxDataToSTM32H7 reported length is too long\n", 2);
         len = sizeof(m_usb_thread.UserTxBuffer);
     }
 
     if(len > int(sizeof(USB_Protocol::data)))
     {
-        m_console->putData("Error postTxDataToSTM32H7 reported length is too long\n", 1);
+        m_console->putData("Error postTxDataToSTM32H7 reported length is too long\n", 2);
         len = sizeof(USB_Protocol::data);
     }
 
@@ -653,11 +705,16 @@ void MainWindow::logFileOpen()
     m_console->fileOpen();
 }
 
+void MainWindow::openLogsFolder()
+{
+    m_console->openLogsFolder();
+}
+
 void MainWindow::sendCommandToSTM32(quint8 command, const quint8 *p_data, quint32 data_size)
 {
     if(data_size && p_data == nullptr)
     {
-        m_console->putData("Error sendCommandToSTM32sendCommandToSTM32 wrong parameters\n", 1);
+        m_console->putData("Error sendCommandToSTM32sendCommandToSTM32 wrong parameters\n", 2);
         return;
     }
 
@@ -673,22 +730,10 @@ void MainWindow::usbHsDataReceived()
 }
 
 // Debug HS command from GUI
-void MainWindow::sendHsCommandGetStatus()
-{
-    m_console->putData(QString("Send HS command USB_CMD_GET_STATUS\n"), 1);
-    m_usb_thread.sendHsCommand(USB_CMD_GET_STATUS, 0, nullptr);
-}
-
-void MainWindow::sendHsCommandGetData()
-{
-    m_console->putData(QString("Send HS command GET_DATA, requested data size %1\n").arg(m_usb_thread.stm32_ready_data_size), 1);
-    m_usb_thread.sendHsCommand(USB_CMD_GET_DATA, 4, (uint8_t*)&m_usb_thread.stm32_ready_data_size);
-}
-
 void MainWindow::sendHsCommandAdcStart()
 {
     uint32_t adc_data_length = 440000;
-    m_console->putData(QString("Send HS command USB_CMD_ADC_START, adc_data_length %1\n").arg(adc_data_length), 1);
+    m_console->putData(QString("Send HS command USB_CMD_ADC_START, adc_data_length %1\n").arg(adc_data_length), 2);
     m_usb_thread.sendHsCommand(USB_CMD_ADC_START, 4, (uint8_t*)&adc_data_length);
 }
 
@@ -698,7 +743,7 @@ void MainWindow::sendHsCommandAdcStart2()
     common_special_command = true;
 
     uint32_t adc_data_length = 31400;
-    m_console->putData(QString("Send HS command USB_CMD_ADC_START, adc_data_length %1\n").arg(adc_data_length), 1);
+    m_console->putData(QString("Send HS command USB_CMD_ADC_START, adc_data_length %1\n").arg(adc_data_length), 2);
     m_usb_thread.sendHsCommand(USB_CMD_ADC_START, 4, (uint8_t*)&adc_data_length);
 }
 
@@ -708,14 +753,31 @@ void MainWindow::sendHsCommandAdcStart3()
     common_special_command = true;
 
     uint32_t adc_data_length = 440000;
-    m_console->putData(QString("Send HS command USB_CMD_ADC_START, adc_data_length %1\n").arg(adc_data_length), 1);
+    m_console->putData(QString("Send HS command USB_CMD_ADC_START, adc_data_length %1\n").arg(adc_data_length), 2);
     m_usb_thread.sendHsCommand(USB_CMD_ADC_START, 4, (uint8_t*)&adc_data_length);
 }
 
 void MainWindow::sendHsCommandAgcStart()
 {
-    m_console->putData(QString("Send HS command USB_CMD_AGC_START\n"), 1);
+    m_console->putData(QString("Send HS command USB_CMD_AGC_START\n"), 2);
     sendCommandToSTM32(USB_CMD_AGC_START, nullptr, 0);
+}
+
+void MainWindow::recordSweep()
+{
+    // Show 'select directory' modal dialog
+    QString dir = QFileDialog::getExistingDirectory(this, "Select directory for 'sweep' signals", "/home", QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
+
+    if(dir == NULL)
+    {
+        m_console->putData(QString("Sweep record canceled\n"), 2);
+        return;
+    }
+
+    // Set directory
+    m_console->setSweepRecordDirectory(dir);
+
+    m_mod_tx_thread.separateRecordSweepStart();
 }
 
 void MainWindow::commandCalculatePredistortionTablesStart()
@@ -728,9 +790,14 @@ void MainWindow::commandAgcStart()
     m_mod_tx_thread.separateAgcStart();
 }
 
+void MainWindow::srpModeSet(uint8_t mode)
+{
+    m_qam_thread.srpModeSet(mode);
+}
+
 void MainWindow::qamDecoderReset()
 {
-    m_qam_thread.SetFirstPassFlag();
+    m_qam_thread.setFirstPassFlag();
 }
 
 // Indigo Base Protocol callback
@@ -744,4 +811,14 @@ bool MainWindow::frame_builded_cb(const void *param, const uint8_t *buffer, uint
     self->transmitDataSerialPort(buffer, size);
 
     return true;
+}
+
+void MainWindow::on_actionShow_advanced_logs_in_console_triggered(bool checked)
+{
+    m_ShowAdvancedLogs = checked;
+}
+
+void MainWindow::on_actionReset_statistics_in_status_bar_triggered()
+{
+    statisics_reset();
 }

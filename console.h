@@ -73,6 +73,8 @@ public:
     void Close();
     void fileFlush();
     void fileOpen();
+    void openLogsFolder();
+    void setSweepRecordDirectory(QString dir);
 
 protected:
 
@@ -97,11 +99,14 @@ private:
     QTextStream outFrameErrorAdc;
     QTextStream outSweep;
     QTextStream outSin600;
+    QTextStream outSweepRecords;
 
     uint8_t n_file = 0;                     // ADC data file switcher
     uint32_t n_frame = 0;                   // Number of frame for 'frame error adc data file'
 
-    const int n_MaxLogFiles = 20;      // Maximum log files in the 'Logs' folder
+    const int n_MaxLogFiles = 20;           // Maximum log files in the 'Logs' folder
+
+    QString m_SweepSaveDirectory = "SBC_Logs/Sweep_records";
 };
 
 #endif // CONSOLE_H

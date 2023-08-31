@@ -55,6 +55,7 @@
 #include <QDesktopServices>
 #include <QFileInfo>
 #include <QDir>
+#include "atomic_vars.h"
 
 Console::Console(QWidget *parent) :
     QPlainTextEdit(parent)
@@ -131,7 +132,7 @@ void Console::putData(const QString &data, uint8_t priority)
     ++priority;
 #endif
 
-    if(priority)
+    if((priority > 1) || (priority == 1 && m_ShowAdvancedLogs))
     {
         insertPlainText(data);
 
@@ -139,7 +140,7 @@ void Console::putData(const QString &data, uint8_t priority)
         bar->setValue(bar->maximum());
     }
 
-    // Log to file
+    // Log to file (any 'priority')
 
     // Write the date of recording
     out << QDateTime::currentDateTime().toString("hh:mm:ss.zzz ");
@@ -176,7 +177,7 @@ void Console::putDataAdc(const quint8 *p_data, quint32 size)
 void Console::putDataAdcSpecial(const qint16 *p_data, quint32 len, uint8_t type)
 {
     QScopedPointer<QFile> *f;
-    QTextStream *out;
+    QTextStream *out = nullptr;
     QString data;
     bool flush_data_after_write = true;
 
@@ -222,21 +223,69 @@ void Console::putDataAdcSpecial(const qint16 *p_data, quint32 len, uint8_t type)
 
             data.append(QString("// =================================== Sweep, len %3 ===================================\n").arg(len));
             break;
+
+        case 3:
+        {
+            // Check & create folder for 'sweep' records
+            bool res = false;
+
+            if(!QDir(m_SweepSaveDirectory).exists())
+            {
+                res = QDir().mkdir(m_SweepSaveDirectory);
+
+                if(!res)
+                {
+                    putData("Error can't create directory for 'sweep' records '" + m_SweepSaveDirectory + "'\n", 2);
+                    break;
+                }
+            }
+
+            if(!QDir(m_SweepSaveDirectory).isReadable())
+            {
+                putData("Error directory for 'sweep' records is not readable '" + m_SweepSaveDirectory + "'\n", 2);
+                break;
+            }
+
+            QScopedPointer<QFile> m_sweepRecordFile;      // Smart pointer to file
+            m_sweepRecordFile.reset(new QFile(m_SweepSaveDirectory + "/sweep_record_" + QDateTime::currentDateTime().toString("yyyy-MM-dd_hh.mm.ss.zzz") + ".txt"));
+            res = m_sweepRecordFile.data()->open(QFile::Append | QFile::Text);
+
+            if(!res)
+            {
+                putData("Error can't write file for 'sweep' records. Wrong directory or root is needed to access '" + m_SweepSaveDirectory + "'\n", 2);
+                m_sweepRecordFile->close();
+                break;
+            }
+
+            outSweepRecords.setDevice(m_sweepRecordFile.data());
+            outSweepRecords << QString("// =================================== Sweep, len %3 ===================================\n").arg(len);
+
+            for(uint64_t i = 1; i < len; ++i)
+                outSweepRecords << QString("%1\n").arg((int16_t)p_data[i]);
+
+            outSweepRecords.flush();
+
+            m_sweepRecordFile->close();
+            return;
+        }
     }
 
     for(uint64_t i = 1; i < len; ++i)
         data.append(QString("%1\n").arg((int16_t)p_data[i]));
 
-    *out << data;
-    if(flush_data_after_write)
+    if(out != nullptr)
     {
-        (*out).flush();       // Clear the buffered data
+        *out << data;
+        if(flush_data_after_write)
+        {
+            (*out).flush();       // Clear the buffered data
+        }
     }
 }
 
 void Console::fileFlush()
 {
-    putData("Force log file flush by user\n", 1);
+    putData("Force log file flush by user\n", 2);
     out.flush();    // Clear the buffered data
 }
 
@@ -247,13 +296,47 @@ void Console::fileOpen()
     info.setFile(m_logFile->fileName());
     info.makeAbsolute();
 
-    putData(QString("Opening log file: ") + info.filePath() + QString("\n"), 1);
+    putData(QString("Opening log file: ") + info.filePath() + QString("\n"), 2);
 
     // Flush before open
     fileFlush();
 
     // Open file with external program
     QDesktopServices::openUrl(QUrl::fromLocalFile(info.filePath()));
+}
+
+void Console::openLogsFolder()
+{
+    // Flush log file
+    fileFlush();
+
+    // Open logs folder
+    const QString& path = "SBC_Logs";
+    QFileInfo info(path);
+
+#if defined(Q_OS_WIN)
+    QStringList args;
+    if (!info.isDir())
+        args << "/select,";
+    args << QDir::toNativeSeparators(path);
+    if (QProcess::startDetached("explorer", args))
+        return;
+#elif defined(Q_OS_MAC)
+    QStringList args;
+    args << "-e";
+    args << "tell application \"Finder\"";
+    args << "-e";
+    args << "activate";
+    args << "-e";
+    args << "select POSIX file \"" + path + "\"";
+    args << "-e";
+    args << "end tell";
+    args << "-e";
+    args << "return";
+    if (!QProcess::execute("/usr/bin/osascript", args))
+        return;
+#endif
+    QDesktopServices::openUrl(QUrl::fromLocalFile(info.isDir()? path : info.path()));
 }
 
 void Console::Close()
@@ -277,4 +360,9 @@ void Console::Close()
 
     outSin600.flush();
     m_sin600File->close();
+}
+
+void Console::setSweepRecordDirectory(QString dir)
+{
+    m_SweepSaveDirectory = dir;
 }

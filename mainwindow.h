@@ -60,6 +60,7 @@
 #include <sin_freq_sweep_thread.h>
 #include <mod_transmitter_thread.h>
 #include <gpio_tracker.h>
+#include <blackbox.h>
 
 QT_BEGIN_NAMESPACE
 
@@ -75,6 +76,7 @@ class Console;
 class SettingsDialog;
 class MessageBox;
 class GpioTracker;
+class BlackBox;
 
 class MainWindow : public QMainWindow
 {
@@ -89,20 +91,24 @@ private slots:
     void closeSerialPort();
     void logFileFlush();
     void logFileOpen();
-    void sendHsCommandGetStatus();      // command to STM32
-    void sendHsCommandGetData();        // command to STM32
+    void openLogsFolder();
+
+
     void sendHsCommandAdcStart();       // command to STM32
     void sendHsCommandAdcStart2();      // command to STM32
     void sendHsCommandAdcStart3();      // command to STM32
     void sendHsCommandAgcStart();       // command to STM32
+    void recordSweep();                 // command to STM32
     void readDataSerialPort();
     void transmitDataSerialPort(const uint8_t *p_data, int length);
     void transmitWaitToSerialPort();
     void postTxDataSTM(const uint8_t *p_data, const int length);
+    void on_actionShow_advanced_logs_in_console_triggered(bool checked);
 
-    // Commands form Indigo Suite
+    // Commands from Indigo Suite
     void commandCalculatePredistortionTablesStart();
     void commandAgcStart();
+    void srpModeSet(uint8_t mode);
 
     void handleError(QSerialPort::SerialPortError error);
     void consolePutData(const QString &data, quint8 priority);
@@ -116,7 +122,8 @@ private slots:
     void qamDecoderReset();
 
     void usbInitTimeoutStart(int timeout_ms);
-    //void modAnswerTimeoutStart(int timeout_ms);
+
+    void on_actionReset_statistics_in_status_bar_triggered();
 
 private:
     void initActionsConnections();
@@ -126,6 +133,7 @@ private:
     void parseDataSerialPort();
     void serialPortRxCleanup();
     int shutdownProcedure();
+    void secondElapsedCallback();
 
     static bool frame_builded_cb(const void *param, const uint8_t *buffer, uint32_t size);
 
@@ -141,7 +149,7 @@ private:
     ModTransmitterThread m_mod_tx_thread;
     GpioTracker *m_gpio_shutdown = nullptr;
     GpioTracker *m_gpio_output = nullptr;
-
+    BlackBox m_blackbox;
 
     QByteArray TtyUserRxBuffer;
 

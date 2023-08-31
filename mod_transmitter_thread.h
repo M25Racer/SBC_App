@@ -32,6 +32,7 @@ public:
     void ModAnswerDataReceived();
     void calculatePredistortionTablesStart();
     void separateAgcStart();
+    void separateRecordSweepStart();
 
     bool m_AutoConfigurationMode = false;                   // Set true if auto configuration is active (in progress)
 
@@ -69,6 +70,12 @@ private:
         STAT_MOD_COMMANDS_FOR_AGC = 16,             // AGC (automatic gain configuration) for 'MOD get status' signal is in progress
 
         AGCCFG_START = 100,                         // AGC auto configuration (separately from 'Auto configuration') started
+
+        SPECIAL_USR_REQ_START = 101,                // Start special user requested commands sequence: configure AGC for Sweep, then save Sweep to file and exit
+        SPECIAL_USR_REQ_AGC_START_FOR_SWEEP = 102,  // Special user requested commands sequence: AGC for Sweep
+        SPECIAL_USR_REQ_SWEEP_MOD_COMMANDS_FOR_AGC = 103,   // Special user requested commands sequence: requesting MOD to send 'sweep' signals
+        SPECIAL_USR_REQ_ADC_START_FOR_SWEEP = 104,
+        SPECIAL_USR_REQ_SWEEP_MOD_COMMAND = 105,
 
         ERROR_ANSWER_TIMEOUT = 248,                 // Reserved for MAXIM/Indigo Suite DLL: no answer from SRP2
         ERROR_PREDISTORTION_TABLES_TX_FAILED = 249,     // Errors todo

@@ -5,18 +5,20 @@ TARGET = SBC_App_v2
 TEMPLATE = app
 
 # Version, max 255.255.255
-VERSION = 1.0.0
+VERSION = 1.0.1
 
 DEFINES += VERSION_STRING=\\\"$${VERSION}\\\"
 
 SOURCES += \
     atomic_vars.cpp \
+    blackbox.cpp \
     crc16.cpp \
     crc8.cpp \
     gpio_tracker.cpp \
     indigo_base_protocol.cpp \
     main.cpp \
     mainwindow.cpp \
+    median_window_filter.cpp \
     message_box.cpp \
     mod_transmitter_thread.cpp \
     qam_decoder/eml_fftshift.cpp \
@@ -126,11 +128,13 @@ HEADERS += \
     IndigoProtocol/constants.h \
     agc_algorithm.h \
     atomic_vars.h \
+    blackbox.h \
     crc16.h \
     crc8.h \
     gpio_tracker.h \
     indigo_base_protocol.h \
     mainwindow.h \
+    median_window_filter.h \
     message_box.h \
     mod_transmitter_thread.h \
     qam_common.h \

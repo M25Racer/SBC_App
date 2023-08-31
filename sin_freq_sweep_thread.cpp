@@ -21,6 +21,7 @@ using namespace QAM_Common;
 /* Extern global variables */
 extern QWaitCondition sinFreqSweepBufNotEmpty;
 extern QMutex m_mutex_sweep_thread;
+extern double f0;   // carrier frequency
 
 /* Private variables */
 static double SignalSin[USB_MAX_DATA_SIZE];
@@ -116,8 +117,18 @@ void SinFreqSweepThread::run()
                     double val = SignalSweep[i];
                     SignalBuffer[1][i] = (int16_t)val;
                 }
-                emit consolePutAdcDataSpecial(SignalBuffer[1], LengthSweep, 2);
-                Sweep();
+
+                if(sweep_record_to_file)
+                {
+                    // Save 'sweep' to file, do not calculate
+                    sweep_record_to_file = false;
+                    emit consolePutAdcDataSpecial(SignalBuffer[1], LengthSweep, 3);
+                }
+                else
+                {
+                    emit consolePutAdcDataSpecial(SignalBuffer[1], LengthSweep, 2);
+                    Sweep();
+                }
             }
         }
     }
@@ -128,7 +139,7 @@ bool SinFreqSweepThread::ConvertToDouble(uint8_t *p_data_in, uint32_t length_in,
     // Check pointers
     if(p_data_out == nullptr || p_length == nullptr)
     {
-        emit consolePutData("Error ring buffer get: data pointer or length pointer = null", 1);
+        emit consolePutData("Error ring buffer get: data pointer or length pointer = null", 2);
         return false;
     }
 
@@ -152,7 +163,7 @@ bool SinFreqSweepThread::ConvertToDouble(uint8_t *p_data_in, uint32_t length_in,
 
 void SinFreqSweepThread::FreqEstimateForSweep()
 {
-    emit consolePutData(QString("QAM sin frequency estimate for sweep starting, length %1\n").arg(LengthSin), 1);
+    emit consolePutData(QString("QAM sin frequency estimate for sweep starting, length %1\n").arg(LengthSin), 2);
 
     FreqEstState = TFreqEstState::FREQ_EST_WORK_IN_PROGRESS;
 
@@ -169,26 +180,29 @@ void SinFreqSweepThread::FreqEstimateForSweep()
     switch(sweep_warning_status_int)
     {
         case 0: // sweep_freq_warning_status = 0;% OK input array
-            //emit consolePutData(QString("Sweep freq: OK input array\n"), 1);
+            //emit consolePutData(QString("Sweep freq: OK input array\n"), 2);
+            // Save frequency
+            f0 = f_opt;
+            emit consolePutData(QString("Saving carrier frequency f0 = %1\n").arg(f0), 2);
             break;
         case 1:
-            emit consolePutData(QString("Sweep freq warning: all or more than 33% input array equal 0\n"), 1);
+            emit consolePutData(QString("Sweep freq warning: all or more than 33% input array equal 0\n"), 2);
             break;
         case 2:
-            emit consolePutData(QString("Sweep freq warning: path of input array equal 0, less than 33%\n"), 1);
+            emit consolePutData(QString("Sweep freq warning: path of input array equal 0, less than 33%\n"), 2);
             break;
         default:
-            emit consolePutData(QString("Sweep freq warning: unknown status %1\n").arg(sweep_warning_status_int), 1);
+            emit consolePutData(QString("Sweep freq warning: unknown status %1\n").arg(sweep_warning_status_int), 2);
             break;
     }
 
-    emit consolePutData(QString("Sweep freq f_opt = %1, elapsed time = %2 ms\n").arg(f_opt).arg(peformance_timer.elapsed()), 1);
+    emit consolePutData(QString("Sweep freq f_opt = %1, elapsed time = %2 ms\n").arg(f_opt).arg(peformance_timer.elapsed()), 2);
     FreqEstState = TFreqEstState::FREQ_EST_COMPLETE;
 }
 
 void SinFreqSweepThread::Sweep()
 {
-    emit consolePutData(QString("QAM sweep starting, length %1\n").arg(LengthSweep), 1);
+    emit consolePutData(QString("QAM sweep starting, length %1\n").arg(LengthSweep), 2);
 
     SweepState = TSweepState::SWEEP_WORK_IN_PROGRESS;
 
@@ -215,30 +229,30 @@ void SinFreqSweepThread::Sweep()
     switch(sweep_warning_status_int)
     {
         case 0: // sweep_warning_status   = 0; %input array OK
-            //emit consolePutData(QString("Sweep: input array OK\n"), 1);
+            //emit consolePutData(QString("Sweep: input array OK\n"), 2);
             break;
         case 1: // sweep_warning_status   = 1; %input sine singal freq or sample freq equal 0
-            emit consolePutData(QString("Sweep warning: input sine singal freq or sample freq equal 0\n"), 1);
+            emit consolePutData(QString("Sweep warning: input sine singal freq or sample freq equal 0\n"), 2);
             break;
         case 2: // sweep_warning_status   = 2; %not enough len input array len < 80%
-            emit consolePutData(QString("Sweep warning: not enough len input array len < 80%\n"), 1);
+            emit consolePutData(QString("Sweep warning: not enough len input array len < 80%\n"), 2);
             break;
         case 3: // sweep_warning_status   = 3; % len input array > 80% or < 100%
-            emit consolePutData(QString("Sweep warning: len input array > 80% or < 100%\n"), 1);
+            emit consolePutData(QString("Sweep warning: len input array > 80% or < 100%\n"), 2);
             break;
         case 4: // sweep_warning_status   = 4; %no found sweep preamble(ampMod)
-            emit consolePutData(QString("Sweep warning: no found sweep preamble(ampMod)\n"), 1);
+            emit consolePutData(QString("Sweep warning: no found sweep preamble(ampMod)\n"), 2);
             break;
         case 5: // sweep_warning_status   = 5; %all input array equal 0
-            emit consolePutData(QString("Sweep warning: all input array equal 0\n"), 1);
+            emit consolePutData(QString("Sweep warning: all input array equal 0\n"), 2);
             break;
         default:
-            emit consolePutData(QString("Sweep warning: unknown status %1\n").arg(sweep_warning_status_int), 1);
+            emit consolePutData(QString("Sweep warning: unknown status %1\n").arg(sweep_warning_status_int), 2);
             break;
     }
 
-    emit consolePutData(QString("Sweep elapsed time = %1 ms\n").arg(peformance_timer.elapsed()), 1);
-    emit consolePutData(QString("Sweep shift_for_qam_data = %1\n").arg(shift_for_qam_data_int), 1);
+    emit consolePutData(QString("Sweep elapsed time = %1 ms\n").arg(peformance_timer.elapsed()), 2);
+    emit consolePutData(QString("Sweep shift_for_qam_data = %1\n").arg(shift_for_qam_data_int), 2);
 
     SweepState = TSweepState::SWEEP_COMPLETE;
 }
