@@ -151,6 +151,7 @@ void QamThread::srpModeSet(uint8_t mode)
 
 void QamThread::QAM_Decoder()
 {
+    QString log_str0 = "";  // combined logs with priority = 0
     QString log_str1 = "";  // combined logs with priority = 1
     QString log_str2 = "";  // combined logs with priority = 2
 
@@ -401,15 +402,16 @@ void QamThread::QAM_Decoder()
             m_freqValMutex.lock();
             f0_saved = f0;
             m_freqValMutex.unlock();
-            log_str1.append(QString("Filter f0: median filtered = %1\n").arg(f0));
+            log_str0.append(QString("Filter f0: median filtered = %1\n").arg(f0));
         }
         else
         {
-            log_str1.append("Filter f0: filter is not filled yet, skipping\n");
+            log_str0.append("Filter f0: filter is not filled yet, skipping\n");
         }
     }
 
     // Show logs to console and save to log file (depending on priority)
     if(!log_str2.isEmpty()) emit consolePutData(log_str2, 2);
     if(!log_str1.isEmpty()) emit consolePutData(log_str1, 1);
+    if(!log_str0.isEmpty()) emit consolePutData(log_str0, 0);
 }
