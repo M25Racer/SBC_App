@@ -547,6 +547,8 @@ void MainWindow::parseDataSerialPort()
     if(syncIsSuspendedTimeInProgress())
     {
         uint16_t suspended_time_left = syncGetTime();
+        if(suspended_time_left > 5)
+            suspended_time_left -= 5;
         if(suspended_time_left)
         {
             m_console->putData(QString("Sync: suspended time is in progress: answer with 'CmdWaitAgainSend' susp.time left %1\n").arg(suspended_time_left), 1);
