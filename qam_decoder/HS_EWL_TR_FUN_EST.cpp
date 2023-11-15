@@ -30,6 +30,11 @@ static void lagrange_resamp(const double s[450000], double p, double q, double
   x0, double resamp_data[57820]);
 static double rt_hypotd_snf(double u0, double u1);
 
+
+// Global var from sin_freq_sweep_thread.cpp
+extern double cable_gain_freq[14001];
+extern double cable_gain[14001];
+
 // Function Definitions
 //
 // Input parameters
@@ -409,6 +414,13 @@ void HS_EWL_TR_FUN_EST(const double sweep_data[450000], const double sweep_math
 
           coder::vmovfun(newGain, 14001, b_dv);
           coder::interp1(*(double (*)[14001])&F_tr[28001], b_dv, b_dv1, gain_s);
+
+          for(int i = 0; i < 14001; i++)
+          {
+              cable_gain[i] = b_dv[i];
+              cable_gain_freq[i] = F_tr[28001 + i];
+          }
+
 
           // 69725
           std::memcpy(&b_gain_s[0], &gain_s[0], 513U * sizeof(double));

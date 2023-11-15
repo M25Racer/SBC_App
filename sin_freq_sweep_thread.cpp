@@ -33,6 +33,8 @@ double gain_data[2048];
 double phase_data[2048];
 float gain_data_float[2048];
 float phase_data_float[2048];
+double cable_gain_freq[14001];
+double cable_gain[14001];
 static double sweep_warning_status;
 static double shift_for_qam_data;
 uint16_t shift_for_qam_data_int;
@@ -122,7 +124,12 @@ void SinFreqSweepThread::run()
                 {
                     // Save 'sweep' to file, do not calculate
                     sweep_record_to_file = false;
-                    emit consolePutAdcDataSpecial(SignalBuffer[1], LengthSweep, 3);
+                    for(int i = 0; i < 14001; i++)
+                    {
+                        SignalBuffer[1][(int)LengthSweep + i] = (int16_t)round(2000*log10(cable_gain[i]));
+                        //SignalBuffer[1][(int)LengthSweep + 14001 + i] = (int16_t)cable_gain_freq[i];
+                    }
+                    emit consolePutAdcDataSpecial(SignalBuffer[1], LengthSweep + 14001, 3);
                 }
                 else
                 {
