@@ -94,6 +94,11 @@ bool CMessageBox::message_box_srp(uint8_t* Buf, uint16_t len, uint8_t master_add
             // Data was not answered by message box
             return false;
             break;
+        case AUTO_CFG_CONTINUE:
+            emit commandCalculatePredistortionTablesContinue();
+            tx_len = message_header_to_array(&message, messege_box_buffer);
+            emit postData(messege_box_buffer + 1, tx_len - 1);
+            break;
 
         case AUTO_CFG_PREDISTORTION:
             emit commandCalculatePredistortionTablesStart();

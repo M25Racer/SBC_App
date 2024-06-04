@@ -107,6 +107,7 @@ private slots:
 
     // Commands from Indigo Suite
     void commandCalculatePredistortionTablesStart();
+    void commandCalculatePredistortionTablesContinue();
     void commandAgcStart();
     void srpModeSet(uint8_t mode);
 

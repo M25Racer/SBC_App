@@ -35,6 +35,7 @@ signals:
     void postData(const uint8_t *p_data, int length);
     void postDataToStm32H7(const uint8_t *p_data, const int length);
     void commandCalculatePredistortionTablesStart();
+    void commandCalculatePredistortionTablesContinue();
     void commandAgcStart();
     void srpModeSet(uint8_t mode);
 
@@ -131,6 +132,7 @@ private:
     static const uint8_t CABLE_STATUS          = 0xC8;
 
     static const uint8_t AUTO_CFG_PREDISTORTION = 0xCD;  // Start auto configuration 'predistortion tables'
+    static const uint8_t AUTO_CFG_CONTINUE      = 0xCC;  // Continue auto configuration process after speed selecting speed
     static const uint8_t GET_AUTO_CFG_STATUS    = 0xCE;  // Get current state\status for auto configuration 'predistortion tables'
     static const uint8_t AGC_CONFIGURATION    = 0xCF;  // AGC configuraton start, stop, or get status AGC config status
 
