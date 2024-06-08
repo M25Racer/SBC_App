@@ -87,6 +87,7 @@ int HS_EWL_DEMOD_QAM(const double data[14040], double len_data, double f_est,
       rxFilter1_not_empty = true;
     }
 
+    Fs = 17520*52;
     coder::rat(f_est * 52.0 / Fs, &del_re, &Q);
     if ((!(del_re <= 0.0)) && (!(Q <= 0.0))) {
       creal_T dc;
@@ -221,6 +222,8 @@ int HS_EWL_DEMOD_QAM(const double data[14040], double len_data, double f_est,
 
       rxFilter1.step(b_y1, z);
       dc = coder::qammod();
+      dc.re = -1;
+      dc.im = 1;
       creal_T del = z[static_cast<int>(round(resamp_len/52))];
       if (del.im == 0.0) {
         if (dc.im == 0.0) {
@@ -281,38 +284,50 @@ int HS_EWL_DEMOD_QAM(const double data[14040], double len_data, double f_est,
 //          stream << "something" << endl;
 //      }
       // posible start QAM-256 demodulate
-      for (k = 0; k < 265; k++) {
+      uint16_T M = 4;
+      uint16_T sqrtM;
+      sqrtM = (uint16_T)sqrt(M);
+      for (k = 0; k < 265; k++)
+      {
         b_a3_tmp = z[k + 5].re;
         x = z[k + 5].im;
-        a3_tmp = rt_roundd_snf(((b_a3_tmp * del_re - x * a3) + 15.0) / 2.0);
-        if (a3_tmp < 0.0) {
+        a3_tmp = rt_roundd_snf(((b_a3_tmp * del_re - x * a3) + (sqrtM - 1)) / 2.0);
+        if (a3_tmp < 0.0)
+        {
           a3_tmp = 0.0;
-        } else {
-          if (a3_tmp > 15.0) {
-            a3_tmp = 15.0;
+        }
+        else
+        {
+          if (a3_tmp > (sqrtM - 1))
+          {
+            a3_tmp = sqrtM - 1;
           }
         }
 
-        b_a3_tmp = rt_roundd_snf(((b_a3_tmp * a3 + x * del_re) + 15.0) / 2.0);
-        if (b_a3_tmp < 0.0) {
+        b_a3_tmp = rt_roundd_snf(((b_a3_tmp * a3 + x * del_re) + (sqrtM - 1)) / 2.0);
+        if (b_a3_tmp < 0.0)
+        {
           b_a3_tmp = 0.0;
-        } else {
-          if (b_a3_tmp > 15.0) {
-            b_a3_tmp = 15.0;
+        }
+        else
+        {
+          if (b_a3_tmp > sqrtM - 1)
+          {
+            b_a3_tmp = sqrtM - 1;
           }
         }
 
-        intX[k] = ((16.0 - b_a3_tmp) - 1.0) + 16.0 * a3_tmp;
+        intX[k] = ((sqrtM - b_a3_tmp) - 1.0) + sqrtM * a3_tmp;
       }
 
-      for (b_i = 0; b_i < 256; b_i++) {
+      for (b_i = 0; b_i < M; b_i++) {
         mapping[b_i] = 0U;
-        symbolI[b_i] = static_cast<signed char>(b_i >> 4);//for qam64 (b_i >> 3)
-        symbolQ[b_i] = static_cast<signed char>(b_i & 15);//for qam64 (b_i & 7)
+        symbolI[b_i] = static_cast<signed char>(b_i >> 1);//for qam64 (b_i >> 3) for qam 256 (b_i >> 4)
+        symbolQ[b_i] = static_cast<signed char>(b_i & (sqrtM - 1));//for qam64 (b_i & 7)  for qam 256 (b_i & 15)
       }
 
-      for (b_i = 1; b_i < 4; b_i += b_i) {//for qam_64 b_i = 3
-        for (ihi = 0; ihi < 256; ihi++) {
+      for (b_i = 1; b_i < 1; b_i += b_i) {//for qam_64 b_i = 3 for qam_256 b_i = 4
+        for (ihi = 0; ihi < M; ihi++) {
           k = symbolI[ihi];
           symbolI[ihi] = static_cast<signed char>(k ^ k >> b_i);
           k = symbolQ[ihi];
@@ -320,8 +335,8 @@ int HS_EWL_DEMOD_QAM(const double data[14040], double len_data, double f_est,
         }
       }
 
-      for (b_i = 0; b_i < 256; b_i++) {
-        mapping[(symbolI[b_i] << 4) + symbolQ[b_i]] = static_cast<unsigned char>
+      for (b_i = 0; b_i < M; b_i++) {
+        mapping[(symbolI[b_i] << 1) + symbolQ[b_i]] = static_cast<unsigned char>
           (b_i);
       }
       // end QAM-256 demodulate
@@ -335,17 +350,20 @@ int HS_EWL_DEMOD_QAM(const double data[14040], double len_data, double f_est,
       }
 
       for (b_i = 0; b_i < 50; b_i++) {
-        if ((mapping[static_cast<int>(intX[b_i] + 1.0) - 1] == 128) && (mapping[
-             static_cast<int>(intX[b_i + 1] + 1.0) - 1] == 128) && (mapping[
-             static_cast<int>(intX[b_i + 2] + 1.0) - 1] == 128) && (mapping[
-             static_cast<int>(intX[b_i + 3] + 1.0) - 1] == 255)) {
+        if ((mapping[static_cast<int>(intX[b_i] + 1.0) - 1] == 0) && (mapping[//128
+             static_cast<int>(intX[b_i + 1] + 1.0) - 1] == 0) && (mapping[//128
+             static_cast<int>(intX[b_i + 2] + 1.0) - 1] == 0) && (mapping[//128
+             static_cast<int>(intX[b_i + 3] + 1.0) - 1] == 3)) {//255
           *start_inf_data = (static_cast<double>(b_i) + 1.0) + 3.0;
         }
       }
 
-      for (b_i = 0; b_i < 212; b_i++) {
-        byte_data[b_i] = mapping[static_cast<int>(intX[static_cast<int>
-          (*start_inf_data) + b_i] + 1.0) - 1];
+      for (b_i = 0; b_i < 52; b_i++)//212
+      {
+          for(int j = 0; j < 4; j++)
+          {
+            byte_data[b_i] = (uint8_T)byte_data[b_i] | mapping[(int)(intX[(int)(*start_inf_data) + b_i*4 + j] + 1.0) - 1] << (3 - j)*2;
+          }
       }
 
       // byte_data = trData(start_inf_data+(1:255-43));

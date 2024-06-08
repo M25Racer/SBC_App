@@ -57,7 +57,7 @@ private:
 
     // QAM data related sizes & offsets
     static const uint32_t TxPacketRsCodesSize = 8;
-    static const uint32_t TxPacketDataSize = (212 - TxPacketRsCodesSize);
+    static const uint32_t TxPacketDataSize = (52 - TxPacketRsCodesSize);//qam 256 212
     static const uint32_t TxPacketDataOffset = 23;
 
     bool m_QamDecoderFirstPassFlag = true;

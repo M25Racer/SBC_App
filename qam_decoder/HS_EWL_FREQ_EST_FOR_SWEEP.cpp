@@ -183,13 +183,13 @@ static double preambule_from(const double s[33000], double len)
 //                double *sweep_freq_warning_status
 // Return Type  : void
 //
-void HS_EWL_FREQ_EST_FOR_SWEEP(double s2[33000], double len, double Fs, double
+void HS_EWL_FREQ_EST_FOR_SWEEP(double s2[63000], double len, double Fs, double
   f0, double per_numb, double sps, double *f_opt, double *ph_opt, double
   *sweep_freq_warning_status)
 {
-  static double sine[40000];
-  static double t[40000];
-  static double x[40000];
+  static double sine[63000];
+  static double t[63000];
+  static double x[63000];
   double err2;
   double sine_from;
   double sine_len;
@@ -207,7 +207,7 @@ void HS_EWL_FREQ_EST_FOR_SWEEP(double s2[33000], double len, double Fs, double
   //  sps = 92;
   //  per_numb = 500;
   *sweep_freq_warning_status = 0.0;
-  std::memset(&sine[0], 0, 40000U * sizeof(double));
+  std::memset(&sine[0], 0, 63000U * sizeof(double));
   if (!rtIsNaN(s2[0])) {
     idx = 1;
   } else {
@@ -215,7 +215,7 @@ void HS_EWL_FREQ_EST_FOR_SWEEP(double s2[33000], double len, double Fs, double
     idx = 0;
     k = 2;
     exitg1 = false;
-    while ((!exitg1) && (k < 33001)) {
+    while ((!exitg1) && (k < 63001)) {
       if (!rtIsNaN(s2[k - 1])) {
         idx = k;
         exitg1 = true;
@@ -230,7 +230,7 @@ void HS_EWL_FREQ_EST_FOR_SWEEP(double s2[33000], double len, double Fs, double
   } else {
     sine_from = s2[idx - 1];
     i = idx + 1;
-    for (k = i; k < 33001; k++) {
+    for (k = i; k < 63001; k++) {
       sine_len = s2[k - 1];
       if (sine_from < sine_len) {
         sine_from = sine_len;
@@ -238,7 +238,7 @@ void HS_EWL_FREQ_EST_FOR_SWEEP(double s2[33000], double len, double Fs, double
     }
   }
 
-  for (i = 0; i < 33000; i++) {
+  for (i = 0; i < 63000; i++) {
     s2[i] /= sine_from;
   }
 
@@ -270,7 +270,7 @@ void HS_EWL_FREQ_EST_FOR_SWEEP(double s2[33000], double len, double Fs, double
     }
 
     // sine = s2(sine_from+(0:sps*(per_numb-5)));%s2(sine_from:sine_to);%sine_from+(0:sps*(per_numb-5))
-    std::memset(&t[0], 0, 40000U * sizeof(double));
+    std::memset(&t[0], 0, 63000U * sizeof(double));
     i = static_cast<int>(sine_len);
     for (idx = 0; idx < i; idx++) {
       t[idx] = (static_cast<double>(idx) + 1.0) / Fs;

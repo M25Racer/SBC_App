@@ -145,7 +145,7 @@ void ModTransmitterThread::run()
                 sin600_command = true;
                 common_special_command = true;
 
-                uint32_t adc_data_length = 31400;
+                uint32_t adc_data_length = 31400*2;
                 emit sendCommandToSTM32(USB_CMD_ADC_START, (uint8_t*)&adc_data_length, 4);
 
                 // Next state
@@ -199,7 +199,7 @@ void ModTransmitterThread::run()
                         // Complete, go to next state
                         setState(AGC_START_FOR_SWEEP);
                     }
-                    else if(Timeout >= 30000/100)  // 30 sec
+                    else if(Timeout >= 75000/100)  // 30 sec
                     {
                         emit consolePutData(":: Predistortion auto cfg :: Error freq estimate timeout elapsed\n", 2);
                         setState(ERROR_FREQ_ESTIMATE_TIMEOUT);

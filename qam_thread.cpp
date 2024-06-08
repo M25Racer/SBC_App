@@ -35,7 +35,7 @@ static int16_t FrameErrorAdcBuffer[10][USB_MAX_DATA_SIZE];
 double f0 = 35045;          //carrier freq
 double f0_saved = 35045;    //carrier freq saved for blackbox usage
 double sps = round(Fs/f0);  //sample per spreamble_lenymbol
-double mode = 0;            //1-both stages enabled, 0-only sevond stage
+double mode = 1;            //1-both stages enabled, 0-only sevond stage
 
 //  output var for HS_EWL_FREQ_ACQ
 double warning_status;
@@ -169,7 +169,7 @@ void QamThread::QAM_Decoder()
 
     peformance_timer.start();
 
-    HS_EWL_FREQ_ACQ_error_status = HS_EWL_FREQ_ACQ(signal, len, Fs, f0, sps, mode, preamble_len,
+    HS_EWL_FREQ_ACQ_error_status = HS_EWL_FREQ_ACQ(signal, len, Fs, 17520, sps, mode, preamble_len,
                         message_len, data, &len_data, (double*)&f_est_data, &warning_status);
 
     if(HS_EWL_FREQ_ACQ_error_status == 0)
