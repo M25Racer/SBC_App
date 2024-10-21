@@ -20,7 +20,7 @@
 //
 namespace coder
 {
-  void Outputs(dsp_FIRDecimator_0 *obj, const creal_T U0[14040], creal_T Y0[270])
+  void Outputs(dsp_FIRDecimator_0 *obj, const creal_T *U0, int sig_len, creal_T *Y0, int z_len)//14040 270 for qam256
   {
     int cffIdx;
     int curTapIdx;
@@ -36,7 +36,7 @@ namespace coder
     curTapIdx = obj->W4_TapDelayIndex;
     outBufIdx = 0;
     maxWindow = (phaseIdx + 1) * 10;
-    for (int iIdx = 0; iIdx < 14040; iIdx++) {
+    for (int iIdx = 0; iIdx < (int)sig_len; iIdx++) {//14040
       int jIdx;
       obj->W1_Sums.re += U0[inputIdx].re * obj->P1_FILT[cffIdx];
       obj->W1_Sums.im += U0[inputIdx].im * obj->P1_FILT[cffIdx];
@@ -82,7 +82,7 @@ namespace coder
     obj->W4_TapDelayIndex = curTapIdx;
     obj->W2_CoeffIdx = cffIdx;
     obj->W0_PhaseIdx = phaseIdx;
-    std::memcpy(&Y0[0], &obj->O0_Y0[0], 270U * sizeof(creal_T));
+    std::memcpy(&Y0[0], &obj->O0_Y0[0], z_len * sizeof(creal_T));//270
   }
 
   //

@@ -51,7 +51,7 @@ namespace coder
      public:
       FIRDecimator *init();
       void reset();
-      void step(const creal_T varargin_1[14040], creal_T varargout_1[270]);
+      void step(const creal_T *varargin_1,int sig_len, creal_T *varargout_1, int z_len);
       void setupAndReset();
       void setup();
       void matlabCodegenDestructor();

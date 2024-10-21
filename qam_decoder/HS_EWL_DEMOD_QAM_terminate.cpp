@@ -21,7 +21,7 @@ void HS_EWL_DEMOD_QAM_terminate()
 {
   HS_EWL_FREQ_ACQ_free();
   HS_EWL_DEMOD_QAM_free();
-//  omp_destroy_nest_lock(&emlrtNestLockGlobal);
+  //omp_destroy_nest_lock(&emlrtNestLockGlobal);
   isInitialized_HS_EWL_DEMOD_QAM = false;
 }
 

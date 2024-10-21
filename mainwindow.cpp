@@ -84,7 +84,6 @@ MainWindow::MainWindow(QWidget *parent) :
     m_message_box(new CMessageBox),
     m_gpio_shutdown(new GpioTracker(26, 0, this)),
     m_gpio_output(new GpioTracker(20, 1, this))
-
 {
     m_ui->setupUi(this);
 

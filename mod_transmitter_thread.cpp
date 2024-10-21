@@ -259,6 +259,7 @@ void ModTransmitterThread::run()
                         emit startAnswerTimeoutTimer(timeoutAgcSweepCommands_ms);
                         break;
                     }
+
                     emit consolePutData(":: Predistortion auto cfg :: AGC for 'SWEEP' configured, state AGC_OK\n", 2);
                     setState(ADC_START_FOR_SWEEP);
                 }
@@ -778,7 +779,11 @@ void ModTransmitterThread::calculatePredistortionTablesStart()
 
 void ModTransmitterThread::calculatePredistortionTablesContinue()
 {
-    m_AutoConfigurationMode = true;
+    if(m_AutoConfigurationMode)
+    {
+        emit consolePutData("Error: unable to start user requested AGC configuration, because autoconfiguration is in progress\n", 2);
+        return;
+    }
 
 //    emit consolePutData("==================================================\n"
 //                        "Starting predistortion auto configuration sequence\n"

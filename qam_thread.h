@@ -56,16 +56,15 @@ private:
     } HsEwlReceive_WarningStatus;
 
     // QAM data related sizes & offsets
-    static const uint32_t TxPacketRsCodesSize = 8;
-    static const uint32_t TxPacketDataSize = (52 - TxPacketRsCodesSize);//qam 256 212
-    static const uint32_t TxPacketDataOffset = 23;
+    uint32_t TxPacketRsCodesSize = 8*2;//8 for qam64
+    uint32_t TxPacketDataSize = (469 - TxPacketRsCodesSize);//(225 - TxPacketRsCodesSize) - for qam64
 
     bool m_QamDecoderFirstPassFlag = true;
 
     QMutex mutex;
 
     //uint8_t frame_decoded[TxPacketRsCodesSize + TxPacketDataSize];          // data decoded from single qam packet
-    uint8_t frame_decoded[255];
+    uint8_t frame_decoded[255*2];
 
     uint8_t n_error_frame = 0;
 

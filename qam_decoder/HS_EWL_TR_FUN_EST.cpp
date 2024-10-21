@@ -22,6 +22,7 @@
 #include "rt_nonfinite.h"
 #include "xcorr.h"
 #include "rt_nonfinite.h"
+#include "stdio.h"
 #include <cmath>
 #include <cstring>
 
@@ -140,7 +141,7 @@ static double rt_hypotd_snf(double u0, double u1)
 void HS_EWL_TR_FUN_EST(const double sweep_data[450000], const double sweep_math
   [57820], double Fs, double f_opt, double f_sine, double PreSPP, double gain
   [2048], double phase[2048], double *shift_for_qam_data, double
-  *sweep_warning_status)
+  *sweep_warning_status, qam qam_str)
 {
   static creal_T channel2[57820];
   static creal_T spec_sweep[57820];
@@ -160,9 +161,10 @@ void HS_EWL_TR_FUN_EST(const double sweep_data[450000], const double sweep_math
   static double newGain[14001];
   static double newPhase[14001];
   static double c_y[13581];
-  double b_gain_s[1024];
-  double b_dv1[513];
-  double gain_s[513];
+  double b_gain_s[2048];//2048
+  double b_dv1[4096];//1025
+  double abs_freq[4096] = { 0 };
+  double gain_s[1025];//1025
   double bi;
   double kd;
   double r;
@@ -173,9 +175,10 @@ void HS_EWL_TR_FUN_EST(const double sweep_data[450000], const double sweep_math
 
   std::memset(&gain[0], 0, 2048U * sizeof(double));
   std::memset(&phase[0], 0, 2048U * sizeof(double));
+  std::memset(&b_gain_s[0], 0, 2048U * sizeof(double));
   *shift_for_qam_data = 0.0;
 
-  // gain_phase_impulse_cable_buf634 = load('C:\Users\ramil.ziyadiev\Desktop\Work\qam transmiter\gain_phase_impulse_cable_buf634a.mat');
+  // gain_phase_impulse_cable_buf634 = load('C:\Users\ramil.ziyadiev\Desktop\Work\qam transmiter\gain_phase_impulse_cable_buf634a.mat'); 
   if ((f_opt == 0.0) || (Fs == 0.0) || (f_sine == 0.0) || (PreSPP == 0.0)) {
     *sweep_warning_status = 1.0;
 
@@ -260,8 +263,8 @@ void HS_EWL_TR_FUN_EST(const double sweep_data[450000], const double sweep_math
           double shift_pream;
 
           // START SWEEP CODE
-          //  resampSweepAfter23 = [zeros(1,PreSPP*2-Im+corr_var),resamp_sweep(1:end-(PreSPP*2-Im+corr_var))'];
-          //      TrFunEst = fftshift(fft(resampSweepAfter23(length(sweepPreamble):end))./fft(sweep_math(length(sweepPreamble):end)));
+          //  resampSweepAfter23 = [zeros(1,PreSPP*2-Im+corr_var),resamp_sweep(1:end-(PreSPP*2-Im+corr_var))']; 
+          //      TrFunEst = fftshift(fft(resampSweepAfter23(length(sweepPreamble):end))./fft(sweep_math(length(sweepPreamble):end))); 
           //
           //      newPhase        = angle(TrFunEst(firstFreq:lastFreq));
           //      newGain         = abs(TrFunEst(firstFreq:lastFreq));
@@ -275,7 +278,7 @@ void HS_EWL_TR_FUN_EST(const double sweep_data[450000], const double sweep_math
               resamp_sweep[i];
           }
 
-          // resampSweepAfter23 = [zeros(1,PreSPP*2-Im+corr_var),resamp_sweep(1:end-(PreSPP*2-Im+corr_var))'];
+          // resampSweepAfter23 = [zeros(1,PreSPP*2-Im+corr_var),resamp_sweep(1:end-(PreSPP*2-Im+corr_var))']; 
           coder::fft(*(double (*)[56001])&sweep_math[1819], y_tmp);
           coder::fft(*(double (*)[56001])&resampSweepAfter23[1819], TrFunEst);
           for (b_i = 0; b_i < 56001; b_i++) {
@@ -396,56 +399,85 @@ void HS_EWL_TR_FUN_EST(const double sweep_data[450000], const double sweep_math
           ft[28909] = -4.8426150121085811;
           ft[28910] = -2.9103830456733704E-11;
 
-          //  plot(gain_sogl_freq(1:end-25),20*log10(gain_sogl(1:end-25))-10, 'lineWidth', 2)
+          //  plot(gain_sogl_freq(1:end-25),20*log10(gain_sogl(1:end-25))-10, 'lineWidth', 2) 
           //  hold on
-          //  plot(gain_phase_impulse_cable_buf634.Gain{4},gain_phase_impulse_cable_buf634.Gain{8}-3.5)
+          //  plot(gain_phase_impulse_cable_buf634.Gain{4},gain_phase_impulse_cable_buf634.Gain{8}-3.5) 
           //  ylabel('Gain, Db');
           //  xlabel('freq, kHz');
           //  legend('Imit + SRP Imit','Cabel')
           //  grid on
-          for (b_i = 0; b_i < 513; b_i++) {
-            b_dv1[b_i] = 136.71875 * static_cast<double>(b_i);
+
+          //---- GAIN for predistortion ----//
+          // 
+          // change b_dv1 array_size from 513 to 1024
+          uint16_t size = qam_str.fft_order;
+          int32_t Fd = 280000;
+          double freq_coef = static_cast<double>(Fd) / static_cast<double>(size);
+//          FILE* file;
+//          fopen_s(&file,"test_gain.txt", "w");
+          b_dv1[0] = (double) (- Fd / 2);
+          for (b_i = 1; b_i < size; b_i++) {
+              b_dv1[b_i] = b_dv1[b_i - 1] + freq_coef;// *static_cast<double>(b_i);//136.71875
+          }
+          for (uint16_t i = 0; i < size; i++) {
+              abs_freq[i] = std::abs(b_dv1[i]);
           }
 
           coder::vmovfun(newGain, 14001, b_dv);
-          coder::interp1(*(double (*)[14001])&F_tr[28001], b_dv, b_dv1, gain_s);
+          coder::interp1(*(double (*)[14001])&F_tr[28001], b_dv, &b_dv1[size/2], gain_s, size/4+1);
 
           // 69725
-          std::memcpy(&b_gain_s[0], &gain_s[0], 513U * sizeof(double));
-          for (b_i = 0; b_i < 511; b_i++) {
-            b_gain_s[b_i + 513] = gain_s[512];
+          std::memcpy(&b_gain_s[0], &gain_s[0], (size/4+1) * sizeof(double));
+          for (b_i = 0; b_i < size/4-1; b_i++) {
+            b_gain_s[b_i + size/4+1] = gain_s[size/4];
           }
 
           b_gain_s[0] = b_gain_s[2];
           b_gain_s[1] = b_gain_s[2];
-          coder::interp1SplineOrPCHIP(b_gain_s, gain);
+          std::memcpy(gain, &b_gain_s[0], (size/2) * sizeof(double));
+          //coder::interp1SplineOrPCHIP(b_gain_s, &b_dv1[size / 2], abs_freq, gain, size);
+
+//          for (int i = 0; i < 2048; i++)
+//              fprintf(file, "%f,", gain[i]);
+//          fclose(file);
+
+
+          //---- PHASE for predistortion ----//
+
           for (k = 0; k < 57820; k++) {
             y[k] = std::abs(ft[k]);
           }
 
-          for (b_i = 0; b_i < 513; b_i++) {
+          /*for (b_i = 0; b_i < 513; b_i++) {
             b_dv1[b_i] = 136.71875 * static_cast<double>(b_i);
-          }
+          }*/
 
           coder::vmovfun(newPhase, 14001, b_dv);
-          coder::interp1(*(double (*)[14001])&F_tr[28001], b_dv, b_dv1, gain_s);
+          coder::interp1(*(double (*)[14001])&F_tr[28001], b_dv, &b_dv1[size/2], gain_s, size / 4 + 1);
 
           // 70000
-          std::memcpy(&b_gain_s[0], &gain_s[0], 513U * sizeof(double));
-          for (b_i = 0; b_i < 511; b_i++) {
-            b_gain_s[b_i + 513] = gain_s[512];
+          std::memcpy(&b_gain_s[0], &gain_s[0], (size/4+1) * sizeof(double));
+          for (b_i = 0; b_i < size/4-1; b_i++) {
+            b_gain_s[b_i + size/4+1] = gain_s[size/4];
           }
 
           // 70000
           b_gain_s[0] = b_gain_s[2];
           b_gain_s[1] = b_gain_s[2];
-          coder::interp1SplineOrPCHIP(b_gain_s, phase);
+//          FILE* file1;
+//          fopen_s(&file1,"test_phase.txt", "w");
+          std::memcpy(phase, &b_gain_s[0], (size/2) * sizeof(double));
+          //coder::interp1SplineOrPCHIP(b_gain_s, &b_dv1[size / 2], abs_freq, phase, size);
+//          for (int i = 0; i < 2048; i++)
+//              fprintf(file1,"%f,",phase[i]);
+//          fclose(file1);
+          // end PHASE for predistortion
           for (k = 0; k < 57820; k++) {
             b_y[k] = std::abs(ft[k]);
             Vq[k] = 0.0;
           }
 
-          coder::interp1SplineOrPCHIP(phase, b_y, Vq);
+          coder::interp1SplineOrPCHIP_1(phase, b_y, Vq);
           for (k = 0; k < 57820; k++) {
             kd = Vq[k];
             re = kd * 0.0;
@@ -463,7 +495,7 @@ void HS_EWL_TR_FUN_EST(const double sweep_data[450000], const double sweep_math
             Vq[k] = 0.0;
           }
 
-          coder::interp1SplineOrPCHIP(gain, y, Vq);
+          coder::interp1SplineOrPCHIP_1(gain, y, Vq);
           for (k = 0; k < 57820; k++) {
             bi = Vq[k];
             channel2[k].re *= bi;
@@ -616,7 +648,7 @@ void HS_EWL_TR_FUN_EST(const double sweep_data[450000], const double sweep_math
                 resamp_sweep[flag_array_zero];
             }
 
-            // resampSweepAfter23 = [zeros(1,PreSPP*2-(Im-shift_pream)) SignalB(1:end-(PreSPP*2-(Im-shift_pream)))];
+            // resampSweepAfter23 = [zeros(1,PreSPP*2-(Im-shift_pream)) SignalB(1:end-(PreSPP*2-(Im-shift_pream)))]; 
             coder::fft(*(double (*)[56001])&resampSweepAfter23[1819], TrFunEst);
             for (b_i = 0; b_i < 56001; b_i++) {
               ar = TrFunEst[b_i].re;
@@ -705,8 +737,10 @@ void HS_EWL_TR_FUN_EST(const double sweep_data[450000], const double sweep_math
             }
           }
 
-          *shift_for_qam_data = rt_roundd_snf(phase[1280] / 6.2831853071795862 *
-            8.0);
+          double mod_freq_pos;
+          mod_freq_pos = std::round(35000/(140000/2048)) + 1;
+
+          *shift_for_qam_data = rt_roundd_snf(phase[static_cast<int>(mod_freq_pos)] / 6.2831853071795862 * 8.0);
         }
       }
     }

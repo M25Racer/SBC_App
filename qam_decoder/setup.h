@@ -20,7 +20,7 @@ struct dsp_FIRDecimator_1;
 // Function Declarations
 namespace coder
 {
-  void Outputs(dsp_FIRDecimator_0 *obj, const creal_T U0[14040], creal_T Y0[270]);
+  void Outputs(dsp_FIRDecimator_0 *obj, const creal_T *U0, int sig_len, creal_T *Y0, int z_len);
   void Outputs(dsp_FIRDecimator_1 *obj, const creal_T U0[2132], creal_T Y0[41]);
 }
 

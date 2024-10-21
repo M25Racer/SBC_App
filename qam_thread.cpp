@@ -32,27 +32,30 @@ static double Signal[USB_MAX_DATA_SIZE];
 static int16_t FrameErrorAdcBuffer[10][USB_MAX_DATA_SIZE];
 
 //double Fs = 1832061;//280000;//ADC sample rate
+//extern double f_opt;
 double f0 = 35045;          //carrier freq
 double f0_saved = 35045;    //carrier freq saved for blackbox usage
 double sps = round(Fs/f0);  //sample per spreamble_lenymbol
-double mode = 1;            //1-both stages enabled, 0-only sevond stage
+double mode = 0;            //1-both stages enabled, 0-only sevond stage
+
+qam qam_str;
 
 //  output var for HS_EWL_FREQ_ACQ
 double warning_status;
-double data[14040];
+double data[27300];
 //double index_data;
-double len_data;
+int32_T len_data;
 double f_est_data;//estimated frequency
 //int f_est_size;
 
 //  output var for HS_EWL_DEMOD_QAM
 //creal_T qam_symbols_data[255];
 int qam_symbols_size;
-double byte_data[255];
+double byte_data[469];
 int byte_data_size;
 
-double qam_symbols_real[275];
-double qam_symbols_imag[275];
+double qam_symbols_real[525];
+double qam_symbols_imag[525];
 double start_inf_data;
 
 #define DATA_DECODED_SIZE           (128*1024)
@@ -96,6 +99,12 @@ void QamThread::run()
     gen_poly(T1, gs);
     //gen_poly(Ts2, gs2);
 
+    // QAM init
+    //qam64_init(&qam_str);
+    qam256_double_frame_init(&qam_str);
+    TxPacketRsCodesSize = 8*2;
+    TxPacketDataSize = 469 - TxPacketRsCodesSize;
+
     // Reset filter for 'f0' carrier frequency
     m_flt->Reset();
 
@@ -112,11 +121,39 @@ void QamThread::run()
 
         if(!res)
         {
-            emit consolePutData("Error ring buffer get() returned false\n", 1);
+            emit consolePutData("Error ring buffer get() returned false\n", 2);
             continue;
         }
 
         QAM_Decoder();
+
+        if(m_ChangeSpeed)   // Change speed if needed
+        {
+            m_ChangeSpeed = false;
+            switch(m_SrpMode)
+            {
+                case HS_210_MODE:
+                    // QAM64
+                    emit consolePutData(QString("Changing speed to HS_210_MODE\n"), 2);
+                    qam64_init(&qam_str);
+                    TxPacketRsCodesSize = 8;
+                    TxPacketDataSize = 225 - TxPacketRsCodesSize;
+                    setFirstPassFlag();
+                    break;
+
+                case HS_280_MODE:
+                    // QAM256 Double Frame
+                    emit consolePutData(QString("Changing speed to HS_280_MODE\n"), 2);
+                    qam256_double_frame_init(&qam_str);
+                    TxPacketRsCodesSize = 8*2;
+                    TxPacketDataSize = 469 - TxPacketRsCodesSize;
+                    setFirstPassFlag();
+                    break;
+
+                default:
+                    break;
+            }
+        }
     }
 }
 
@@ -151,11 +188,10 @@ void QamThread::srpModeSet(uint8_t mode)
 
 void QamThread::QAM_Decoder()
 {
-    QString log_str0 = "";  // combined logs with priority = 0
     QString log_str1 = "";  // combined logs with priority = 1
     QString log_str2 = "";  // combined logs with priority = 2
 
-    int rs_decode_flag = -1;
+    int rs_decode_flag[2] = { -1, -1 };
     qint64 rs_elapsed = 0;
 
     // ERROR status
@@ -169,13 +205,14 @@ void QamThread::QAM_Decoder()
 
     peformance_timer.start();
 
-    HS_EWL_FREQ_ACQ_error_status = HS_EWL_FREQ_ACQ(signal, len, Fs, 17520, sps, mode, preamble_len,
-                        message_len, data, &len_data, (double*)&f_est_data, &warning_status);
+    HS_EWL_FREQ_ACQ_error_status = HS_EWL_FREQ_ACQ(signal, len, Fs, f0, sps, mode, preamble_len,
+        &qam_str, data, &len_data, (double*)&f_est_data, &warning_status);
 
     if(HS_EWL_FREQ_ACQ_error_status == 0)
     {
-        HS_EWL_DEMOD_QAM_error_status = HS_EWL_DEMOD_QAM(data, len_data, f_est_data, Fs, qam_symbols_real,
-                                                        qam_symbols_imag, byte_data, &start_inf_data);
+        HS_EWL_DEMOD_QAM_error_status = HS_EWL_DEMOD_QAM(data, len_data, f_est_data, Fs, &qam_str, qam_symbols_real,
+                    qam_symbols_imag, byte_data, &start_inf_data);
+
         switch(HS_EWL_DEMOD_QAM_error_status)
         {
             case 1: // input data LEN <= 0
@@ -201,22 +238,76 @@ void QamThread::QAM_Decoder()
         // Check 'frame' CRC
         uint8_t crc8 = calc_crc8(frame_decoded + TxPacketRsCodesSize, TxPacketDataSize - 1);
 
+
         if(crc8 != tail->crc8)
         {
             crc_error = true;
-            //emit consolePutData(QString("HS frame parsing crc error, attempting to correct data with rs decoder\n"), 1);
 
             peformance_timer2.start();
 
             // Zero padding before decode
             memset(frame_decoded + TxPacketRsCodesSize + TxPacketDataSize, 0x00, sizeof(frame_decoded) - TxPacketRsCodesSize - TxPacketDataSize);
 
-            rs_decode_flag = decode_rs1(frame_decoded);
-
-            if(rs_decode_flag < 2)
+            // RS Codes length + Data length <= 255 ?
+            if(TxPacketRsCodesSize + TxPacketDataSize <= 255)
             {
-                // Check crc again
-                crc8 = calc_crc8(frame_decoded + TxPacketRsCodesSize, TxPacketDataSize - 1);
+                // Single QAM frame mode
+                rs_decode_flag[0] = decode_rs1(frame_decoded);
+
+                if(rs_decode_flag[0] < 2)
+                {
+                    // Check crc again
+                    crc8 = calc_crc8(frame_decoded + TxPacketRsCodesSize, TxPacketDataSize - 1);
+                }
+            }
+            else
+            {
+                // Double QAM frame mode
+                // 8 rs codes, 8 rs codes, 255-8 data first frame, 255-8 data second frame
+
+                // First QAM frame
+                // Copy RS codes to 'tmp_buffer'
+                for(quint16 i = 0; i < TxPacketRsCodesSize/2; ++i)
+                    tmp_buffer[i] = frame_decoded[i];
+
+                // Copy data to 'tmp_buffer'
+                quint16 p_data = TxPacketRsCodesSize;
+                for(quint16 i = TxPacketRsCodesSize/2; i < 255; ++i)
+                    tmp_buffer[i] = frame_decoded[p_data++];
+
+                rs_decode_flag[0] = decode_rs1(tmp_buffer);
+
+                if(rs_decode_flag[0] < 2)
+                {
+                    // Copy corrected rs codes & data back
+                    memcpy(frame_decoded, tmp_buffer, TxPacketRsCodesSize/2);
+                    memcpy(frame_decoded + TxPacketRsCodesSize, tmp_buffer + TxPacketRsCodesSize/2, 255-TxPacketRsCodesSize/2);
+                }
+
+                // Second QAM frame
+                // Copy RS codes to 'tmp_buffer'
+                for(quint16 i = 0; i < TxPacketRsCodesSize/2; ++i)
+                    tmp_buffer[i] = frame_decoded[TxPacketRsCodesSize/2 + i];
+
+                // Copy data to 'tmp_buffer'
+                p_data = TxPacketRsCodesSize + (255 - TxPacketRsCodesSize/2);
+                for(quint16 i = TxPacketRsCodesSize/2; i < 255; ++i)
+                    tmp_buffer[i] = frame_decoded[p_data++];
+
+                rs_decode_flag[1] = decode_rs1(tmp_buffer);
+
+                if(rs_decode_flag[1] < 2)
+                {
+                    // Copy corrected rs codes & data back
+                    memcpy(frame_decoded + TxPacketRsCodesSize/2, tmp_buffer, TxPacketRsCodesSize/2);
+                    memcpy(frame_decoded + TxPacketRsCodesSize + (255 - TxPacketRsCodesSize/2), tmp_buffer + TxPacketRsCodesSize/2, 255-TxPacketRsCodesSize/2);
+                }
+
+                if(rs_decode_flag[0] < 2 || rs_decode_flag[1] < 2)
+                {
+                    // Check crc again
+                    crc8 = calc_crc8(frame_decoded + TxPacketRsCodesSize, TxPacketDataSize - 1);
+                }
             }
 
             rs_elapsed = peformance_timer2.elapsed();
@@ -300,29 +391,32 @@ void QamThread::QAM_Decoder()
     }
 
     // RS decoder debug information
-    switch(rs_decode_flag)
+    for(uint8_t i = 0; i < 2; ++i)
     {
-        case 0:
-            /* no non-zero syndromes => no errors: output received codeword */
-            log_str2.append(QString("RS decoder finished in %1 ms: no errors\n").arg(rs_elapsed));
-            break;
+        switch(rs_decode_flag[i])
+        {
+            case 0:
+                /* no non-zero syndromes => no errors: output received codeword */
+                log_str2.append(QString("RS decoder finished in %1 ms: no errors\n").arg(rs_elapsed));
+                break;
 
-        case 1:
-            log_str2.append(QString("RS decoder finished in %1 ms: errors corrected\n").arg(rs_elapsed));
-            break;
+            case 1:
+                log_str2.append(QString("RS decoder finished in %1 ms: errors corrected\n").arg(rs_elapsed));
+                break;
 
-        case 2:
-        case 3:
-            log_str2.append(QString("RS decoder finished in %1 ms: unable to correct\n").arg(rs_elapsed));
-            break;
+            case 2:
+            case 3:
+                log_str2.append(QString("RS decoder finished in %1 ms: unable to correct\n").arg(rs_elapsed));
+                break;
 
-        default:
-            break;
+            default:
+                break;
+        }
     }
 
-    if(rs_decode_flag == -1)
+    if(rs_decode_flag[0] == -1 && rs_decode_flag[1] == -1)
         rs_statistics_add_no_correction();
-    else if(rs_decode_flag < 2)
+    else if(rs_decode_flag[0] < 2 || rs_decode_flag[1] < 2)
         rs_statistics_add_correction();
 
     // Debug information
@@ -384,7 +478,7 @@ void QamThread::QAM_Decoder()
 //    HS_EWL_DEMOD_QAM_terminate();
 
     // If frame received without any errors
-    if(!crc_error && warning_status == CORRECT && rs_decode_flag == -1)
+    if(!crc_error && warning_status == CORRECT && rs_decode_flag[0] == -1 && rs_decode_flag[1] == -1)
     {
         // Filter f0 carrier frequency
         mutex.lock();
@@ -402,11 +496,11 @@ void QamThread::QAM_Decoder()
             m_freqValMutex.lock();
             f0_saved = f0;
             m_freqValMutex.unlock();
-            log_str0.append(QString("Filter f0: median filtered = %1\n").arg(f0));
+            log_str1.append(QString("Filter f0: median filtered = %1\n").arg(f0));
         }
         else
         {
-            log_str0.append("Filter f0: filter is not filled yet, skipping\n");
+            log_str1.append("Filter f0: filter is not filled yet, skipping\n");
         }
     }
 

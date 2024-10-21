@@ -27,8 +27,8 @@ struct b_struct_T
 // Function Declarations
 namespace coder
 {
-  static void interp1Linear(const double y[14001], const double xi[513], double
-    yi[513], const double varargin_1[14001]);
+  static void interp1Linear(const double y[14001], const double *xi, double
+    yi[513], const double varargin_1[14001], uint16_t size);
 }
 
 // Function Definitions
@@ -41,8 +41,8 @@ namespace coder
 //
 namespace coder
 {
-  static void interp1Linear(const double y[14001], const double xi[513], double
-    yi[513], const double varargin_1[14001])
+  static void interp1Linear(const double y[14001], const double *xi, double
+    yi[513], const double varargin_1[14001], uint16_t size)
   {
     double maxx;
     double minx;
@@ -55,8 +55,7 @@ namespace coder
     minx = varargin_1[0];
     maxx = varargin_1[14000];
 
-
-    for (int k = 0; k < 513; k++) {
+    for (int k = 0; k < size; k++) {
       r_tmp = xi[k];
       if (rtIsNaN(r_tmp)) {
         yi[k] = rtNaN;
@@ -102,7 +101,7 @@ namespace coder
   // Return Type  : void
   //
   void interp1(const double varargin_1[14001], const double varargin_2[14001],
-               const double varargin_3[513], double Vq[513])
+               const double *varargin_3, double *Vq, uint16_t size)
   {
     static double y[14001];
     double x[14001];
@@ -132,11 +131,11 @@ namespace coder
           }
         }
 
-        for (k = 0; k < 513; k++) {
+        for (k = 0; k < size; k++) {
           Vq[k] = rtNaN;
         }
 
-        interp1Linear(y, varargin_3, Vq, x);
+        interp1Linear(y, varargin_3, Vq, x, size);
         exitg1 = 1;
       }
     } while (exitg1 == 0);
@@ -147,9 +146,9 @@ namespace coder
   //                double yi[2048]
   // Return Type  : void
   //
-  void interp1SplineOrPCHIP(const double y[1024], double yi[2048])
+  void interp1SplineOrPCHIP(const double *y, double *freq, double *abs_freq, double *yi, uint16_t size)
   {
-    static const double b_dv[2048] = { 140000.0, 139863.28125, 139726.5625,
+    /*static const double b_dv[2048] = {140000.0, 139863.28125, 139726.5625,
       139589.84375, 139453.125, 139316.40625, 139179.6875, 139042.96875,
       138906.25, 138769.53125, 138632.8125, 138496.09375, 138359.375,
       138222.65625, 138085.9375, 137949.21875, 137812.5, 137675.78125,
@@ -509,14 +508,16 @@ namespace coder
       137812.5, 137949.21875, 138085.9375, 138222.65625, 138359.375,
       138496.09375, 138632.8125, 138769.53125, 138906.25, 139042.96875,
       139179.6875, 139316.40625, 139453.125, 139589.84375, 139726.5625,
-      139863.28125 };
+      139863.28125 };*/
 
-    struct_T pp;
-    double md[1024];
-    double s[1024];
-    double dvdf[1023];
-    double dx[1023];
+    b_struct_T pp;
+    double md[2048];
+    double s[2048];
+    double dvdf[2047];
+    double dx[2047];
     double d;
+    double d31;
+    double dnnm2;
     double r;
     double xloc;
     int high_i;
@@ -524,20 +525,20 @@ namespace coder
     int low_i;
     int low_ip1;
     int mid_i;
-    for (k = 0; k < 1023; k++) {
-      d = 136.71875 * (static_cast<double>(k) + 1.0) - 136.71875 * static_cast<
-        double>(k);
+    for (k = 0; k < size/2-1; k++) {
+      d = freq[k + 1] - freq[k];
       dx[k] = d;
       dvdf[k] = (y[k + 1] - y[k]) / d;
     }
 
-    s[0] = ((dx[0] + 546.875) * dx[1] * dvdf[0] + dx[0] * dx[0] * dvdf[1]) /
-      273.4375;
-    s[1023] = ((dx[1022] + 546.875) * dx[1021] * dvdf[1022] + dx[1022] * dx[1022]
-               * dvdf[1021]) / 273.4375;
+    d31 = freq[2] - freq[0];
+    dnnm2 = freq[size/2-1] - freq[size/2-3];
+    s[0] = ((dx[0] + 2.0 * d31) * dx[1] * dvdf[0] + dx[0] * dx[0] * dvdf[1]) / d31;
+    s[size/2-1] = ((dx[size/2-2] + 2.0 * dnnm2) * dx[size/2-3] * dvdf[size/2-2] + dx[size/2-2] * dx[size/2-2]
+               * dvdf[size/2-3]) / dnnm2;
     md[0] = dx[1];
-    md[1023] = dx[1021];
-    for (k = 0; k < 1022; k++) {
+    md[size/2-1] = dx[size/2-3];
+    for (k = 0; k < size/2-2; k++) {
       r = dx[k + 1];
       d = dx[k];
       s[k + 1] = 3.0 * (r * dvdf[k] + d * dvdf[k + 1]);
@@ -545,28 +546,28 @@ namespace coder
     }
 
     r = dx[1] / md[0];
-    md[1] -= r * 273.4375;
+    md[1] -= r * d31;
     s[1] -= r * s[0];
-    for (k = 0; k < 1021; k++) {
+    for (k = 0; k < size/2-3; k++) {
       r = dx[k + 2] / md[k + 1];
       md[k + 2] -= r * dx[k];
       s[k + 2] -= r * s[k + 1];
     }
 
-    r = 273.4375 / md[1022];
-    md[1023] -= r * dx[1021];
-    s[1023] -= r * s[1022];
-    s[1023] /= md[1023];
-    for (k = 1021; k >= 0; k--) {
+    r = dnnm2 / md[size/2-2];
+    md[size/2-1] -= r * dx[size/2-3];
+    s[size/2-1] -= r * s[size/2-2];
+    s[size/2-1] /= md[size/2-1];
+    for (k = size/2-3; k >= 0; k--) {
       s[k + 1] = (s[k + 1] - dx[k] * s[k + 2]) / md[k + 1];
     }
 
-    s[0] = (s[0] - 273.4375 * s[1]) / md[0];
-    for (k = 0; k < 1024; k++) {
-      pp.breaks[k] = 136.71875 * static_cast<double>(k);
+    s[0] = (s[0] - d31 * s[1]) / md[0];
+    for (k = 0; k < size/2; k++) {
+      pp.breaks[k] = freq[k];
     }
 
-    for (k = 0; k < 1023; k++) {
+    for (k = 0; k < size/2-1; k++) {
       double d1;
       double d2;
       double dzzdx;
@@ -576,19 +577,18 @@ namespace coder
       dzzdx = (d - d1) / d2;
       r = (s[k + 1] - d) / d2;
       pp.coefs[k] = (r - dzzdx) / d2;
-      pp.coefs[k + 1023] = 2.0 * dzzdx - r;
-      pp.coefs[k + 2046] = d1;
-      pp.coefs[k + 3069] = y[k];
+      pp.coefs[k + size/2-1] = 2.0 * dzzdx - r;
+      pp.coefs[k + size-2] = d1;
+      pp.coefs[k + size*3/2 - 3] = y[k];
     }
 
-
-    for (int b_k = 0; b_k < 2048; b_k++) {
+    for (int b_k = 0; b_k < size; b_k++) {
       low_i = 0;
       low_ip1 = 2;
-      high_i = 1024;
+      high_i = size/2;
       while (high_i > low_ip1) {
         mid_i = ((low_i + high_i) + 1) >> 1;
-        if (b_dv[b_k] >= pp.breaks[mid_i - 1]) {
+        if (abs_freq[b_k] >= pp.breaks[mid_i - 1]) {
           low_i = mid_i - 1;
           low_ip1 = mid_i + 1;
         } else {
@@ -596,9 +596,9 @@ namespace coder
         }
       }
 
-      xloc = b_dv[b_k] - pp.breaks[low_i];
-      yi[b_k] = xloc * (xloc * (xloc * pp.coefs[low_i] + pp.coefs[low_i + 1023])
-                        + pp.coefs[low_i + 2046]) + pp.coefs[low_i + 3069];
+      xloc = abs_freq[b_k] - pp.breaks[low_i];
+      yi[b_k] = xloc * (xloc * (xloc * pp.coefs[low_i] + pp.coefs[low_i + size/2-1])
+                        + pp.coefs[low_i + size-2]) + pp.coefs[low_i + size*3/2-3];
     }
   }
 
@@ -608,7 +608,7 @@ namespace coder
   //                double yi[57820]
   // Return Type  : void
   //
-  void interp1SplineOrPCHIP(const double y[2048], const double xi[57820], double
+  void interp1SplineOrPCHIP_1(const double *y, const double xi[57820], double
     yi[57820])
   {
     b_struct_T pp;
@@ -680,7 +680,6 @@ namespace coder
       pp.coefs[k + 4094] = d1;
       pp.coefs[k + 6141] = y[k];
     }
-
 
     for (int b_k = 0; b_k < 57820; b_k++) {
       xloc = xi[b_k];

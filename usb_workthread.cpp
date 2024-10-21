@@ -562,24 +562,25 @@ void LIBUSB_CALL UsbWorkThread::rx_callback(struct libusb_transfer *transfer)
                     // Retransmit data to PC
                     emit postTxDataToSerialPort(UserRxBuffer + pStartData + sizeof(USBheader_t), header->packet_length - sizeof(USBheader_t));
                     break;
-                case SRP_HS_DATA:
+                case SRP_HS_DATA_QAM256:
+                case SRP_HS_DATA_QAM64:
                     parseHsData();
 
-//                    // Check speed and change it if needed
-//                    // Normally speed is changed using 'custom parameters' commands, the code below should execute only
-//                    // if 'SBC_App' suddenly restarts and looses speed configuration
-//                    static uint8_t cnt = 0;
-//                    if(header->type != m_SrpMode)
-//                    {
-//                        if(++cnt > 10)
-//                        {
-//                            cnt = 0;
-//                            emit consolePutData(QString("Warning: SBC detected wrong speed configuration, changing speed\n"), 2);
-//                            emit srpModeSet(header->type);
-//                        }
-//                    }
-//                    else
-//                        cnt = 0;
+                    // Check speed and change it if needed
+                    // Normally speed is changed using 'custom parameters' commands, the code below should execute only
+                    // if 'SBC_App' suddenly restarts and looses speed configuration
+                    static uint8_t cnt = 0;
+                    if(header->type != m_SrpMode)
+                    {
+                        if(++cnt > 10)
+                        {
+                            cnt = 0;
+                            emit consolePutData(QString("Warning: SBC detected wrong speed configuration, changing speed\n"), 2);
+                            emit srpModeSet(header->type);
+                        }
+                    }
+                    else
+                        cnt = 0;
                     break;
             }
 
@@ -887,7 +888,7 @@ void UsbWorkThread::sendHsCommand(uint8_t Command, uint32_t Length, const uint8_
 {
     USBheader_t header;
     header.cmd = Command;
-    header.type = SRP_HS_DATA;
+    header.type = SRP_HS_DATA_QAM256;   // don't care SRP_HS_DATA_QAM256 or SRP_HS_DATA_QAM64
     header.packet_length = sizeof(USBheader_t) + Length;
 
 #ifdef QT_DEBUG

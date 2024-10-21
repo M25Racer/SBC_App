@@ -19,7 +19,7 @@
 //
 void HS_EWL_DEMOD_QAM_initialize()
 {
-//  omp_init_nest_lock(&emlrtNestLockGlobal);
+  //omp_init_nest_lock(&emlrtNestLockGlobal);
   HS_EWL_DEMOD_QAM_init();
   HS_EWL_FREQ_ACQ_init();
   isInitialized_HS_EWL_DEMOD_QAM = true;

@@ -21,6 +21,7 @@ using namespace QAM_Common;
 /* Extern global variables */
 extern QWaitCondition sinFreqSweepBufNotEmpty;
 extern QMutex m_mutex_sweep_thread;
+extern qam qam_str;
 extern double f0;   // carrier frequency
 
 /* Private variables */
@@ -212,7 +213,7 @@ void SinFreqSweepThread::Sweep()
 
     HS_EWL_TR_FUN_EST(sweep, math_sweep, Fs, f_opt*2, f_sine, pream_sps,
                      gain_data, phase_data,&shift_for_qam_data,
-                     &sweep_warning_status);
+                     &sweep_warning_status, qam_str);
 
     // Convert to float
     for(uint16_t i = 0; i < 2048; ++i)
