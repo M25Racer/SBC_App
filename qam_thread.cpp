@@ -150,6 +150,15 @@ void QamThread::run()
                     setFirstPassFlag();
                     break;
 
+                case HS_QPSK_MODE:
+                    // QPSK
+                    emit consolePutData(QString("Changing speed to HS_QPSK_MODE\n"), 2);
+                    qpsk_init(&qam_str);
+                    TxPacketRsCodesSize = 8;
+                    TxPacketDataSize = 50 - TxPacketRsCodesSize;
+                    setFirstPassFlag();
+                    break;
+
                 default:
                     break;
             }
@@ -173,6 +182,7 @@ void QamThread::srpModeSet(uint8_t mode)
     {
         case HS_210_MODE:
         case HS_280_MODE:
+        case HS_QPSK_MODE:
             if(m_SrpMode != m)
             {
                 emit consolePutData(QString("Received request to change speed, it will be changed later\n"), 2);
@@ -201,9 +211,20 @@ void QamThread::QAM_Decoder()
     bool crc_error = true;
     bool last_frame_received = false;
     double *signal = (double*)&Signal;
+    double resamp_qpsk_signal[29300] = {0};
+    int32_T resamp_qpsk_len = (int32_T)Length;
     double len = Length;
 
     peformance_timer.start();
+
+    if(qam_str.order == 4)
+    {
+        resamp_qpsk_len = lagrange_reamp(signal, &resamp_qpsk_len, resamp_qpsk_signal, 229007.625, 139941, 4);
+        signal = resamp_qpsk_signal;
+        len = (double)resamp_qpsk_len;
+        f0 = 17500;
+        sps = 52;
+    }
 
     HS_EWL_FREQ_ACQ_error_status = HS_EWL_FREQ_ACQ(signal, len, Fs, f0, sps, mode, preamble_len,
         &qam_str, data, &len_data, (double*)&f_est_data, &warning_status);
@@ -507,5 +528,5 @@ void QamThread::QAM_Decoder()
     // Show logs to console and save to log file (depending on priority)
     if(!log_str2.isEmpty()) emit consolePutData(log_str2, 2);
     if(!log_str1.isEmpty()) emit consolePutData(log_str1, 1);
-    if(!log_str0.isEmpty()) emit consolePutData(log_str0, 0);
+    //if(!log_str0.isEmpty()) emit consolePutData(log_str0, 0);
 }

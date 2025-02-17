@@ -48,7 +48,7 @@ private:
     uint8_t message_box_buffer_mod[1024];
     uint16_t n_channel = 0;
 
-    uint32_t n_elements = 2048;
+    uint32_t n_elements = 128;//2048;
 
     typedef enum
     {
@@ -115,11 +115,11 @@ private:
     const uint32_t n_MaxAttemptsHighLevel = 3;
     const uint32_t n_MaxContinuousAgcErrors = 10;           // max number of continuous AGC errors
 
-    const uint32_t timeoutAnswer_ms = 2500;
+    const uint32_t timeoutAnswer_ms = 2800;
 
-    const uint32_t timeoutAgcSin35kHzCommands_ms = 1000;     // timeout between SIN 35 kHz transfers for AGC
-    const uint32_t timeoutAgcSweepCommands_ms = 1200;        // timeout between Sweep transfers for AGC
-    const uint32_t timeoutModStatusCommands_ms = 1000;       // timeout between MOD GET STATUS transfers for AGC
+    const uint32_t timeoutAgcSin35kHzCommands_ms = 2000;     // timeout between SIN 35 kHz transfers for AGC
+    const uint32_t timeoutAgcSweepCommands_ms = 1700;        // timeout between Sweep transfers for AGC
+    const uint32_t timeoutModStatusCommands_ms = 1200;       // timeout between MOD GET STATUS transfers for AGC
 
     const uint32_t n_MaxSin35kHzCommands = 200;             // max number of SIN 35 kHz transfers for AGC
     const uint32_t n_MaxSweepCommands = 500;                // max number of Sweep transfers for AGC

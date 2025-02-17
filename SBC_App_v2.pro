@@ -39,10 +39,10 @@ SOURCES += \
     qam_decoder/ifft.cpp \
     qam_decoder/ifftshift.cpp \
     qam_decoder/interp1.cpp \
-    qam_decoder/log2.cpp \
     qam_decoder/minOrMax.cpp \
     qam_decoder/movSumProdOrMean.cpp \
     qam_decoder/qammod.cpp \
+    qam_decoder/qam_init.cpp \
     qam_decoder/RaisedCosineReceiveFilter.cpp \
     qam_decoder/rat.cpp \
     qam_decoder/rtGetInf.cpp \

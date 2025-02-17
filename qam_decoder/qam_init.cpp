@@ -24,3 +24,11 @@ void qam256_double_frame_init(qam *qam_str){
     qam_str->pream_qam_sym      = 15;
     qam_str->fft_order          = 4096;
 }
+void qpsk_init(qam *qam_str)
+{
+    qam_str->order              = 4;
+    qam_str->qam_sym_per_frame  = 256;
+    qam_str->inf_byte_amount    = 50;
+    qam_str->pream_qam_sym      = 1;
+    qam_str->fft_order          = 2048;
+}

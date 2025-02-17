@@ -564,6 +564,7 @@ void LIBUSB_CALL UsbWorkThread::rx_callback(struct libusb_transfer *transfer)
                     break;
                 case SRP_HS_DATA_QAM256:
                 case SRP_HS_DATA_QAM64:
+                case SRP_HS_DATA_QPSK:
                     parseHsData();
 
                     // Check speed and change it if needed

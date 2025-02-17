@@ -107,6 +107,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(m_message_box, &CMessageBox::commandCalculatePredistortionTablesContinue, this, &MainWindow::commandCalculatePredistortionTablesContinue);
     connect(m_message_box, &CMessageBox::commandAgcStart, this, &MainWindow::commandAgcStart);
     connect(m_message_box, &CMessageBox::srpModeSet, this, &MainWindow::srpModeSet);
+
     connect(m_gpio_shutdown, &GpioTracker::consolePutData, this, &MainWindow::consolePutData);
     connect(m_gpio_output, &GpioTracker::consolePutData, this, &MainWindow::consolePutData);
     connect(&m_usb_thread, &UsbWorkThread::postTxDataToSerialPort, this, &MainWindow::transmitDataSerialPort, Qt::ConnectionType::QueuedConnection);
@@ -766,7 +767,7 @@ void MainWindow::sendHsCommandAgcStart()
 void MainWindow::recordSweep()
 {
     // Show 'select directory' modal dialog
-    QString dir = QFileDialog::getExistingDirectory(this, "Select directory for 'sweep' signals", "/home", QFileDialog::ShowDirsOnly);// | QFileDialog::DontResolveSymlinks | QFileDialog::DontUseNativeDialog);
+    QString dir = QFileDialog::getExistingDirectory(this, "Select directory for 'sweep' signals", "/home", QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
 
     if(dir == NULL)
     {

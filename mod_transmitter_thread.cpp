@@ -15,6 +15,9 @@ extern QMutex m_mutex_mod;
 
 extern float gain_data_float[2048];
 extern float phase_data_float[2048];
+extern float gain_resamp_data[128];
+extern float phase_resamp_data[128];
+
 extern uint16_t shift_for_qam_data_int;
 
 extern RingBuffer *m_ring;
@@ -126,7 +129,9 @@ void ModTransmitterThread::run()
                         emit startAnswerTimeoutTimer(timeoutAgcSin35kHzCommands_ms);
                         break;
                     }
+
                     emit consolePutData(":: Predistortion auto cfg :: AGC for 'SIN 35kHz' configured, state AGC_OK\n", 2);
+
                     if(State == SIN35KHZ_MOD_COMMANDS_FOR_AGC_2)
                     {
                         setState(START_TX_PREDISTORTION_TABLES_TO_MOD);
@@ -368,6 +373,13 @@ void ModTransmitterThread::run()
                 retry = false;
                 n_attempts = 0;
                 n_attempts_high_level = 0;
+
+                emit sendCommandToSTM32(USB_CMD_SET_GAIN_TABLES, (uint8_t*)&gain_data_float, sizeof(gain_data_float)/2);
+                QThread::msleep(1500);
+                emit sendCommandToSTM32(USB_CMD_SET_PHASE_TABLES, (uint8_t*)&phase_data_float, sizeof(phase_data_float)/2);
+                QThread::msleep(1500);
+                emit sendCommandToSTM32(USB_CMD_SET_PRED_SHIFT, (uint8_t*)&shift_for_qam_data_int, sizeof(shift_for_qam_data_int));
+                QThread::msleep(1500);
 
                 setState(TX_PREDISTORTION_TABLES_TO_MOD);
                 /* fallthrough */
@@ -675,9 +687,9 @@ void ModTransmitterThread::transmitPredistortionTables()
             for(uint32_t i = 0; i < 8; ++i)
             {
                 if(StatePredistTx == TX_PHASE_TABLE)
-                    p_f = reinterpret_cast<uint8_t*>(&phase_data_float[n_channel*8 + i]);
+                    p_f = reinterpret_cast<uint8_t*>(&phase_resamp_data[n_channel*8 + i]);
                 else //if(State == TRANSMIT_GAIN)
-                    p_f = reinterpret_cast<uint8_t*>(&gain_data_float[n_channel*8 + i]);
+                    p_f = reinterpret_cast<uint8_t*>(&gain_resamp_data[n_channel*8 + i]);
 
                 message_box_buffer_mod[11 + j++] = p_f[0];
                 message_box_buffer_mod[11 + j++] = p_f[1];
@@ -696,8 +708,8 @@ void ModTransmitterThread::transmitPredistortionTables()
             message_box_buffer_mod[12] = uint8_t((shift_for_qam_data_int >> 8) & 0xFF);
 
             // Calculate crc16 for phase & gain tables and shift
-            calc_crc16((uint8_t*)&phase_data_float, sizeof(phase_data_float));
-            calc_crc16_continue((uint8_t*)&gain_data_float, sizeof(phase_data_float));
+            calc_crc16((uint8_t*)&phase_resamp_data, sizeof(phase_resamp_data));
+            calc_crc16_continue((uint8_t*)&gain_resamp_data, sizeof(gain_resamp_data));
             uint16_t crc16 = calc_crc16_continue((uint8_t*)&shift_for_qam_data_int, sizeof(shift_for_qam_data_int));
 
             message_box_buffer_mod[13] = uint8_t(crc16 & 0xFF);
@@ -779,11 +791,12 @@ void ModTransmitterThread::calculatePredistortionTablesStart()
 
 void ModTransmitterThread::calculatePredistortionTablesContinue()
 {
-    if(m_AutoConfigurationMode)
-    {
-        emit consolePutData("Error: unable to start user requested AGC configuration, because autoconfiguration is in progress\n", 2);
-        return;
-    }
+    m_AutoConfigurationMode = true;
+//    if(m_AutoConfigurationMode)
+//    {
+//        emit consolePutData("Error: unable to start user requested AGC configuration, because autoconfiguration is in progress\n", 2);
+//        return;
+//    }
 
 //    emit consolePutData("==================================================\n"
 //                        "Starting predistortion auto configuration sequence\n"

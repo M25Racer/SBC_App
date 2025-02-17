@@ -21,9 +21,10 @@ typedef enum : uint8_t
 
 typedef enum : uint8_t
 {
-    LS_MODE = 0x00,
-    HS_210_MODE = 0x01,
-    HS_280_MODE = 0x02
+    LS_MODE         = 0x00,
+    HS_210_MODE     = 0x01,
+    HS_280_MODE     = 0x02,
+    HS_QPSK_MODE    = 0x03
 } TSrpMode;
 
 /* Global atomic variables */

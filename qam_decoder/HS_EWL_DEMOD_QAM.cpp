@@ -220,8 +220,8 @@ int HS_EWL_DEMOD_QAM(const double *data, double len_data, double f_est,//18460-f
           ihi = 0;
         }
       }
-
       int sig_len = (qam_str->qam_sym_per_frame + 15)*52;
+      int z_len = qam_str->qam_sym_per_frame + 15;
       rxFilter1.step(b_y1,sig_len, z, z_len);
       dc.re = qam_str->pream_qam_sym; //coder::qammod();
       dc.im = qam_str->pream_qam_sym;
@@ -285,10 +285,7 @@ int HS_EWL_DEMOD_QAM(const double *data, double len_data, double f_est,//18460-f
 //          stream << "something" << endl;
 //      }
       // posible start QAM-256 demodulate
-      for (k = 0; k < 265; k++)
-        }
 
-        {
       uint8_t* pointer_to_inf_byte;
       if(qam_str->order == 256)
         pointer_to_inf_byte = qam_256_demodulator(z, qam_str->qam_sym_per_frame+13, del_re, a3);
@@ -298,11 +295,11 @@ int HS_EWL_DEMOD_QAM(const double *data, double len_data, double f_est,//18460-f
       for(int i = 0; i < (int)qam_str->inf_byte_amount; i++){
           byte_data[i] = *(pointer_to_inf_byte+i);
       }
-      for (b_i = 0; b_i < M; b_i++) {
       //get qam diagram symbols
       for (b_i = 0; b_i < (int)qam_str->qam_sym_per_frame+13; b_i++) {
         b_a3_tmp = z[b_i].re;
         x = z[b_i].im;
+        qam_symbols_real[b_i] = b_a3_tmp * del_re - x * a3;
         qam_symbols_imag[b_i] = b_a3_tmp * a3 + x * del_re;
       }
 //      for (k = 0; k < 265; k++) {
@@ -344,7 +341,6 @@ int HS_EWL_DEMOD_QAM(const double *data, double len_data, double f_est,//18460-f
 //        }
 //      }
 
-      //      qam_symbols = zeros(273,1,'like',0.0000 + 0.0000i);
 //      for (b_i = 0; b_i < 256; b_i++) {
 //        mapping[(symbolI[b_i] << 4) + symbolQ[b_i]] = static_cast<unsigned char>
 //          (b_i);

@@ -10,6 +10,7 @@ typedef struct qam{
     uint16_t    fft_order;
 } qam;
 
+void qpsk_init(qam *qam_str);
 void qam64_init(qam *qam_str);
 void qam256_init(qam *qam_str);
 void qam256_double_frame_init(qam *qam_str);

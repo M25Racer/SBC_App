@@ -77,6 +77,8 @@ public:
     static const uint8_t PING = 0xD8;
     static const uint8_t SET_CUSTOM_PARAM = 0xD9;
     static const uint8_t GET_CUSTOM_PARAM = 0xDA;
+    static const uint8_t SET_TX_MODULATION = 0XDB;
+    static const uint8_t TEST_CMD = 0XDC;
     static const uint8_t SEND_SWEEP_SIGNAL  = 0xDB;
     static const uint8_t SEND_SIN_35KHZ     = 0xDC; // Отправить несколько периодов синуса 35 кГц макс. амплитуды, используется для режима автоподстройки 'AGC' SRP, 54 4ddc0301040000000000 286b
     static const uint8_t SEND_SIN_2KHZ      = 0xDD; // Отправить несколько периодов синуса 2 кГц макс. амплитуды, 54 4ddd0301040000000000 0b80
