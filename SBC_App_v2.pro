@@ -19,6 +19,10 @@ SOURCES += \
     mainwindow.cpp \
     message_box.cpp \
     mod_transmitter_thread.cpp \
+    qam_decoder/HS_EWL_LineEqualizer.cpp \
+    qam_decoder/HS_EWL_LineEqualizer_data.cpp \
+    qam_decoder/HS_EWL_LineEqualizer_initialize.cpp \
+    qam_decoder/HS_EWL_LineEqualizer_terminate.cpp \
     qam_decoder/eml_fftshift.cpp \
     qam_decoder/fft.cpp \
     qam_decoder/FFTImplementationCallback.cpp \
@@ -134,6 +138,11 @@ HEADERS += \
     message_box.h \
     mod_transmitter_thread.h \
     qam_common.h \
+    qam_decoder/HS_EWL_LineEqualizer.h \
+    qam_decoder/HS_EWL_LineEqualizer_data.h \
+    qam_decoder/HS_EWL_LineEqualizer_initialize.h \
+    qam_decoder/HS_EWL_LineEqualizer_terminate.h \
+    qam_decoder/HS_EWL_LineEqualizer_types.h \
     qam_decoder/eml_fftshift.h \
     qam_decoder/fft.h \
     qam_decoder/FFTImplementationCallback.h \
